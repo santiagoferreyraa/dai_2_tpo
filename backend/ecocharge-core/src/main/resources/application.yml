@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: ecocharge-core
+
+  # Perfil por defecto: PostgreSQL, que es el motor sobre el que corren las demos.
+  datasource:
+    url: ${ECOCHARGE_DB_URL:jdbc:postgresql://localhost:5432/ecocharge}
+    username: ${ECOCHARGE_DB_USER:ecocharge}
+    password: ${ECOCHARGE_DB_PASSWORD:ecocharge}
+
+  jpa:
+    hibernate:
+      ddl-auto: update      # TODO: reemplazar por Flyway antes de la Entrega 2
+    open-in-view: false     # evita que la sesión JPA quede abierta en la capa de presentación
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${SERVER_PORT:8081}
+
+---
+# Perfil de desarrollo: base en memoria, para levantar el módulo sin PostgreSQL instalado.
+# Las demos de las entregas corren sobre PostgreSQL, no sobre H2.
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:h2:mem:ecocharge;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    # Necesario si más adelante agregamos un data.sql de datos de prueba:
+    # sin esto, el script corre ANTES de que Hibernate cree las tablas.
+    defer-datasource-initialization: true
+
+  h2:
+    console:
+      enabled: true         # http://localhost:8081/h2-console

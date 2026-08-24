@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ecocharge</groupId>
+    <artifactId>ecocharge-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>EcoCharge — Parent</name>
+    <description>
+        Plataforma de gestión, reserva y tarificación de estaciones de carga para vehículos eléctricos.
+        TP Integrador — Desarrollo de Aplicaciones II.
+    </description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.6</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!--
+        Un módulo por artefacto desplegable. Ver ARQUITECTURA_ECOCHARGE.md §6.4.
+        Los componentes de negocio viven dentro de estos módulos, cada uno con su interfaz explícita.
+
+        Pendientes de crear en las próximas entregas:
+          - ecocharge-carga          (Reservas + Sesiones de carga — los componentes stateful)
+          - ecocharge-integracion    (Pagos REST + Red Eléctrica SOAP)
+          - ecocharge-async          (Notificaciones — consumidor JMS)
+          - distribuidora-soap       (simulador del sistema legado, publica el WSDL)
+          - cargador-simulador       (simulador de hardware, publica telemetría al tópico)
+          - pasarela-simulada        (simulador del partner de pagos, expone la API REST)
+    -->
+    <modules>
+        <module>backend/ecocharge-core</module>
+    </modules>
+
+</project>

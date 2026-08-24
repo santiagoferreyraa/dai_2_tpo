@@ -1,0 +1,30 @@
+# --- Java / Maven ---
+target/
+*.jar
+*.war
+*.class
+dependency-reduced-pom.xml
+
+# --- Node / React ---
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# --- Entorno ---
+.env
+.env.local
+*.log
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- SO ---
+.DS_Store
+Thumbs.db
