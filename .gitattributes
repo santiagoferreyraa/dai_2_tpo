@@ -1,0 +1,44 @@
+# Normalización de finales de línea.
+#
+# Sin esto, alguien trabajando en macOS o con un IDE mal configurado commitea un archivo
+# con finales de línea distintos y Git lo reporta como "cambió entero". El resultado son
+# conflictos fantasma sobre archivos que nadie tocó.
+#
+# Regla: en el repositorio TODO se guarda con LF. Git lo convierte al checkout si hace falta.
+
+* text=auto eol=lf
+
+# Excepciones: scripts de Windows que se rompen si no tienen CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Scripts de shell y el wrapper de Maven: LF sí o sí, o no arrancan.
+*.sh    text eol=lf
+mvnw    text eol=lf
+gradlew text eol=lf
+
+# --- Archivos generados ---
+#
+# package-lock.json lo regenera npm, no se edita a mano. Con "-merge" Git no intenta
+# mezclarlo: deja tu versión, marca el conflicto y vos lo regenerás.
+#
+#   git checkout --ours frontend/package-lock.json
+#   npm --prefix frontend install
+#   git add frontend/package-lock.json
+#
+# Con "-diff" además no ensucia el diff del PR con miles de líneas.
+package-lock.json -diff -merge
+*.lock            -diff
+
+# --- Binarios ---
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.jar   binary

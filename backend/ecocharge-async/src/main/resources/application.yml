@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: ecocharge-async
+
+  main:
+    # Consumidor del broker: no expone API pública, así que no levanta servidor web.
+    web-application-type: none
+    # Sin servidor web y sin listeners todavía, el proceso terminaría apenas arranca.
+    # keep-alive lo mantiene vivo. Cuando exista el primer @JmsListener, se puede sacar.
+    keep-alive: true
+
+# --- Broker ---
+# El starter de Artemis se agrega junto con el primer @JmsListener: apenas está en el
+# classpath, Spring intenta conectarse al arrancar, y Docker todavía no está instalado
+# en todas las máquinas. Los nombres de cola y tópico están en ARQUITECTURA §3.3.
+#
+# spring:
+#   artemis:
+#     broker-url: ${ECOCHARGE_BROKER_URL:tcp://localhost:61616}
+#     user: ${ECOCHARGE_BROKER_USER:ecocharge}
+#     password: ${ECOCHARGE_BROKER_PASSWORD:ecocharge}
