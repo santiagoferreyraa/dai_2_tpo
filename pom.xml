@@ -5,12 +5,12 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ecocharge</groupId>
-    <artifactId>ecocharge-parent</artifactId>
+    <groupId>com.ecopedia</groupId>
+    <artifactId>ecopedia-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>EcoCharge — Parent</name>
+    <name>Ecopedia — Parent</name>
     <description>
         Plataforma de gestión, reserva y tarificación de estaciones de carga para vehículos eléctricos.
         TP Integrador — Desarrollo de Aplicaciones II.
@@ -32,7 +32,7 @@
     </properties>
 
     <!--
-        Un módulo por artefacto desplegable. Ver ARQUITECTURA_ECOCHARGE.md §6.4.
+        Un módulo por artefacto desplegable. Ver ARQUITECTURA_ECOPEDIA.md §6.4.
         Los componentes de negocio viven dentro de estos módulos, cada uno con su interfaz explícita.
 
         Los cuatro están declarados desde el principio, aunque tres estén todavía vacíos.
@@ -46,10 +46,10 @@
           - pasarela-simulada      (el partner de pagos, expone la API REST)
     -->
     <modules>
-        <module>backend/ecocharge-core</module>
-        <module>backend/ecocharge-carga</module>
-        <module>backend/ecocharge-integracion</module>
-        <module>backend/ecocharge-async</module>
+        <module>backend/ecopedia-core</module>
+        <module>backend/ecopedia-carga</module>
+        <module>backend/ecopedia-integracion</module>
+        <module>backend/ecopedia-async</module>
     </modules>
 
     <build>

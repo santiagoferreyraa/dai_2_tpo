@@ -1,4 +1,4 @@
-# EcoCharge
+# Ecopedia
 
 Plataforma de gestión, reserva y tarificación de estaciones de carga rápida para vehículos eléctricos.
 
@@ -43,17 +43,17 @@ consola web en http://localhost:8161/console).
 
 ```bash
 mvn clean install
-mvn -pl backend/ecocharge-core spring-boot:run
+mvn -pl backend/ecopedia-core spring-boot:run
 ```
 
 Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a la vez:
 
 | Módulo | Puerto | Comando |
 |--------|--------|---------|
-| `ecocharge-core` | 8081 | `mvn -pl backend/ecocharge-core spring-boot:run` |
-| `ecocharge-carga` | 8082 | `mvn -pl backend/ecocharge-carga spring-boot:run` |
-| `ecocharge-integracion` | 8083 | `mvn -pl backend/ecocharge-integracion spring-boot:run` |
-| `ecocharge-async` | — | `mvn -pl backend/ecocharge-async spring-boot:run` *(sin web: consume del broker)* |
+| `ecopedia-core` | 8081 | `mvn -pl backend/ecopedia-core spring-boot:run` |
+| `ecopedia-carga` | 8082 | `mvn -pl backend/ecopedia-carga spring-boot:run` |
+| `ecopedia-integracion` | 8083 | `mvn -pl backend/ecopedia-integracion spring-boot:run` |
+| `ecopedia-async` | — | `mvn -pl backend/ecopedia-async spring-boot:run` *(sin web: consume del broker)* |
 
 `mvn verify` además **chequea el formato** con Spotless y falla si algo quedó sin formatear.
 Para arreglarlo: `mvn spotless:apply`.
@@ -64,7 +64,7 @@ Mientras Docker no esté instalado, el perfil `dev` levanta el módulo contra un
 en memoria, sin dependencias externas:
 
 ```bash
-mvn -pl backend/ecocharge-core spring-boot:run -Dspring-boot.run.profiles=dev
+mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 Consola de H2: http://localhost:8081/h2-console
@@ -180,10 +180,10 @@ dai_2_tpo/
 ├── .nvmrc                     # Versión de Node del equipo
 ├── .github/workflows/ci.yml   # Build + formato en cada PR
 ├── backend/
-│   ├── ecocharge-core/        # Usuarios · Terminales · Tarificación
-│   ├── ecocharge-carga/       # Reservas · Sesiones de carga (stateful)
-│   ├── ecocharge-integracion/ # Pagos (REST) · Red Eléctrica (SOAP)
-│   └── ecocharge-async/       # Notificaciones (consumidor JMS)
+│   ├── ecopedia-core/        # Usuarios · Terminales · Tarificación
+│   ├── ecopedia-carga/       # Reservas · Sesiones de carga (stateful)
+│   ├── ecopedia-integracion/ # Pagos (REST) · Red Eléctrica (SOAP)
+│   └── ecopedia-async/       # Notificaciones (consumidor JMS)
 ├── frontend/                  # React + TypeScript + Vite
 │   ├── vite.config.ts         # proxy a /api, alias @/, plugin de Tailwind
 │   ├── .prettierrc.json       # Formato compartido
@@ -198,10 +198,10 @@ estos módulos, cada uno con su interfaz explícita.
 
 | Módulo | Componentes | Estado |
 |--------|-------------|--------|
-| `ecocharge-core` | ServicioDeTerminales · ServicioDeUsuarios · ServicioDeTarificacion | 🚧 scaffold |
-| `ecocharge-carga` | ServicioDeReservas · ServicioDeSesionesDeCarga *(stateful)* | 🚧 scaffold |
-| `ecocharge-integracion` | ServicioDePagos (REST) · ServicioDeRedElectrica (SOAP) | 🚧 scaffold |
-| `ecocharge-async` | ServicioDeNotificaciones | 🚧 scaffold |
+| `ecopedia-core` | ServicioDeTerminales · ServicioDeUsuarios · ServicioDeTarificacion | 🚧 scaffold |
+| `ecopedia-carga` | ServicioDeReservas · ServicioDeSesionesDeCarga *(stateful)* | 🚧 scaffold |
+| `ecopedia-integracion` | ServicioDePagos (REST) · ServicioDeRedElectrica (SOAP) | 🚧 scaffold |
+| `ecopedia-async` | ServicioDeNotificaciones | 🚧 scaffold |
 | `distribuidora-soap` | Simulador del sistema legado — publica el WSDL | ⬜ pendiente |
 | `pasarela-simulada` | Simulador del partner de pagos — expone la API REST | ⬜ pendiente |
 | `cargador-simulador` | Simulador de hardware — publica telemetría al tópico | ⬜ pendiente |
@@ -230,7 +230,7 @@ verifica que las entidades coincidan con las tablas, pero no las toca. Con `upda
 personas contra la misma base, el arranque de uno le rompe las tablas al otro.
 
 Los archivos van en `src/main/resources/db/migration/` del módulo que corresponda
-(`ecocharge-core` o `ecocharge-carga`).
+(`ecopedia-core` o `ecopedia-carga`).
 
 **Cada módulo tiene su propio schema** dentro de la misma base: `core` y `carga`. Flyway los
 crea solo. Es necesario porque, si compartieran schema, compartirían la tabla

@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: ecopedia-integracion
+
+# Sin datasource: este módulo no tiene tablas propias. Su estado vive en los sistemas
+# externos con los que habla. Si eso cambia, copiar el bloque de datasource + flyway
+# de ecopedia-core y agregar las dependencias correspondientes al pom.
+server:
+  port: ${SERVER_PORT:8083}
+
+# --- Sistemas externos simulados ---
+# Todavía no existen: se levantan como procesos aparte en entregas siguientes.
+# Ver ARQUITECTURA_ECOPEDIA.md §3.1 y §3.2.
+ecopedia:
+  pasarela-pagos:
+    url: ${ECOPEDIA_PASARELA_URL:http://localhost:8091}
+  distribuidora:
+    url: ${ECOPEDIA_DISTRIBUIDORA_URL:http://localhost:8092/ws}
