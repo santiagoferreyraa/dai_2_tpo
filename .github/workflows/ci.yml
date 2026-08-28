@@ -41,7 +41,7 @@ jobs:
         run: mvn -B verify
 
   frontend:
-    name: Frontend (npm)
+    name: Frontend (pnpm)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -50,24 +50,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Va antes de setup-node a propósito: el caché de Node necesita que pnpm ya exista
+      # para poder preguntarle dónde tiene su store.
+      #
+      # La versión sale del campo "packageManager" de frontend/package.json, así que se
+      # fija en un solo lugar y no puede desincronizarse de la que usa cada máquina.
+      - name: Preparar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
-      # 'npm ci' instala exactamente lo que dice package-lock.json y falla si el lock
-      # quedó desincronizado de package.json — que es justo el síntoma de un merge
-      # mal resuelto del lock.
+      # '--frozen-lockfile' instala exactamente lo que dice pnpm-lock.yaml y falla si el
+      # lock quedó desincronizado de package.json — que es justo el síntoma de un merge
+      # mal resuelto del lock. En CI ya es el comportamiento por defecto, pero explícito
+      # se lee mejor y no depende de que eso no cambie.
       - name: Instalar dependencias
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Chequear formato
-        run: npm run format:check
+        run: pnpm run format:check
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
