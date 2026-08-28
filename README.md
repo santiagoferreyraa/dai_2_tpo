@@ -24,6 +24,7 @@ TP Integrador — **Desarrollo de Aplicaciones II** (3.4.218, Comisión Lunes TM
 - JDK 21 o superior
 - Maven 3.9+
 - Node 20+
+- pnpm 11+ *(`npm install -g pnpm`)*
 - Docker Desktop *(pendiente de instalar — ver "Correr sin Docker")*
 
 ---
@@ -76,20 +77,20 @@ Consola de H2: http://localhost:8081/h2-console
 
 ```bash
 cd frontend
-npm install     # solo la primera vez
-npm run dev
+pnpm install    # solo la primera vez, y cada vez que alguien agregue una dependencia
+pnpm dev
 ```
 
 Queda en http://localhost:5173
 
 | Comando | Qué hace |
 |---------|----------|
-| `npm run dev` | Servidor de desarrollo con hot reload |
-| `npm run build` | Chequeo de tipos (`tsc -b`) + build de producción |
-| `npm run lint` | Linter (oxlint) |
-| `npm run format` | Formatea todo con Prettier |
-| `npm run format:check` | Falla si algo quedó sin formatear (es lo que corre CI) |
-| `npm run preview` | Sirve el build de producción localmente |
+| `pnpm dev` | Servidor de desarrollo con hot reload |
+| `pnpm build` | Chequeo de tipos (`tsc -b`) + build de producción |
+| `pnpm lint` | Linter (oxlint) |
+| `pnpm format` | Formatea todo con Prettier |
+| `pnpm format:check` | Falla si algo quedó sin formatear (es lo que corre CI) |
+| `pnpm preview` | Sirve el build de producción localmente |
 
 **El proxy ya está configurado:** todo lo que el front pida a `/api/...` se redirige a
 `http://localhost:8081`. Se llama a rutas relativas (`fetch('/api/estaciones')`) y no hay
@@ -142,20 +143,20 @@ Y después el Pull Request, con **squash merge**.
    resolvés vos que sabés qué hiciste, en vez de dejárselo a quien mergea.
 5. **Avisar en el grupo en qué archivo estás.** No hace falta repartir roles: alcanza con que
    dos no estén en `TerminalController.java` la misma tarde.
-6. **Formatear antes de commitear:** `mvn spotless:apply` y `npm run format`. Si te olvidás,
+6. **Formatear antes de commitear:** `mvn spotless:apply` y `pnpm format`. Si te olvidás,
    CI te lo marca en el PR.
 7. **Agregar una dependencia va en un PR aparte**, y se mergea el mismo día. Así el
-   `package-lock.json` no queda tocado en tres ramas a la vez.
+   `pnpm-lock.yaml` no queda tocado en tres ramas a la vez.
 
-### Cuando conflictúa `package-lock.json`
+### Cuando conflictúa `pnpm-lock.yaml`
 
-Ese archivo lo genera npm, no se resuelve a mano. Está marcado en `.gitattributes` para que
+Ese archivo lo genera pnpm, no se resuelve a mano. Está marcado en `.gitattributes` para que
 Git ni lo intente. Cuando pase:
 
 ```bash
-git checkout --ours frontend/package-lock.json
-npm --prefix frontend install
-git add frontend/package-lock.json
+git checkout --ours frontend/pnpm-lock.yaml
+pnpm --dir frontend install
+git add frontend/pnpm-lock.yaml
 git rebase --continue
 ```
 
@@ -163,7 +164,7 @@ git rebase --continue
 
 ```bash
 mvn spotless:apply     # backend
-npm --prefix frontend run format
+pnpm --dir frontend format
 git commit -am "Aplicar formato"
 ```
 
@@ -175,7 +176,7 @@ git commit -am "Aplicar formato"
 dai_2_tpo/
 ├── pom.xml                    # POM padre (multi-módulo) + config de Spotless
 ├── docker-compose.yml         # PostgreSQL + ActiveMQ
-├── .gitattributes             # LF en todo; package-lock sin merge textual
+├── .gitattributes             # LF en todo; el lock sin merge textual
 ├── .editorconfig              # Indentación y encoding para los tres IDEs
 ├── .nvmrc                     # Versión de Node del equipo
 ├── .github/workflows/ci.yml   # Build + formato en cada PR

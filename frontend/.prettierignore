@@ -1,5 +1,5 @@
 # Generados: los reescribe la herramienta, no nosotros.
 node_modules
 dist
-package-lock.json
+pnpm-lock.yaml
 *.tsbuildinfo

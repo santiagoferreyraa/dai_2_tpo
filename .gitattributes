@@ -20,15 +20,15 @@ gradlew text eol=lf
 
 # --- Archivos generados ---
 #
-# package-lock.json lo regenera npm, no se edita a mano. Con "-merge" Git no intenta
+# pnpm-lock.yaml lo regenera pnpm, no se edita a mano. Con "-merge" Git no intenta
 # mezclarlo: deja tu versión, marca el conflicto y vos lo regenerás.
 #
-#   git checkout --ours frontend/package-lock.json
-#   npm --prefix frontend install
-#   git add frontend/package-lock.json
+#   git checkout --ours frontend/pnpm-lock.yaml
+#   pnpm --dir frontend install
+#   git add frontend/pnpm-lock.yaml
 #
 # Con "-diff" además no ensucia el diff del PR con miles de líneas.
-package-lock.json -diff -merge
+pnpm-lock.yaml    -diff -merge
 *.lock            -diff
 
 # --- Binarios ---
