@@ -223,6 +223,52 @@ La capa de negocio depende de la **interfaz** del DAO, nunca de Spring Data dire
 
 ---
 
+## Direcciones y configuración
+
+**Ninguna dirección de red se escribe a mano.** Ni una URL, ni un host, ni un puerto, dentro
+de un archivo `.java`, `.ts` o `.tsx`.
+
+Hoy todo corre en `localhost` y parece que da lo mismo. No da lo mismo: para la Entrega Final
+la aplicación tiene que correr en una máquina que haga de servidor, con dos dispositivos
+apuntando al mismo estado. Si para entonces hay direcciones desparramadas por el código,
+mudar el ambiente deja de ser cambiar un valor y pasa a ser un refactor por todo el proyecto,
+justo en la semana de la entrega.
+
+### Backend
+
+Todo dato de conexión sale de una variable de entorno **con valor por defecto para
+desarrollo**, como ya hacen los `application.yml`:
+
+```yaml
+url: ${ECOPEDIA_DB_URL:jdbc:postgresql://localhost:5432/ecopedia}
+```
+
+Así el que clona el repo levanta el módulo sin configurar nada, y el ambiente compartido se
+arma exportando variables, sin tocar el código.
+
+Si un módulo necesita hablar con otro, la dirección se declara igual, bajo la clave
+`ecopedia:` del YAML — nunca incrustada donde se hace la llamada. `ecopedia-integracion` ya
+lo hace así con los sistemas externos simulados.
+
+### Frontend
+
+Las llamadas van a rutas **relativas** que empiezan con `/api`, y pasan por el cliente HTTP
+de `src/lib/`. El proxy de Vite las redirige al backend, así que el frontend no sabe ni
+necesita saber dónde está la API — y de paso no hay CORS que configurar.
+
+```ts
+// Bien: anda igual en desarrollo y en el ambiente compartido.
+await api.get('/terminales')
+
+// Mal: ata el código a una máquina, y el token de sesión hay que acordarse de mandarlo.
+await fetch('http://localhost:8081/api/terminales')
+```
+
+Que todas las llamadas pasen por un solo lugar es además lo que permite agregar la
+autenticación una vez, cuando exista el login, en vez de en cada pantalla.
+
+---
+
 ## Migraciones de base de datos
 
 El esquema lo gobierna **Flyway**, no Hibernate. `ddl-auto` está en `validate`: Hibernate
