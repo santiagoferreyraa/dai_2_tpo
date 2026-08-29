@@ -32,6 +32,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+            Seguridad declarativa: habilita @PreAuthorize sobre las operaciones sensibles.
+            Ver SecurityConfig: por ahora deja pasar todo, para no trabar las pruebas
+            manuales mientras el componente de Usuarios no exista.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- Capa de datos: soporte para la implementación JPA de los DAO -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

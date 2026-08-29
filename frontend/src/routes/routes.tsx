@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router'
 
 import App from '@/App'
 import { homeRoutes } from '@/features/home/routes'
+import { terminalRoutes } from '@/features/terminals/routes'
 
 /**
  * El ÚNICO archivo compartido del ruteo.
@@ -20,7 +21,7 @@ export const router = createBrowserRouter([
     element: <App />,
     children: [
       ...homeRoutes,
-      // ...terminalRoutes,
+      ...terminalRoutes,
       // ...bookingRoutes,
     ],
   },
