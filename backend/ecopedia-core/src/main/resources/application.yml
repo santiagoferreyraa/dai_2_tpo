@@ -52,7 +52,13 @@ spring:
   datasource:
     # MODE=PostgreSQL hace que H2 acepte la sintaxis de PostgreSQL, así las mismas
     # migraciones corren en los dos motores y el esquema no se bifurca.
-    url: jdbc:h2:mem:ecopedia-core;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    #
+    # DATABASE_TO_LOWER=TRUE no es decoración: sin eso H2 guarda en MAYÚSCULAS todo
+    # identificador que la migración no entrecomilla, mientras que Flyway sí entrecomilla el
+    # nombre del schema. Queda un schema "core" con tablas "STATIONS" y "CONNECTORS", y
+    # Hibernate —que busca en minúscula, como PostgreSQL— aborta el arranque con
+    # "Schema-validation: missing table". Compila igual: falla recién al levantar.
+    url: jdbc:h2:mem:ecopedia-core;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver
