@@ -4,18 +4,18 @@
   Tema de la aplicación.
 
   Los tokens se definen acá una sola vez y se usan como clases de Tailwind
-  (bg-fondo, text-texto, etc.). Cuando implementemos el cambio de tema en tiempo
+  (bg-background, text-text, etc.). Cuando implementemos el cambio de tema en tiempo
   real (RNF08, puntos extra en la Entrega Final), alcanza con redefinir estos
   valores bajo [data-theme="dark"] sin tocar ningún componente.
 */
 @theme {
-  --color-fondo: #ffffff;
-  --color-superficie: #f4f5f7;
-  --color-borde: #d9dce1;
-  --color-texto: #16191d;
-  --color-texto-suave: #5c636e;
-  --color-primario: #12894f;
-  --color-primario-fuerte: #0d6b3e;
+  --color-background: #ffffff;
+  --color-surface: #f4f5f7;
+  --color-border: #d9dce1;
+  --color-text: #16191d;
+  --color-text-muted: #5c636e;
+  --color-primary: #12894f;
+  --color-primary-strong: #0d6b3e;
 }
 
 html,
@@ -25,6 +25,6 @@ body,
 }
 
 body {
-  background-color: var(--color-fondo);
-  color: var(--color-texto);
+  background-color: var(--color-background);
+  color: var(--color-text);
 }

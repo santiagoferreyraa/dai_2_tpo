@@ -7,33 +7,33 @@
  *
  * Las rutas se escriben relativas y SIN el prefijo `/api`, que lo agrega el cliente:
  *
- *     const terminales = await api.get<Terminal[]>('/terminales', { parametros: { ciudad } })
+ *     const terminals = await api.get<Terminal[]>('/terminals', { params: { city } })
  *
  * Ver el README del repo, "Direcciones y configuración".
  */
 
 /** Prefijo que el proxy de Vite redirige al backend. Ver `vite.config.ts`. */
-const RAIZ = '/api'
+const ROOT = '/api'
 
 /**
  * Error de una llamada a la API.
  *
- * `estado` es el código HTTP, o `0` cuando la petición no llegó a salir (backend caído,
+ * `status` es el código HTTP, o `0` cuando la petición no llegó a salir (backend caído,
  * sin conexión, petición cancelada).
  */
-export class ErrorDeApi extends Error {
-  readonly estado: number
-  readonly detalle: unknown
+export class ApiError extends Error {
+  readonly status: number
+  readonly detail: unknown
 
-  constructor(mensaje: string, estado: number, detalle?: unknown) {
-    super(mensaje)
-    this.name = 'ErrorDeApi'
-    this.estado = estado
-    this.detalle = detalle
+  constructor(message: string, status: number, detail?: unknown) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.detail = detail
   }
 }
 
-let tokenDeSesion: string | null = null
+let sessionToken: string | null = null
 
 /**
  * Guarda el token que viaja en cada llamada; con `null` cierra la sesión.
@@ -41,95 +41,94 @@ let tokenDeSesion: string | null = null
  * Lo va a llamar el login cuando exista. Es el único lugar del frontend que arma la
  * cabecera `Authorization`: si se agrega a mano en cada pantalla, siempre falta en alguna.
  */
-export function definirToken(token: string | null): void {
-  tokenDeSesion = token
+export function setToken(token: string | null): void {
+  sessionToken = token
 }
 
-export type ValorDeParametro = string | number | boolean
+export type ParamValue = string | number | boolean
 
-export interface OpcionesDePeticion {
+export interface RequestOptions {
   /** Parámetros de query. Las claves con valor `undefined` no se envían. */
-  parametros?: Record<string, ValorDeParametro | undefined>
+  params?: Record<string, ParamValue | undefined>
   /** Para cancelar la petición si la pantalla se desmonta antes de que responda. */
-  senal?: AbortSignal
+  signal?: AbortSignal
 }
 
-function armarUrl(ruta: string, parametros: OpcionesDePeticion['parametros']): string {
-  const url = `${RAIZ}${ruta}`
-  if (!parametros) return url
+function buildUrl(path: string, params: RequestOptions['params']): string {
+  const url = `${ROOT}${path}`
+  if (!params) return url
 
   const query = new URLSearchParams()
-  for (const [clave, valor] of Object.entries(parametros)) {
-    if (valor !== undefined) query.append(clave, String(valor))
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.append(key, String(value))
   }
 
-  const cadena = query.toString()
-  return cadena ? `${url}?${cadena}` : url
+  const queryString = query.toString()
+  return queryString ? `${url}?${queryString}` : url
 }
 
 /**
  * Spring Boot 3 responde los errores como ProblemDetail (RFC 7807): de ahí sale el texto
  * que se le muestra al usuario. Si la respuesta no trae JSON, queda el código de estado.
  */
-async function leerError(respuesta: Response): Promise<ErrorDeApi> {
-  let cuerpo: unknown = null
+async function readError(response: Response): Promise<ApiError> {
+  let body: unknown = null
   try {
-    cuerpo = await respuesta.json()
+    body = await response.json()
   } catch {
     // La respuesta no traía JSON válido; nos quedamos con el estado.
   }
 
-  const problema = cuerpo as { detail?: string; title?: string; message?: string } | null
-  const mensaje =
-    problema?.detail ?? problema?.title ?? problema?.message ?? `Error ${respuesta.status}`
+  const problem = body as { detail?: string; title?: string; message?: string } | null
+  const message =
+    problem?.detail ?? problem?.title ?? problem?.message ?? `Error ${response.status}`
 
-  return new ErrorDeApi(mensaje, respuesta.status, cuerpo)
+  return new ApiError(message, response.status, body)
 }
 
-async function peticion<T>(
-  metodo: string,
-  ruta: string,
-  cuerpo?: unknown,
-  opciones?: OpcionesDePeticion,
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options?: RequestOptions,
 ): Promise<T> {
-  const cabeceras: Record<string, string> = { Accept: 'application/json' }
-  if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json'
-  if (tokenDeSesion !== null) cabeceras['Authorization'] = `Bearer ${tokenDeSesion}`
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (sessionToken !== null) headers['Authorization'] = `Bearer ${sessionToken}`
 
-  let respuesta: Response
+  let response: Response
   try {
-    respuesta = await fetch(armarUrl(ruta, opciones?.parametros), {
-      method: metodo,
-      headers: cabeceras,
-      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-      signal: opciones?.senal,
+    response = await fetch(buildUrl(path, options?.params), {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: options?.signal,
     })
   } catch (error) {
-    throw new ErrorDeApi('No se pudo conectar con el servidor', 0, error)
+    throw new ApiError('No se pudo conectar con el servidor', 0, error)
   }
 
-  if (!respuesta.ok) throw await leerError(respuesta)
+  if (!response.ok) throw await readError(response)
 
   // Un 204 (o un DELETE, o un POST sin cuerpo de respuesta) no trae JSON que parsear.
-  if (respuesta.status === 204 || respuesta.status === 205) return undefined as T
+  if (response.status === 204 || response.status === 205) return undefined as T
 
-  const texto = await respuesta.text()
-  return (texto ? JSON.parse(texto) : undefined) as T
+  const text = await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 export const api = {
-  get: <T>(ruta: string, opciones?: OpcionesDePeticion) =>
-    peticion<T>('GET', ruta, undefined, opciones),
+  get: <T>(path: string, options?: RequestOptions) => request<T>('GET', path, undefined, options),
 
-  post: <T>(ruta: string, cuerpo?: unknown, opciones?: OpcionesDePeticion) =>
-    peticion<T>('POST', ruta, cuerpo, opciones),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('POST', path, body, options),
 
-  put: <T>(ruta: string, cuerpo?: unknown, opciones?: OpcionesDePeticion) =>
-    peticion<T>('PUT', ruta, cuerpo, opciones),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('PUT', path, body, options),
 
-  patch: <T>(ruta: string, cuerpo?: unknown, opciones?: OpcionesDePeticion) =>
-    peticion<T>('PATCH', ruta, cuerpo, opciones),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>('PATCH', path, body, options),
 
-  delete: <T = void>(ruta: string, opciones?: OpcionesDePeticion) =>
-    peticion<T>('DELETE', ruta, undefined, opciones),
+  delete: <T = void>(path: string, options?: RequestOptions) =>
+    request<T>('DELETE', path, undefined, options),
 }

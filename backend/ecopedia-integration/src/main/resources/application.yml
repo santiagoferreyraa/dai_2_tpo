@@ -1,6 +1,6 @@
 spring:
   application:
-    name: ecopedia-integracion
+    name: ecopedia-integration
 
 # Sin datasource: este módulo no tiene tablas propias. Su estado vive en los sistemas
 # externos con los que habla. Si eso cambia, copiar el bloque de datasource + flyway
@@ -12,7 +12,7 @@ server:
 # Todavía no existen: se levantan como procesos aparte en entregas siguientes.
 # Ver ARQUITECTURA_ECOPEDIA.md §3.1 y §3.2.
 ecopedia:
-  pasarela-pagos:
-    url: ${ECOPEDIA_PASARELA_URL:http://localhost:8091}
-  distribuidora:
-    url: ${ECOPEDIA_DISTRIBUIDORA_URL:http://localhost:8092/ws}
+  payment-gateway:
+    url: ${ECOPEDIA_PAYMENT_GATEWAY_URL:http://localhost:8091}
+  power-grid:
+    url: ${ECOPEDIA_POWER_GRID_URL:http://localhost:8092/ws}

@@ -3,15 +3,15 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 
 import '@/index.css'
-import { router } from '@/rutas/rutas'
+import { router } from '@/routes/routes'
 
-const contenedor = document.getElementById('root')
+const container = document.getElementById('root')
 
-if (!contenedor) {
+if (!container) {
   throw new Error('No se encontró el elemento #root en index.html')
 }
 
-createRoot(contenedor).render(
+createRoot(container).render(
   <StrictMode>
     <RouterProvider router={router} />
   </StrictMode>,

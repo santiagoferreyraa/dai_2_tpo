@@ -18,7 +18,7 @@ spring:
     locations: classpath:db/migration
     # Un schema por artefacto, dentro de la misma base.
     #
-    # Sin esto, core y carga compartirían la tabla flyway_schema_history: cada uno vería
+    # Sin esto, core y charging compartirían la tabla flyway_schema_history: cada uno vería
     # las migraciones del otro como "aplicadas pero ausentes" y ninguno de los dos arrancaría.
     # Flyway crea el schema si no existe.
     schemas: core

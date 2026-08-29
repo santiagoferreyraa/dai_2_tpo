@@ -52,8 +52,8 @@ Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a l
 | Módulo | Puerto | Comando |
 |--------|--------|---------|
 | `ecopedia-core` | 8081 | `mvn -pl backend/ecopedia-core spring-boot:run` |
-| `ecopedia-carga` | 8082 | `mvn -pl backend/ecopedia-carga spring-boot:run` |
-| `ecopedia-integracion` | 8083 | `mvn -pl backend/ecopedia-integracion spring-boot:run` |
+| `ecopedia-charging` | 8082 | `mvn -pl backend/ecopedia-charging spring-boot:run` |
+| `ecopedia-integration` | 8083 | `mvn -pl backend/ecopedia-integration spring-boot:run` |
 | `ecopedia-async` | — | `mvn -pl backend/ecopedia-async spring-boot:run` *(sin web: consume del broker)* |
 
 `mvn verify` además **chequea el formato** con Spotless y falla si algo quedó sin formatear.
@@ -93,11 +93,11 @@ Queda en http://localhost:5173
 | `pnpm preview` | Sirve el build de producción localmente |
 
 **El proxy ya está configurado:** todo lo que el front pida a `/api/...` se redirige a
-`http://localhost:8081`. Se llama a rutas relativas (`fetch('/api/estaciones')`) y no hay
+`http://localhost:8081`. Se llama a rutas relativas (`fetch('/api/stations')`) y no hay
 que tocar CORS en desarrollo.
 
 **Alias de imports:** `@/` apunta a `frontend/src/`, así que se importa
-`@/componentes/Mapa` en vez de `../../componentes/Mapa`.
+`@/components/Map` en vez de `../../components/Map`.
 
 ---
 
@@ -147,6 +147,10 @@ Y después el Pull Request, con **squash merge**.
    CI te lo marca en el PR.
 7. **Agregar una dependencia va en un PR aparte**, y se mergea el mismo día. Así el
    `pnpm-lock.yaml` no queda tocado en tres ramas a la vez.
+8. **El código se escribe en inglés; los comentarios, en castellano.** Alcanza a clases,
+   métodos, variables, nombres de archivo y carpeta, rutas REST, tablas y columnas. Los
+   comentarios, esta documentación y los mensajes al usuario siguen en castellano; los
+   mensajes de commit y los PR, en inglés.
 
 ### Cuando conflictúa `pnpm-lock.yaml`
 
@@ -182,8 +186,8 @@ dai_2_tpo/
 ├── .github/workflows/ci.yml   # Build + formato en cada PR
 ├── backend/
 │   ├── ecopedia-core/        # Usuarios · Terminales · Tarificación
-│   ├── ecopedia-carga/       # Reservas · Sesiones de carga (stateful)
-│   ├── ecopedia-integracion/ # Pagos (REST) · Red Eléctrica (SOAP)
+│   ├── ecopedia-charging/    # Reservas · Sesiones de carga (stateful)
+│   ├── ecopedia-integration/ # Pagos (REST) · Red Eléctrica (SOAP)
 │   └── ecopedia-async/       # Notificaciones (consumidor JMS)
 ├── frontend/                  # React + TypeScript + Vite
 │   ├── vite.config.ts         # proxy a /api, alias @/, plugin de Tailwind
@@ -199,10 +203,10 @@ estos módulos, cada uno con su interfaz explícita.
 
 | Módulo | Componentes | Estado |
 |--------|-------------|--------|
-| `ecopedia-core` | ServicioDeTerminales · ServicioDeUsuarios · ServicioDeTarificacion | 🚧 scaffold |
-| `ecopedia-carga` | ServicioDeReservas · ServicioDeSesionesDeCarga *(stateful)* | 🚧 scaffold |
-| `ecopedia-integracion` | ServicioDePagos (REST) · ServicioDeRedElectrica (SOAP) | 🚧 scaffold |
-| `ecopedia-async` | ServicioDeNotificaciones | 🚧 scaffold |
+| `ecopedia-core` | TerminalService · UserService · PricingService | 🚧 scaffold |
+| `ecopedia-charging` | BookingService · ChargingSessionService *(stateful)* | 🚧 scaffold |
+| `ecopedia-integration` | PaymentService (REST) · PowerGridService (SOAP) | 🚧 scaffold |
+| `ecopedia-async` | NotificationService | 🚧 scaffold |
 | `distribuidora-soap` | Simulador del sistema legado — publica el WSDL | ⬜ pendiente |
 | `pasarela-simulada` | Simulador del partner de pagos — expone la API REST | ⬜ pendiente |
 | `cargador-simulador` | Simulador de hardware — publica telemetría al tópico | ⬜ pendiente |
@@ -248,7 +252,7 @@ Así el que clona el repo levanta el módulo sin configurar nada, y el ambiente 
 arma exportando variables, sin tocar el código.
 
 Si un módulo necesita hablar con otro, la dirección se declara igual, bajo la clave
-`ecopedia:` del YAML — nunca incrustada donde se hace la llamada. `ecopedia-integracion` ya
+`ecopedia:` del YAML — nunca incrustada donde se hace la llamada. `ecopedia-integration` ya
 lo hace así con los sistemas externos simulados.
 
 ### Frontend
@@ -259,10 +263,10 @@ necesita saber dónde está la API — y de paso no hay CORS que configurar.
 
 ```ts
 // Bien: anda igual en desarrollo y en el ambiente compartido.
-await api.get('/terminales')
+await api.get('/stations')
 
 // Mal: ata el código a una máquina, y el token de sesión hay que acordarse de mandarlo.
-await fetch('http://localhost:8081/api/terminales')
+await fetch('http://localhost:8081/api/stations')
 ```
 
 Que todas las llamadas pasen por un solo lugar es además lo que permite agregar la
@@ -277,9 +281,9 @@ verifica que las entidades coincidan con las tablas, pero no las toca. Con `upda
 personas contra la misma base, el arranque de uno le rompe las tablas al otro.
 
 Los archivos van en `src/main/resources/db/migration/` del módulo que corresponda
-(`ecopedia-core` o `ecopedia-carga`).
+(`ecopedia-core` o `ecopedia-charging`).
 
-**Cada módulo tiene su propio schema** dentro de la misma base: `core` y `carga`. Flyway los
+**Cada módulo tiene su propio schema** dentro de la misma base: `core` y `charging`. Flyway los
 crea solo. Es necesario porque, si compartieran schema, compartirían la tabla
 `flyway_schema_history`: cada módulo vería las migraciones del otro como "aplicadas pero
 ausentes" y ninguno de los dos arrancaría.
@@ -287,10 +291,10 @@ ausentes" y ninguno de los dos arrancaría.
 ### Convención de nombres
 
 ```
-V<AAAAMMDD><HHmm>__descripcion_en_snake_case.sql
+V<AAAAMMDD><HHmm>__description_in_snake_case.sql
 ```
 
-Por ejemplo: `V202608241530__crear_tabla_estaciones.sql`
+Por ejemplo: `V202608241530__create_stations_table.sql`
 
 **Con timestamp, nunca con `V1`, `V2`, `V3`.** Con numeración secuencial, dos personas
 escriben `V3__` la misma tarde y chocan; con timestamp el choque es imposible.
