@@ -47,8 +47,8 @@
     -->
     <modules>
         <module>backend/ecopedia-core</module>
-        <module>backend/ecopedia-carga</module>
-        <module>backend/ecopedia-integracion</module>
+        <module>backend/ecopedia-charging</module>
+        <module>backend/ecopedia-integration</module>
         <module>backend/ecopedia-async</module>
     </modules>
 
