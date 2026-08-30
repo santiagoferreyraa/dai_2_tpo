@@ -59,26 +59,29 @@ public class TerminalServiceImpl implements TerminalService {
     }
 
     @Override
-    public Connector configureConnector(Long targetId, ConnectorType connectorType, BigDecimal maxPowerKw) {
-        var optionalConnector = connectorRepository.findById(targetId);
-        if (optionalConnector.isPresent()) {
-            Connector connector = optionalConnector.get();
-            connector.setConnectorType(connectorType);
-            connector.setMaxPowerKw(maxPowerKw);
-            return connectorRepository.save(connector);
-        }
-
+    public Connector addConnector(Long stationId, ConnectorType connectorType, BigDecimal maxPowerKw) {
         Station station = stationRepository
-                .findById(targetId)
-                .orElseThrow(
-                        () -> new IllegalArgumentException("No se encontró conector ni estación con ID: " + targetId));
+                .findById(stationId)
+                .orElseThrow(() -> new IllegalArgumentException("Estación no encontrada con ID: " + stationId));
 
-        Connector newConnector = new Connector();
-        newConnector.setStation(station);
-        newConnector.setConnectorType(connectorType);
-        newConnector.setMaxPowerKw(maxPowerKw);
-        newConnector.setOperationalStatus(OperationalStatus.AVAILABLE);
-        return connectorRepository.save(newConnector);
+        Connector connector = new Connector();
+        connector.setStation(station);
+        connector.setConnectorType(connectorType);
+        connector.setMaxPowerKw(maxPowerKw);
+        // Nace disponible: el operador lo saca de servicio después si hace falta.
+        connector.setOperationalStatus(OperationalStatus.AVAILABLE);
+        return connectorRepository.save(connector);
+    }
+
+    @Override
+    public Connector configureConnector(Long connectorId, ConnectorType connectorType, BigDecimal maxPowerKw) {
+        Connector connector = connectorRepository
+                .findById(connectorId)
+                .orElseThrow(() -> new IllegalArgumentException("Conector no encontrado con ID: " + connectorId));
+
+        connector.setConnectorType(connectorType);
+        connector.setMaxPowerKw(maxPowerKw);
+        return connectorRepository.save(connector);
     }
 
     @Override

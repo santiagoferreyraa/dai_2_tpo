@@ -41,7 +41,20 @@ public class TerminalController {
         return ResponseEntity.noContent().build();
     }
 
-    /** RF05: Parametrizar tipo y potencia máxima de un conector. */
+    /**
+     * RF05: Alta de un conector sobre una estación existente.
+     *
+     * <p>La ruta va en inglés por la directriz de código: el resto del controlador todavía
+     * está en castellano y se unifica cuando se apliquen las rutas de ARQUITECTURA §2.3.
+     */
+    @PostMapping("/stations/{stationId}/connectors")
+    public ResponseEntity<ConnectorResponse> addConnector(
+            @PathVariable Long stationId, @Valid @RequestBody ConfigureConnectorRequest request) {
+        Connector created = terminalService.addConnector(stationId, request.connectorType(), request.maxPowerKw());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ConnectorResponse.fromDomain(created));
+    }
+
+    /** RF05: Parametrizar tipo y potencia máxima de un conector que ya existe. */
     @PostMapping("/conectores/{id}/configurar")
     public ResponseEntity<ConnectorResponse> configureConnector(
             @PathVariable Long id, @Valid @RequestBody ConfigureConnectorRequest request) {

@@ -84,6 +84,59 @@ class TerminalServiceTest {
     }
 
     @Test
+    void testAddConnector() {
+        when(stationRepository.findById(10L)).thenReturn(Optional.of(mockStation));
+        when(connectorRepository.save(any(Connector.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Connector created = terminalService.addConnector(10L, ConnectorType.CHADEMO, new BigDecimal("100.00"));
+
+        assertSame(mockStation, created.getStation());
+        assertEquals(ConnectorType.CHADEMO, created.getConnectorType());
+        assertEquals(new BigDecimal("100.00"), created.getMaxPowerKw());
+        assertEquals(OperationalStatus.AVAILABLE, created.getOperationalStatus());
+    }
+
+    /**
+     * El caso que la operación ambigua anterior no podía cubrir: los identificadores de
+     * estación y de conector son secuencias independientes, así que una operación que
+     * aceptara cualquiera de los dos dejaba de crear en cuanto existía un conector con el
+     * mismo número que la estación.
+     */
+    @Test
+    void testAddSecondConnectorToSameStation() {
+        when(stationRepository.findById(10L)).thenReturn(Optional.of(mockStation));
+        when(connectorRepository.save(any(Connector.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Connector first = terminalService.addConnector(10L, ConnectorType.CCS2, new BigDecimal("50.00"));
+        Connector second = terminalService.addConnector(10L, ConnectorType.TYPE_2, new BigDecimal("22.00"));
+
+        assertNotSame(first, second);
+        assertEquals(ConnectorType.CCS2, first.getConnectorType());
+        assertEquals(ConnectorType.TYPE_2, second.getConnectorType());
+        verify(connectorRepository, times(2)).save(any(Connector.class));
+    }
+
+    @Test
+    void testAddConnectorToMissingStation() {
+        when(stationRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> terminalService.addConnector(99L, ConnectorType.CCS2, new BigDecimal("50.00")));
+        verify(connectorRepository, never()).save(any(Connector.class));
+    }
+
+    @Test
+    void testConfigureMissingConnector() {
+        when(connectorRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> terminalService.configureConnector(99L, ConnectorType.CCS2, new BigDecimal("50.00")));
+        verify(connectorRepository, never()).save(any(Connector.class));
+    }
+
+    @Test
     void testSearchStationsWithinRadius() {
         when(stationRepository.findAllActive()).thenReturn(List.of(mockStation));
         when(connectorRepository.findByStationId(10L)).thenReturn(List.of(mockConnector));
