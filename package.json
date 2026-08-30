@@ -1,0 +1,15 @@
+{
+  "name": "ecopedia",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "dev": "concurrently --names back,front --prefix-colors cyan,magenta --kill-others-on-fail \"pnpm dev:back\" \"pnpm dev:front\"",
+    "dev:back": "mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev",
+    "dev:front": "pnpm --dir frontend dev",
+    "build": "mvn -Pweb clean package",
+    "start": "java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

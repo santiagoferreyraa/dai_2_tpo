@@ -148,4 +148,39 @@ class TerminalServiceTest {
         assertEquals(10L, results.get(0).stationId());
         assertTrue(results.get(0).distanceKm() < 5.0);
     }
+
+    @Test
+    void testSearchCombinedFiltersEdgeCases() {
+        when(stationRepository.findAllActive()).thenReturn(List.of(mockStation));
+        when(connectorRepository.findByStationId(10L)).thenReturn(List.of(mockConnector));
+
+        // 1. All filters match: CCS2, min 40kW, onlyAvailable = true -> 1 matching connector
+        SearchCriteria matchAll =
+                new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, new BigDecimal("40.00"), true);
+        List<StationResult> res1 = terminalService.search(matchAll);
+        assertEquals(1, res1.size());
+        assertEquals(1, res1.get(0).matchingConnectors().size());
+
+        // 2. Mismatched type: CHADEMO -> 0 matching connectors
+        SearchCriteria typeMismatch =
+                new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CHADEMO, new BigDecimal("40.00"), true);
+        List<StationResult> res2 = terminalService.search(typeMismatch);
+        assertEquals(1, res2.size());
+        assertTrue(res2.get(0).matchingConnectors().isEmpty());
+
+        // 3. Mismatched power: min 100kW (connector has 50kW) -> 0 matching connectors
+        SearchCriteria powerMismatch =
+                new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, new BigDecimal("100.00"), true);
+        List<StationResult> res3 = terminalService.search(powerMismatch);
+        assertEquals(1, res3.size());
+        assertTrue(res3.get(0).matchingConnectors().isEmpty());
+
+        // 4. Mismatched availability: connector OUT_OF_SERVICE with onlyAvailable = true -> 0 matching connectors
+        mockConnector.setOperationalStatus(OperationalStatus.OUT_OF_SERVICE);
+        SearchCriteria unavailableMismatch =
+                new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, new BigDecimal("40.00"), true);
+        List<StationResult> res4 = terminalService.search(unavailableMismatch);
+        assertEquals(1, res4.size());
+        assertTrue(res4.get(0).matchingConnectors().isEmpty());
+    }
 }
