@@ -19,6 +19,11 @@
         Todos stateless.
     </description>
 
+    <properties>
+        <!-- El frontend vive fuera de este módulo. Lo usa el perfil 'web' de abajo. -->
+        <frontend.dir>${project.basedir}/../../frontend</frontend.dir>
+    </properties>
+
     <dependencies>
         <!-- Capa de presentación: controladores REST -->
         <dependency>
@@ -91,5 +96,107 @@
             </plugin>
         </plugins>
     </build>
+
+    <!--
+        Perfil 'web': mete el frontend adentro de este JAR.
+
+            mvn -Pweb clean package
+            java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar
+
+        Queda un solo artefacto sirviendo el frontend y la API en el mismo puerto y el mismo
+        origen: desaparecen el proxy de Vite y el CORS. Es lo que va a correr en la máquina
+        que haga de servidor del ambiente compartido — ver ARQUITECTURA_ECOPEDIA.md §6.4.
+
+        Va como perfil y no en el ciclo normal a propósito: si el build del frontend entrara
+        en 'mvn verify', el job "Backend (Maven)" de CI pasaría a necesitar Node y a tardar
+        varios minutos más. Ese nombre es un context obligatorio del ruleset de main, así que
+        cuanto menos se toque, mejor.
+    -->
+    <profiles>
+        <profile>
+            <id>web</id>
+
+            <build>
+                <plugins>
+                    <!--
+                        Descarga su propio Node y su propio pnpm en frontend/.mvn-node, en vez de
+                        usar los del PATH. Así el build da lo mismo en las cuatro máquinas y en
+                        cualquier servidor, tenga o no pnpm instalado. Se baja una sola vez.
+                    -->
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.15.1</version>
+
+                        <configuration>
+                            <workingDirectory>${frontend.dir}</workingDirectory>
+                            <installDirectory>${frontend.dir}/.mvn-node</installDirectory>
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <id>install-node-and-pnpm</id>
+                                <goals>
+                                    <goal>install-node-and-pnpm</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- La misma línea que declara .nvmrc y que usa CI. -->
+                                    <nodeVersion>v24.20.0</nodeVersion>
+                                    <!-- La misma que declara "packageManager" en frontend/package.json. -->
+                                    <pnpmVersion>11.24.0</pnpmVersion>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>pnpm-install</id>
+                                <goals>
+                                    <goal>pnpm</goal>
+                                </goals>
+                                <configuration>
+                                    <arguments>install --frozen-lockfile</arguments>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>pnpm-build</id>
+                                <goals>
+                                    <goal>pnpm</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- 'pnpm build' = tsc -b && vite build. Si los tipos no cierran, falla acá. -->
+                                    <arguments>run build</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!--
+                        Spring Boot sirve como estático todo lo que encuentre en classpath:/static/.
+                        Acá es donde el dist/ de Vite entra al JAR.
+                    -->
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-frontend-dist</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${frontend.dir}/dist</directory>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

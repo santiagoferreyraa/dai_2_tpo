@@ -12,6 +12,9 @@ build/
 .vite/
 *.local
 
+# Node y pnpm que se baja frontend-maven-plugin para el perfil 'web'. Ver el pom de core.
+.mvn-node/
+
 # --- Entorno ---
 .env
 .env.local
