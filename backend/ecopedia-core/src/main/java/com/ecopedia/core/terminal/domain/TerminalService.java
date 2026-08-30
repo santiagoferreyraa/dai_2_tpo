@@ -31,7 +31,19 @@ public interface TerminalService {
     /** Baja lógica de una estación: deja de aparecer en la búsqueda (RF04). */
     void deactivateStation(Long stationId);
 
-    /** Parametriza tipo y potencia máxima de un conector (RF05). */
+    /**
+     * Cuelga un conector nuevo de una estación existente (RF05).
+     *
+     * <p>Está separada de {@link #configureConnector(Long, ConnectorType, BigDecimal)} a
+     * propósito: cada una recibe el identificador de una sola clase de cosa —acá una estación,
+     * allá un conector—. Una única operación que resolviera "si el id corresponde a un conector
+     * lo edito, si no creo uno" es ambigua, porque estaciones y conectores tienen secuencias de
+     * identificadores independientes: apenas existe el conector 1, la estación 1 ya no puede
+     * recibir un segundo conector.
+     */
+    Connector addConnector(Long stationId, ConnectorType connectorType, BigDecimal maxPowerKw);
+
+    /** Parametriza tipo y potencia máxima de un conector que ya existe (RF05). */
     Connector configureConnector(Long connectorId, ConnectorType connectorType, BigDecimal maxPowerKw);
 
     /**
@@ -52,4 +64,13 @@ public interface TerminalService {
      * exista y esté operativo antes de comprometer una reserva o habilitar una carga.
      */
     Connector getConnector(Long connectorId);
+
+    /** Devuelve una estación por su identificador. */
+    Station getStation(Long stationId);
+
+    /** Devuelve todas las estaciones activas. */
+    List<Station> getAllStations();
+
+    /** Elimina un conector por su identificador. */
+    void removeConnector(Long connectorId);
 }
