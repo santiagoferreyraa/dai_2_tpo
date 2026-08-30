@@ -14,4 +14,6 @@ public interface ConnectorRepository {
     Optional<Connector> findById(Long connectorId);
 
     List<Connector> findByStationId(Long stationId);
+
+    void delete(Connector connector);
 }

@@ -64,4 +64,13 @@ public interface TerminalService {
      * exista y esté operativo antes de comprometer una reserva o habilitar una carga.
      */
     Connector getConnector(Long connectorId);
+
+    /** Devuelve una estación por su identificador. */
+    Station getStation(Long stationId);
+
+    /** Devuelve todas las estaciones activas. */
+    List<Station> getAllStations();
+
+    /** Elimina un conector por su identificador. */
+    void removeConnector(Long connectorId);
 }

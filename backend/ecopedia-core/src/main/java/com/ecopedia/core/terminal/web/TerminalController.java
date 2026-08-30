@@ -85,11 +85,33 @@ public class TerminalController {
         return ResponseEntity.ok(results);
     }
 
+    /** Listar todas las estaciones activas. */
+    @GetMapping("/estaciones")
+    public ResponseEntity<List<StationResponse>> getAllStations() {
+        List<Station> stations = terminalService.getAllStations();
+        return ResponseEntity.ok(
+                stations.stream().map(StationResponse::fromDomain).toList());
+    }
+
+    /** Consultar una estación por ID. */
+    @GetMapping("/estaciones/{id}")
+    public ResponseEntity<StationResponse> getStation(@PathVariable Long id) {
+        Station station = terminalService.getStation(id);
+        return ResponseEntity.ok(StationResponse.fromDomain(station));
+    }
+
     /** Operación interna / consulta de conector. */
     @GetMapping("/conectores/{id}")
     public ResponseEntity<ConnectorResponse> getConnector(@PathVariable Long id) {
         Connector connector = terminalService.getConnector(id);
         return ResponseEntity.ok(ConnectorResponse.fromDomain(connector));
+    }
+
+    /** Eliminar un conector por ID. */
+    @DeleteMapping("/conectores/{id}")
+    public ResponseEntity<Void> removeConnector(@PathVariable Long id) {
+        terminalService.removeConnector(id);
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
