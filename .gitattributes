@@ -27,6 +27,12 @@ gradlew text eol=lf
 #   pnpm --dir frontend install
 #   git add frontend/pnpm-lock.yaml
 #
+# Hay dos: el del frontend y el de la raíz, que solo tiene el lanzador de 'pnpm dev'.
+# El patrón de abajo no lleva barra, así que Git lo aplica a los dos. Para el de la raíz
+# la receta es la misma, sin el --dir:
+#
+#   git checkout --ours pnpm-lock.yaml && pnpm install && git add pnpm-lock.yaml
+#
 # Con "-diff" además no ensucia el diff del PR con miles de líneas.
 pnpm-lock.yaml    -diff -merge
 *.lock            -diff

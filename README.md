@@ -31,21 +31,87 @@ TP Integrador — **Desarrollo de Aplicaciones II** (3.4.218, Comisión Lunes TM
 
 ## Cómo levantar el proyecto
 
-### 1. Infraestructura
+### El camino corto
+
+Una sola vez, después de clonar:
+
+```bash
+pnpm install                  # en la raíz: el lanzador
+pnpm --dir frontend install   # el frontend
+```
+
+Y de ahí en más, **un solo comando levanta todo**:
+
+```bash
+pnpm dev
+```
+
+Backend y frontend arrancan juntos en la misma terminal, con los logs prefijados `[back]` y
+`[front]`. Ctrl+C corta los dos, y si uno se cae se lleva al otro, así no quedan procesos
+sueltos ocupando el puerto.
+
+El frontend queda en http://localhost:5173 y el backend en http://localhost:8081. **Se navega
+siempre por el 5173:** el proxy ya está configurado y redirige `/api` al backend.
+
+| Comando | Qué hace |
+|---------|----------|
+| `pnpm dev` | Backend + frontend, juntos |
+| `pnpm dev:back` | Solo el backend |
+| `pnpm dev:front` | Solo el frontend |
+| `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
+| `pnpm start` | Corre ese JAR |
+
+`pnpm dev` levanta el backend con el perfil `dev`, o sea contra una base H2 en memoria y sin
+PostgreSQL instalado. Consola de H2: http://localhost:8081/h2-console
+
+### Con PostgreSQL
+
+H2 alcanza para desarrollar, pero **las demos de las entregas corren sobre PostgreSQL**, que es
+lo que se documenta y se defiende. Primero la infraestructura:
 
 ```bash
 docker compose up -d
 ```
 
-Deja arriba PostgreSQL (`localhost:5432`) y ActiveMQ Artemis (`localhost:61616`,
-consola web en http://localhost:8161/console).
-
-### 2. Backend
+Deja arriba PostgreSQL (`localhost:5432`) y ActiveMQ Artemis (`localhost:61616`, consola web en
+http://localhost:8161/console). Y después el backend **sin** el perfil `dev`:
 
 ```bash
-mvn clean install
 mvn -pl backend/ecopedia-core spring-boot:run
 ```
+
+### Producción: un solo artefacto
+
+```bash
+pnpm build     # = mvn -Pweb clean package
+pnpm start     # = java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar
+```
+
+El perfil `web` de Maven buildea el frontend y lo mete adentro del JAR, en `classpath:/static/`.
+Queda **un solo artefacto** que sirve el frontend y la API en el mismo puerto y el mismo origen:
+no hay proxy de Vite ni CORS que configurar. Es lo que va a correr la máquina que haga de
+servidor en el ambiente compartido.
+
+Ese JAR arranca contra PostgreSQL, así que necesita la infraestructura arriba. Para probarlo sin
+base:
+
+```bash
+java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar --spring.profiles.active=dev
+```
+
+Tres cosas que conviene saber:
+
+- **El build del frontend no corre en `mvn verify`.** Está bajo el perfil `web` a propósito: si
+  entrara en el ciclo normal, el job `Backend (Maven)` de CI pasaría a necesitar Node y a tardar
+  varios minutos más, y ese nombre es un check obligatorio del ruleset de `main`.
+- **El plugin se baja su propio Node y su propio pnpm** en `frontend/.mvn-node`, en vez de usar
+  los del PATH. La primera vez tarda; después queda cacheado. Así el build da igual en las cuatro
+  máquinas y en cualquier servidor, tenga o no pnpm instalado.
+- **Después de un `pnpm build`, el `target/` del backend queda con una copia del frontend.**
+  Eso hace que `pnpm dev:back` sirva ese frontend congelado en el 8081. No molesta —en
+  desarrollo se navega por el 5173— pero si confunde, `mvn clean` lo borra.
+
+### Módulo por módulo
 
 Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a la vez:
 
@@ -56,32 +122,12 @@ Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a l
 | `ecopedia-integration` | 8083 | `mvn -pl backend/ecopedia-integration spring-boot:run` |
 | `ecopedia-async` | — | `mvn -pl backend/ecopedia-async spring-boot:run` *(sin web: consume del broker)* |
 
+Agregarles el perfil `dev` es `-Dspring-boot.run.profiles=dev`.
+
 `mvn verify` además **chequea el formato** con Spotless y falla si algo quedó sin formatear.
 Para arreglarlo: `mvn spotless:apply`.
 
-### Correr sin Docker
-
-Mientras Docker no esté instalado, el perfil `dev` levanta el módulo contra una base H2
-en memoria, sin dependencias externas:
-
-```bash
-mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-Consola de H2: http://localhost:8081/h2-console
-
-> El perfil `dev` es solo para desarrollo. **Las demos de las entregas corren sobre
-> PostgreSQL**, que es lo que se documenta y se defiende.
-
-### 3. Frontend
-
-```bash
-cd frontend
-pnpm install    # solo la primera vez, y cada vez que alguien agregue una dependencia
-pnpm dev
-```
-
-Queda en http://localhost:5173
+### El frontend por separado
 
 | Comando | Qué hace |
 |---------|----------|
@@ -92,12 +138,14 @@ Queda en http://localhost:5173
 | `pnpm format:check` | Falla si algo quedó sin formatear (es lo que corre CI) |
 | `pnpm preview` | Sirve el build de producción localmente |
 
-**El proxy ya está configurado:** todo lo que el front pida a `/api/...` se redirige a
-`http://localhost:8081`. Se llama a rutas relativas (`fetch('/api/stations')`) y no hay
-que tocar CORS en desarrollo.
+Se corren desde `frontend/`, o desde la raíz con `pnpm --dir frontend <comando>`.
 
-**Alias de imports:** `@/` apunta a `frontend/src/`, así que se importa
-`@/components/Map` en vez de `../../components/Map`.
+**El proxy ya está configurado:** todo lo que el front pida a `/api/...` se redirige a
+`http://localhost:8081`. Se llama a rutas relativas (`fetch('/api/stations')`) y no hay que
+tocar CORS en desarrollo.
+
+**Alias de imports:** `@/` apunta a `frontend/src/`, así que se importa `@/components/Map` en
+vez de `../../components/Map`.
 
 ---
 
