@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -154,17 +155,31 @@ public class TerminalServiceImpl implements TerminalService {
     }
 
     @Override
+    /*
+     * Las fotos se cargan a mano antes de devolver la estacion.
+     *
+     * `photoUrls` es una @ElementCollection, o sea LAZY, y quien la lee es el mapeo a
+     * StationResponse, que corre en el controlador: con `open-in-view: false` ahi ya no hay
+     * sesion abierta y el acceso explota con LazyInitializationException. Sin estas dos
+     * lineas, GET /api/estaciones y GET /api/estaciones/{id} responden 500 apenas hay una
+     * estacion cargada.
+     */
     @Transactional(readOnly = true)
     public Station getStation(Long stationId) {
-        return stationRepository
+        Station station = stationRepository
                 .findById(stationId)
                 .orElseThrow(() -> new IllegalArgumentException("Estación no encontrada con ID: " + stationId));
+
+        Hibernate.initialize(station.getPhotoUrls());
+        return station;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Station> getAllStations() {
-        return stationRepository.findAllActive();
+        List<Station> stations = stationRepository.findAllActive();
+        stations.forEach(station -> Hibernate.initialize(station.getPhotoUrls()));
+        return stations;
     }
 
     @Override

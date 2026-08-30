@@ -1,219 +1,186 @@
-import type { Connector, StationDetail, StationInput } from '../types'
+import { api } from '@/lib/api'
+
+import type {
+  Connector,
+  ConnectorDraft,
+  Station,
+  StationDetail,
+  StationInput,
+  StationResult,
+} from '../types'
 
 /**
  * Acceso a datos de estaciones.
  *
- * Hoy responde con datos en memoria porque el backend todavía no expone lectura: no hay
- * `GET /api/estaciones` ni `GET /api/estaciones/{id}`, y `StationResponse` no incluye los
- * conectores. Escribir la pantalla contra la API real la dejaría en 404 hasta que aparezcan.
+ * La pantalla nunca llama a `api` ni a `fetch` directamente: llama a estas funciones. El
+ * motivo es que el contrato REST y lo que la pantalla necesita no se parecen, y la costura
+ * conviene que esté en un solo archivo:
  *
- * La pantalla nunca llama a `fetch` ni a `api` directamente: llama a estas funciones. Cuando
- * los endpoints existan se reescribe SOLO este archivo —el cuerpo de cada función pasa a ser
- * la llamada al cliente HTTP, comentada abajo en cada una— y ningún componente se entera.
+ * - Una estación con sus conectores no existe como recurso. `GET /api/estaciones` devuelve
+ *   `StationResponse`, que no los incluye, y no hay endpoint que dé los conectores de una
+ *   estación. El único lugar donde el backend los devuelve agrupados es `GET /api/busqueda`,
+ *   así que el listado sale de combinar las dos llamadas. Ver `listStations`.
+ * - Guardar una estación no es una llamada sino varias: la estación por un lado y cada
+ *   conector por el suyo, con el tipo y la potencia en un endpoint y el estado operativo en
+ *   otro. Ver `saveConnectors`.
  *
- * Todas devuelven `Promise` aun siendo síncronas por dentro, justamente para que ese cambio
- * no obligue a tocar los componentes.
+ * Cuando el backend devuelva los conectores dentro de la estación, este archivo se simplifica
+ * solo y ningún componente se entera.
  */
 
-/** Latencia simulada, para que los estados de carga de la UI sean visibles en desarrollo. */
-const FAKE_LATENCY_MS = 250
+/**
+ * Centro y radio con los que `GET /api/busqueda` deja de filtrar nada.
+ *
+ * La búsqueda descarta por distancia al punto consultado, y no hay forma de pedirle "todas".
+ * 20.100 km es algo más de media circunferencia terrestre: desde cualquier punto alcanza al
+ * resto del planeta, así que ninguna estación queda afuera.
+ */
+const EVERYWHERE = { lat: 0, lon: 0, radioKm: 20100 }
 
-function delay<T>(value: T): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), FAKE_LATENCY_MS))
+/** Lo que el backend recibe para dar de alta o editar una estación (StationRequest). */
+interface StationRequestBody {
+  name: string
+  address: string
+  latitude: number
+  longitude: number
+  photoUrls: string[]
 }
 
-/** Contador de ids del almacén en memoria. Lo reemplaza el identity de Postgres. */
-let nextId = 1
-
-function takeId(): number {
-  return nextId++
+function toRequestBody(input: StationInput): StationRequestBody {
+  return {
+    name: input.name,
+    address: input.address,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    photoUrls: input.photoUrls,
+  }
 }
 
 /**
- * Fotos de ejemplo. Son URLs remotas porque es lo que el backend guarda hoy
- * (`station_photos.url`, VARCHAR 500); las que carga el usuario desde el celular son
- * object URLs locales. Ver ImagePicker.
+ * Conectores de todas las estaciones, indexados por estación.
+ *
+ * Sale de la búsqueda sin filtros, que es el único endpoint que los devuelve agrupados.
  */
-const SAMPLE_PHOTOS = [
-  'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800',
-  'https://images.unsplash.com/photo-1633113093730-47449a1a9c6e?w=800',
-  'https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800',
-]
+async function connectorsByStation(signal?: AbortSignal): Promise<Map<number, Connector[]>> {
+  const results = await api.get<StationResult[]>('/busqueda', { params: EVERYWHERE, signal })
 
-function seed(): StationDetail[] {
-  const rows: Array<
-    [
-      string,
-      string,
-      number,
-      number,
-      Array<[Connector['connectorType'], number, Connector['operationalStatus']]>,
-    ]
-  > = [
-    [
-      'YPF San Juan',
-      'Av. San Juan 2901, C1235 Cdad. Autónoma de Buenos Aires',
-      -34.62294,
-      -58.39073,
-      [
-        ['CCS2', 8.2, 'AVAILABLE'],
-        ['TYPE_2', 22, 'AVAILABLE'],
-        ['CHADEMO', 50, 'OUT_OF_SERVICE'],
-      ],
-    ],
-    [
-      'Shell Recoleta',
-      'Av. Callao 1234, C1023 Cdad. Autónoma de Buenos Aires',
-      -34.59539,
-      -58.39325,
-      [
-        ['CCS2', 150, 'OCCUPIED'],
-        ['TYPE_2', 11, 'OCCUPIED'],
-      ],
-    ],
-    [
-      'Axion Palermo',
-      'Av. Santa Fe 3253, C1425 Cdad. Autónoma de Buenos Aires',
-      -34.58817,
-      -58.41072,
-      [['CHADEMO', 50, 'OUT_OF_SERVICE']],
-    ],
-    [
-      'Puma Belgrano',
-      'Av. Cabildo 2100, C1428 Cdad. Autónoma de Buenos Aires',
-      -34.5615,
-      -58.45633,
-      [
-        ['CCS2', 60, 'OCCUPIED'],
-        ['TYPE_2', 7.4, 'AVAILABLE'],
-      ],
-    ],
-    [
-      'YPF Puerto Madero',
-      'Av. Alicia Moreau de Justo 1150, C1107 Cdad. Autónoma de Buenos Aires',
-      -34.61128,
-      -58.36416,
-      [
-        ['CCS2', 8.2, 'AVAILABLE'],
-        ['CHADEMO', 25, 'AVAILABLE'],
-      ],
-    ],
-  ]
+  return new Map(
+    results.map((result) => [
+      result.stationId,
+      result.matchingConnectors.map((summary) => ({
+        id: summary.connectorId,
+        connectorType: summary.connectorType,
+        maxPowerKw: summary.maxPowerKw,
+        operationalStatus: summary.operationalStatus,
+      })),
+    ]),
+  )
+}
 
-  return rows.map(([name, address, latitude, longitude, connectors]) => ({
-    id: takeId(),
-    name,
-    address,
-    latitude,
-    longitude,
-    // Operador dueño: el backend lo fija en 1 hasta que exista la tabla de usuarios (ECO-23).
-    ownerId: 1,
-    active: true,
-    photoUrls: [...SAMPLE_PHOTOS],
-    connectors: connectors.map(([connectorType, maxPowerKw, operationalStatus]) => ({
-      id: takeId(),
-      connectorType,
-      maxPowerKw,
-      operationalStatus,
-    })),
+/**
+ * Estaciones dadas de alta, con sus conectores.
+ *
+ * Las dos llamadas salen juntas y no una detrás de la otra: no dependen entre sí, y en serie
+ * la pantalla tardaría el doble en aparecer.
+ */
+export async function listStations(signal?: AbortSignal): Promise<StationDetail[]> {
+  const [stations, connectors] = await Promise.all([
+    api.get<Station[]>('/estaciones', { signal }),
+    connectorsByStation(signal),
+  ])
+
+  return stations.map((station) => ({
+    ...station,
+    connectors: connectors.get(station.id) ?? [],
   }))
 }
 
-/** Almacén en memoria. Se pierde al recargar la página; es la gracia de que sea temporal. */
-let stations: StationDetail[] = seed()
+/** Una estación con sus conectores. */
+export async function getStation(id: number, signal?: AbortSignal): Promise<StationDetail> {
+  const [station, connectors] = await Promise.all([
+    api.get<Station>(`/estaciones/${id}`, { signal }),
+    connectorsByStation(signal),
+  ])
 
-/** Copia defensiva: que la pantalla mute lo que devolvemos no debe cambiar el almacén. */
-function clone(station: StationDetail): StationDetail {
-  return {
-    ...station,
-    photoUrls: [...station.photoUrls],
-    connectors: station.connectors.map((connector) => ({ ...connector })),
-  }
-}
-
-function applyInput(station: StationDetail, input: StationInput): StationDetail {
-  return {
-    ...station,
-    name: input.name.trim(),
-    address: input.address.trim(),
-    latitude: input.latitude,
-    longitude: input.longitude,
-    photoUrls: [...input.photoUrls],
-    connectors: input.connectors.map((draft) => ({
-      id: draft.id ?? takeId(),
-      connectorType: draft.connectorType,
-      maxPowerKw: draft.maxPowerKw,
-      operationalStatus: draft.operationalStatus,
-    })),
-  }
+  return { ...station, connectors: connectors.get(id) ?? [] }
 }
 
 /**
- * Estaciones dadas de alta, sin las dadas de baja.
+ * Lleva los conectores de una estación al estado que dejó el formulario.
  *
- * Contra la API: `api.get<StationResponse[]>('/estaciones')`, más los conectores de cada
- * una cuando el backend los devuelva.
+ * Hay tres operaciones distintas y ningún endpoint que las haga juntas:
+ *
+ * - los que el formulario borró se eliminan;
+ * - los que ya existían se reconfiguran (tipo y potencia) y, si hace falta, se les cambia el
+ *   estado operativo, que va por otro endpoint;
+ * - los nuevos se crean —nacen AVAILABLE— y recién después se les pone el estado elegido.
+ *
+ * Los conectores se guardan de a uno pero en paralelo: son independientes entre sí.
  */
-export function listStations(): Promise<StationDetail[]> {
-  return delay(stations.filter((station) => station.active).map(clone))
+async function saveConnectors(
+  stationId: number,
+  drafts: ConnectorDraft[],
+  previous: Connector[],
+): Promise<void> {
+  const keptIds = new Set(drafts.map((draft) => draft.id).filter((id) => id !== undefined))
+
+  const removals = previous
+    .filter((connector) => !keptIds.has(connector.id))
+    .map((connector) => api.delete(`/conectores/${connector.id}`))
+
+  const writes = drafts.map(async (draft) => {
+    const body = { connectorType: draft.connectorType, maxPowerKw: draft.maxPowerKw }
+
+    if (draft.id === undefined) {
+      const created = await api.post<Connector>(`/stations/${stationId}/connectors`, body)
+      if (draft.operationalStatus !== 'AVAILABLE') {
+        await api.patch(`/conectores/${created.id}/estado`, {
+          operationalStatus: draft.operationalStatus,
+        })
+      }
+      return
+    }
+
+    await api.post(`/conectores/${draft.id}/configurar`, body)
+
+    /* El estado solo se toca si cambió: es una llamada más y la mayoría de las ediciones no lo mueven. */
+    const before = previous.find((connector) => connector.id === draft.id)
+    if (before?.operationalStatus !== draft.operationalStatus) {
+      await api.patch(`/conectores/${draft.id}/estado`, {
+        operationalStatus: draft.operationalStatus,
+      })
+    }
+  })
+
+  await Promise.all([...removals, ...writes])
 }
 
-/**
- * Alta de una estación con sus conectores.
- *
- * Contra la API son varias llamadas, no una: `api.post('/estaciones', …)` y después un
- * `api.post('/conectores/{stationId}/configurar', …)` por conector —ese endpoint crea uno
- * nuevo cuando el id que recibe es el de una estación— más un
- * `api.patch('/conectores/{id}/estado', …)` para los que no queden en AVAILABLE, que es
- * el estado con el que nacen.
- */
-export function createStation(input: StationInput): Promise<StationDetail> {
-  const created = applyInput(
-    {
-      id: takeId(),
-      name: '',
-      address: '',
-      latitude: 0,
-      longitude: 0,
-      ownerId: 1,
-      active: true,
-      photoUrls: [],
-      connectors: [],
-    },
-    input,
-  )
-
-  stations = [created, ...stations]
-  return delay(clone(created))
+/** Alta de una estación con sus conectores. */
+export async function createStation(input: StationInput): Promise<StationDetail> {
+  const station = await api.post<Station>('/estaciones', toRequestBody(input))
+  await saveConnectors(station.id, input.connectors, [])
+  /*
+   * Se relee en vez de armar el resultado a mano: los conectores recién creados tienen ids
+   * que solo conoce el backend, y son los que la pantalla necesita para la próxima edición.
+   */
+  return getStation(station.id)
 }
 
-/**
- * Edición de una estación existente.
- *
- * Contra la API: `api.put('/estaciones/{id}', …)` para los datos de la estación, y por cada
- * conector `api.post('/conectores/{id}/configurar', …)` (tipo y potencia) más
- * `api.patch('/conectores/{id}/estado', …)` (estado operativo), que son endpoints distintos.
- *
- * Ojo con los conectores eliminados en el formulario: el backend todavía no expone un
- * borrado de conectores, así que hoy la eliminación solo vive acá.
- */
-export function updateStation(id: number, input: StationInput): Promise<StationDetail> {
-  const current = stations.find((station) => station.id === id)
-  if (!current) return Promise.reject(new Error(`Estación no encontrada con ID: ${id}`))
+/** Edición de una estación existente. */
+export async function updateStation(id: number, input: StationInput): Promise<StationDetail> {
+  const current = await getStation(id)
 
-  const updated = applyInput(current, input)
-  stations = stations.map((station) => (station.id === id ? updated : station))
-  return delay(clone(updated))
+  await api.put<Station>(`/estaciones/${id}`, toRequestBody(input))
+  await saveConnectors(id, input.connectors, current.connectors)
+
+  return getStation(id)
 }
 
 /**
  * Baja lógica, no borrado: la estación puede tener reservas y sesiones colgando.
  *
- * Contra la API: `api.delete('/estaciones/{id}')`, que hace exactamente esto.
+ * El backend la marca inactiva, y `GET /api/estaciones` deja de devolverla.
  */
 export function deactivateStation(id: number): Promise<void> {
-  stations = stations.map((station) =>
-    station.id === id ? { ...station, active: false } : station,
-  )
-  return delay(undefined)
+  return api.delete(`/estaciones/${id}`)
 }

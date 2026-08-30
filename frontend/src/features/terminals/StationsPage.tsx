@@ -72,26 +72,26 @@ export default function StationsPage() {
   const [minPowerKw, setMinPowerKw] = useState<number | null>(null)
 
   useEffect(() => {
-    let active = true
-    listStations()
-      .then((rows) => {
-        if (active) setStations(rows)
-      })
+    /*
+     * Si la pantalla se desmonta antes de que el backend conteste, la petición se cancela.
+     * Cancelar hace que `fetch` rechace, y ese rechazo NO es un error para mostrar: nadie
+     * está esperando la respuesta. De ahí el `aborted` antes de tocar el estado.
+     */
+    const controller = new AbortController()
+
+    listStations(controller.signal)
+      .then((rows) => setStations(rows))
       .catch((error: unknown) => {
-        if (active) {
-          setLoadError(
-            error instanceof Error ? error.message : 'No se pudieron cargar las estaciones',
-          )
-        }
+        if (controller.signal.aborted) return
+        setLoadError(
+          error instanceof Error ? error.message : 'No se pudieron cargar las estaciones',
+        )
       })
       .finally(() => {
-        if (active) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       })
 
-    /* Si la pantalla se desmonta antes de que responda, no se toca el estado. */
-    return () => {
-      active = false
-    }
+    return () => controller.abort()
   }, [])
 
   const filtering = connectorType !== null || minPowerKw !== null
