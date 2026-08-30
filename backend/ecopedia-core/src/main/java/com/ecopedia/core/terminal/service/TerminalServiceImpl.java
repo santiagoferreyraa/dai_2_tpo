@@ -153,6 +153,28 @@ public class TerminalServiceImpl implements TerminalService {
                 .orElseThrow(() -> new IllegalArgumentException("Conector no encontrado con ID: " + connectorId));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Station getStation(Long stationId) {
+        return stationRepository
+                .findById(stationId)
+                .orElseThrow(() -> new IllegalArgumentException("Estación no encontrada con ID: " + stationId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Station> getAllStations() {
+        return stationRepository.findAllActive();
+    }
+
+    @Override
+    public void removeConnector(Long connectorId) {
+        Connector connector = connectorRepository
+                .findById(connectorId)
+                .orElseThrow(() -> new IllegalArgumentException("Conector no encontrado con ID: " + connectorId));
+        connectorRepository.delete(connector);
+    }
+
     private static double calculateHaversineDistanceKm(double lat1, double lon1, double lat2, double lon2) {
         double R = 6371.0;
         double dLat = Math.toRadians(lat2 - lat1);
