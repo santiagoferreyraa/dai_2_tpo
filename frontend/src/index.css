@@ -1,21 +1,158 @@
 @import "tailwindcss";
+/* Estilos propios de Leaflet: posicionan los mosaicos y los controles del mapa.
+   Sin esto el mapa sale como una pila de imágenes sueltas, no como un mapa. */
+@import "leaflet/dist/leaflet.css";
 
 /*
   Tema de la aplicación.
 
   Los tokens se definen acá una sola vez y se usan como clases de Tailwind
-  (bg-background, text-text, etc.). Cuando implementemos el cambio de tema en tiempo
-  real (RNF08, puntos extra en la Entrega Final), alcanza con redefinir estos
-  valores bajo [data-theme="dark"] sin tocar ningún componente.
+  (bg-background, text-text, etc.). La base es oscura: los cuatro neutros de la paleta van de
+  más oscuro a más claro y cubren fondo, superficie, borde y texto. Cuando implementemos el
+  cambio de tema en tiempo real (RNF08, puntos extra en la Entrega Final), lo que se agrega es
+  la variante CLARA bajo [data-theme="light"], sin tocar ningún componente.
+
+  Dos valores no salen directo de la paleta:
+
+  --color-text-muted es un gris agregado. El #6D6D6D de la paleta da 2.77 de contraste sobre el
+  fondo y 1.80 sobre la superficie, contra los 4.5 que pide WCAG: sobre el header el texto
+  secundario quedaba casi del color del header. #9A9A9A llega a 5.11 sobre el fondo, que es
+  donde va a vivir la mayor parte del texto secundario (la lista de resultados). #6D6D6D queda
+  solo para bordes, que es donde el contraste bajo no molesta.
+
+  --color-primary-strong es el verde apagado un paso: es el estado presionado, y la paleta trae
+  un solo verde. No lo usa nadie todavía.
 */
 @theme {
-  --color-background: #ffffff;
-  --color-surface: #f4f5f7;
-  --color-border: #d9dce1;
-  --color-text: #16191d;
-  --color-text-muted: #5c636e;
-  --color-primary: #12894f;
-  --color-primary-strong: #0d6b3e;
+  --color-background: #2a2a2a;
+  --color-surface: #474747;
+  --color-border: #6d6d6d;
+  --color-text: #d9d9d9;
+  --color-text-muted: #9a9a9a;
+  --color-primary: #b9fe70;
+  --color-primary-strong: #a3e858;
+}
+
+/*
+  Ajuste fino de los mosaicos, para que el gris del mapa quede en la misma familia que el del
+  resto de la interfaz. El proveedor ya los sirve en gris (ver mapConfig.ts), y esa es la
+  condición para que esto funcione: sobre una imagen que ya es gris, oscurecer no puede
+  ensuciar ningún color. El mismo filtro sobre mosaicos de colores da el resultado sucio que
+  se ve al intentarlo con OpenStreetMap crudo.
+
+  grayscale(1) va primero y no es redundante: el basemap conserva algún resto de color en
+  parques y rutas principales, y la paleta no tiene ni un tono. Neutraliza esos restos.
+
+  Va sobre el pane de los mosaicos y NUNCA sobre .leaflet-container: el pane de los marcadores
+  es hermano de este, así que los pins quedan fuera del filtro. Aplicado al contenedor, el
+  verde de los anillos se tiñe con el mapa y los badges se dan vuelta.
+*/
+.leaflet-tile-pane {
+  filter: grayscale(1) brightness(0.85) contrast(1.05);
+}
+
+/*
+  Realce del pin al pasarle el mouse por encima y cuando está seleccionado.
+
+  Va por CSS y no recreando el ícono desde React, y eso NO es una preferencia de estilo: al
+  cambiar el ícono, Leaflet reemplaza el elemento del DOM, lo que dispara un mouseout seguido
+  de un mouseover. Si el ícono dependiera del hover, se realimentaría solo y la tarjeta
+  parpadearía sin parar. La selección sí puede cambiar el ícono porque no depende del mouse.
+
+  currentColor conserva el significado: el halo sale verde en una estación con conectores
+  libres y gris en una fuera de servicio, sin repetir el color en dos lugares.
+*/
+.leaflet-marker-icon:hover .station-pin__ring,
+.station-pin__ring--selected {
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 30%, transparent);
+}
+
+/*
+  La tarjeta de la estación se dibuja entera con Tailwind, así que al tooltip de Leaflet hay
+  que sacarle todo lo suyo: fondo, borde, sombra, padding y la flecha del pseudoelemento.
+
+  white-space es el importante: Leaflet lo pone en nowrap, y sin resetearlo la dirección de la
+  estación sale en una sola línea larguísima en vez de cortar dentro de la tarjeta.
+*/
+.leaflet-tooltip.station-tooltip {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  white-space: normal;
+}
+
+.leaflet-tooltip.station-tooltip::before {
+  display: none;
+}
+
+/*
+  Con la tarjeta abierta, su propio círculo tapa el del pin. El badge con la potencia asomaría
+  por debajo, repetido, porque la tarjeta ya muestra ese dato: se esconde mientras dura el
+  hover. Va por CSS y no cambiando el ícono desde React, por el mismo motivo que el halo.
+*/
+.leaflet-marker-icon:hover .station-pin__badge {
+  opacity: 0;
+}
+
+/*
+  La barra de scroll del carrusel se oculta: la columna está superpuesta sobre el mapa y una
+  barra clara al costado corta el degradado justo donde tiene que desvanecerse. La posición
+  dentro de la lista ya la comunica el tamaño de las fichas.
+*/
+.station-carousel {
+  scrollbar-width: none;
+}
+
+.station-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+  Leaflet trae sus propios colores, pensados para un mapa claro: los controles y el tooltip
+  vienen con fondo blanco y texto negro, y el contenedor con un gris claro que aparece como un
+  flash mientras bajan los mosaicos. Sobre el tema oscuro se ven como parches.
+*/
+.leaflet-container {
+  background-color: var(--color-background);
+}
+
+.leaflet-bar a {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Con .leaflet-control-attribution a secas no alcanza: Leaflet pinta su fondo blanco desde
+   `.leaflet-container .leaflet-control-attribution`, que tiene más especificidad y gana. */
+.leaflet-container .leaflet-control-attribution {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.leaflet-bar a {
+  border-bottom-color: var(--color-border);
+}
+
+.leaflet-bar a:hover {
+  background-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-primary);
+}
+
+.leaflet-tooltip {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+/* La flecha del tooltip es un borde de un pseudoelemento, con su propio color. */
+.leaflet-tooltip-top::before {
+  border-top-color: var(--color-border);
 }
 
 html,
