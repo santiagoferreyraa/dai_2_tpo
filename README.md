@@ -46,23 +46,52 @@ Y de ahí en más, **un solo comando levanta todo**:
 pnpm dev
 ```
 
-Backend y frontend arrancan juntos en la misma terminal, con los logs prefijados `[back]` y
-`[front]`. Ctrl+C corta los dos, y si uno se cae se lleva al otro, así no quedan procesos
-sueltos ocupando el puerto.
+Backend y frontend arrancan juntos en la misma terminal, pero **cada uno con su panel**: la
+lista de procesos queda a la izquierda y el log del que esté seleccionado ocupa el resto, con
+su propio scroll. Se cambia de uno a otro con las flechas, y las teclas están siempre a la
+vista en el recuadro de ayuda. Es [mprocs](https://www.npmjs.com/package/mprocs), y se
+configura en `mprocs.yaml`.
+
+Lo que más se usa: **reiniciar un solo proceso sin bajar el otro**. Tocaste una clase del
+backend y querés relevantarlo sin perder el estado del navegador — lo reiniciás desde el
+panel y Vite ni se entera.
 
 El frontend queda en http://localhost:5173 y el backend en http://localhost:8081. **Se navega
 siempre por el 5173:** el proxy ya está configurado y redirige `/api` al backend.
 
 | Comando | Qué hace |
 |---------|----------|
-| `pnpm dev` | Backend + frontend, juntos |
+| `pnpm dev` | Backend + frontend, cada uno en su panel |
 | `pnpm dev:back` | Solo el backend |
 | `pnpm dev:front` | Solo el frontend |
+| `pnpm dev:plain` | Los dos en una sola tira de logs, con prefijos `[back]`/`[front]` |
+| `pnpm free-ports` | Libera el 8081 y el 5173 a mano |
 | `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
 | `pnpm start` | Corre ese JAR |
 
 `pnpm dev` levanta el backend con el perfil `dev`, o sea contra una base H2 en memoria y sin
 PostgreSQL instalado. Consola de H2: http://localhost:8081/h2-console
+
+### Si el puerto quedó tomado
+
+No debería pasar, porque `dev:back` y `dev:front` liberan su puerto antes de arrancar. Pero
+conviene saber por qué existe esa precaución, que es contraintuitiva.
+
+`mvn spring-boot:run` **no corre la aplicación: la lanza en una segunda JVM**. Cuando se corta
+el lanzador con Ctrl+C, la señal llega arriba de la cadena —`pnpm` → `mprocs` → shell → `mvn`
+→ `java`— y en Windows los nietos no la reciben: la aplicación queda viva, con el 8081 tomado
+y su base H2 adentro. La terminal ya se cerró, así que el próximo arranque falla con
+`Port 8081 was already in use` y nada en pantalla explica de dónde sale.
+
+Si hiciera falta destrabarlo a mano:
+
+```bash
+pnpm free-ports
+```
+
+**Lo que no hay que hacer es matar `java.exe` por nombre:** en Windows se lleva puesto el
+servidor de lenguaje de VS Code, y el editor se queda sin autocompletado ni errores hasta que
+se lo reinicia. `pnpm free-ports` mata únicamente al proceso que escucha el puerto.
 
 ### Con PostgreSQL
 
