@@ -132,6 +132,22 @@ public class TerminalServiceImpl implements TerminalService {
                         connector.getOperationalStatus()));
             }
 
+            /*
+             * Una estación sin conectores que sirvan no es un resultado de búsqueda.
+             *
+             * Hasta acá el filtro solo recortaba la lista de conectores, y la estación entraba
+             * igual con la lista vacía. O sea que pedir CHADEMO devolvía las estaciones que no
+             * tienen ninguno, y `onlyAvailable` devolvía las que están enteras fuera de
+             * servicio. Quien busca dónde cargar recibía lugares donde no puede cargar.
+             *
+             * También cubre el caso sin filtros: una estación dada de alta a la que todavía no
+             * le cargaron conectores no es un lugar donde enchufar. El ABM no la pierde, porque
+             * su listado sale de getAllStations y no de acá.
+             */
+            if (matchingConnectors.isEmpty()) {
+                continue;
+            }
+
             results.add(new StationResult(
                     station.getId(),
                     station.getName(),

@@ -149,38 +149,109 @@ class TerminalServiceTest {
         assertTrue(results.get(0).distanceKm() < 5.0);
     }
 
+    /**
+     * Los tres filtros, uno por uno, sobre una estación con un solo conector CCS2 de 50 kW
+     * disponible.
+     *
+     * <p>Cuando el filtro no lo deja pasar, la estación NO tiene que aparecer en los resultados.
+     * Antes aparecía con la lista de conectores vacía, y este mismo test afirmaba que así estaba
+     * bien: buscar CHADEMO devolvía una estación que no tiene ninguno.
+     */
     @Test
     void testSearchCombinedFiltersEdgeCases() {
         when(stationRepository.findAllActive()).thenReturn(List.of(mockStation));
         when(connectorRepository.findByStationId(10L)).thenReturn(List.of(mockConnector));
 
-        // 1. All filters match: CCS2, min 40kW, onlyAvailable = true -> 1 matching connector
+        // 1. Los tres filtros dan: CCS2, mínimo 40 kW y disponible.
         SearchCriteria matchAll =
                 new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, new BigDecimal("40.00"), true);
-        List<StationResult> res1 = terminalService.search(matchAll);
-        assertEquals(1, res1.size());
-        assertEquals(1, res1.get(0).matchingConnectors().size());
+        List<StationResult> all = terminalService.search(matchAll);
+        assertEquals(1, all.size());
+        assertEquals(1, all.get(0).matchingConnectors().size());
 
-        // 2. Mismatched type: CHADEMO -> 0 matching connectors
+        // 2. Otro tipo de conector.
         SearchCriteria typeMismatch =
                 new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CHADEMO, new BigDecimal("40.00"), true);
-        List<StationResult> res2 = terminalService.search(typeMismatch);
-        assertEquals(1, res2.size());
-        assertTrue(res2.get(0).matchingConnectors().isEmpty());
+        assertTrue(terminalService.search(typeMismatch).isEmpty());
 
-        // 3. Mismatched power: min 100kW (connector has 50kW) -> 0 matching connectors
+        // 3. Más potencia de la que da el conector.
         SearchCriteria powerMismatch =
                 new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, new BigDecimal("100.00"), true);
-        List<StationResult> res3 = terminalService.search(powerMismatch);
-        assertEquals(1, res3.size());
-        assertTrue(res3.get(0).matchingConnectors().isEmpty());
+        assertTrue(terminalService.search(powerMismatch).isEmpty());
 
-        // 4. Mismatched availability: connector OUT_OF_SERVICE with onlyAvailable = true -> 0 matching connectors
+        // 4. El único conector está fuera de servicio y se pidieron solo los disponibles.
         mockConnector.setOperationalStatus(OperationalStatus.OUT_OF_SERVICE);
         SearchCriteria unavailableMismatch =
                 new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, new BigDecimal("40.00"), true);
-        List<StationResult> res4 = terminalService.search(unavailableMismatch);
-        assertEquals(1, res4.size());
-        assertTrue(res4.get(0).matchingConnectors().isEmpty());
+        assertTrue(terminalService.search(unavailableMismatch).isEmpty());
+    }
+
+    /**
+     * El filtro recorta los conectores, no la estación.
+     *
+     * <p>Es la otra mitad del arreglo y la que evita pasarse de largo: una estación que tiene un
+     * conector que sirve y otro que no tiene que seguir apareciendo, con el que sirve nada más.
+     */
+    @Test
+    void testSearchKeepsTheStationWithOnlyTheConnectorsThatMatch() {
+        Connector slowType2 = connector(2L, ConnectorType.TYPE_2, "22.00", OperationalStatus.AVAILABLE);
+
+        when(stationRepository.findAllActive()).thenReturn(List.of(mockStation));
+        when(connectorRepository.findByStationId(10L)).thenReturn(List.of(mockConnector, slowType2));
+
+        SearchCriteria onlyCcs2 = new SearchCriteria(-34.61300, -58.38100, 5.0, ConnectorType.CCS2, null, false);
+        List<StationResult> results = terminalService.search(onlyCcs2);
+
+        assertEquals(1, results.size());
+        assertEquals(1, results.get(0).matchingConnectors().size());
+        assertEquals(
+                ConnectorType.CCS2, results.get(0).matchingConnectors().get(0).connectorType());
+    }
+
+    /**
+     * Una estación con todos sus conectores fuera de servicio desaparece al pedir solo los
+     * disponibles, aunque tenga varios.
+     *
+     * <p>Es el caso que el `seed` de datos de ejemplo usa como testigo del filtro.
+     */
+    @Test
+    void testSearchDropsTheStationWithEveryConnectorOutOfService() {
+        mockConnector.setOperationalStatus(OperationalStatus.OUT_OF_SERVICE);
+        Connector alsoBroken = connector(2L, ConnectorType.TYPE_2, "11.00", OperationalStatus.OUT_OF_SERVICE);
+
+        when(stationRepository.findAllActive()).thenReturn(List.of(mockStation));
+        when(connectorRepository.findByStationId(10L)).thenReturn(List.of(mockConnector, alsoBroken));
+
+        SearchCriteria onlyAvailable = new SearchCriteria(-34.61300, -58.38100, 5.0, null, null, true);
+        assertTrue(terminalService.search(onlyAvailable).isEmpty());
+
+        // Sin ese filtro, la misma estación sí es un resultado: se puede reservar para más tarde.
+        SearchCriteria noFilter = new SearchCriteria(-34.61300, -58.38100, 5.0, null, null, false);
+        assertEquals(1, terminalService.search(noFilter).size());
+    }
+
+    /**
+     * Una estación recién dada de alta, todavía sin conectores, no es un lugar donde cargar.
+     *
+     * <p>No hay ningún filtro puesto acá: es la estación la que no tiene con qué.
+     */
+    @Test
+    void testSearchDropsTheStationWithoutConnectors() {
+        when(stationRepository.findAllActive()).thenReturn(List.of(mockStation));
+        when(connectorRepository.findByStationId(10L)).thenReturn(List.of());
+
+        SearchCriteria noFilter = new SearchCriteria(-34.61300, -58.38100, 5.0, null, null, false);
+
+        assertTrue(terminalService.search(noFilter).isEmpty());
+    }
+
+    private Connector connector(Long id, ConnectorType type, String maxPowerKw, OperationalStatus status) {
+        Connector connector = new Connector();
+        connector.setId(id);
+        connector.setStation(mockStation);
+        connector.setConnectorType(type);
+        connector.setMaxPowerKw(new BigDecimal(maxPowerKw));
+        connector.setOperationalStatus(status);
+        return connector;
     }
 }
