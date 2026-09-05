@@ -76,8 +76,8 @@ export interface StationResult {
  *
  * Los de arriba espejan el contrato REST. Los de acá abajo son los que consume la UI,
  * que necesita algo que el contrato todavía no da: la estación con sus conectores
- * adentro. Hoy `StationResponse` no los trae y no existe `GET /api/estaciones`, así que
- * la pantalla arma esta vista a partir de lo que haya (ver data/stationsRepository.ts).
+ * adentro. `StationResponse` no los trae, así que la pantalla arma esta vista combinando
+ * dos llamadas (ver data/stationsRepository.ts).
  * ---------------------------------------------------------------------------
  */
 

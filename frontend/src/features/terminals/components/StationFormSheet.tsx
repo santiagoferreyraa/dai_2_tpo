@@ -25,6 +25,7 @@ interface FormErrors {
   address?: string
   latitude?: string
   longitude?: string
+  connectors?: string
 }
 
 const FIELD_CLASS =
@@ -61,6 +62,17 @@ export default function StationFormSheet({ station, onSubmit, onDelete }: Statio
     const lon = parseDecimal(longitude)
     if (lon === null) found.longitude = 'Longitud inválida'
     else if (lon < -180 || lon > 180) found.longitude = 'Entre -180 y 180'
+
+    /*
+     * Un conector sin potencia no es un conector a medio cargar: es uno que la búsqueda por
+     * potencia mínima nunca va a devolver y que en la tarjeta se lee como "0 kW". Se llega
+     * fácil, porque el campo arranca vacío y porque un texto que todavía no es número
+     * —"8," a mitad de tipeo— también deja el valor en cero.
+     */
+    const invalid = connectors.findIndex((connector) => !(connector.maxPowerKw > 0))
+    if (invalid !== -1) {
+      found.connectors = `El conector ${invalid + 1} necesita una potencia mayor a cero`
+    }
 
     setErrors(found)
     if (Object.keys(found).length > 0) return null
@@ -150,6 +162,7 @@ export default function StationFormSheet({ station, onSubmit, onDelete }: Statio
       </div>
 
       <ConnectorEditor value={connectors} onChange={setConnectors} />
+      {errorText(errors.connectors)}
 
       <ImagePicker value={photoUrls} onChange={setPhotoUrls} />
 

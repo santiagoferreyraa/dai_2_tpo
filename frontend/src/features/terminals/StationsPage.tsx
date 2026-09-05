@@ -30,8 +30,8 @@ import { useWheelToHorizontal } from './useWheelToHorizontal'
  * mirando, y cada forma lo dibuja donde le corresponde. Por eso agrandar la ventana con el
  * detalle abierto lo deja abierto, ahora al costado.
  *
- * Los datos salen de data/stationsRepository, que hoy responde en memoria porque el backend
- * todavía no expone lectura. Ver el comentario de ese archivo.
+ * Los datos salen de data/stationsRepository, que es el único que habla con el backend.
+ * Ver el comentario de ese archivo.
  */
 
 type Sheet =
