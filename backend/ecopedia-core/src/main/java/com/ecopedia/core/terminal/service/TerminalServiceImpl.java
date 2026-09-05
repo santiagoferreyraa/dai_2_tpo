@@ -154,6 +154,15 @@ public class TerminalServiceImpl implements TerminalService {
                 .orElseThrow(() -> new IllegalArgumentException("Conector no encontrado con ID: " + connectorId));
     }
 
+    /*
+     * Las fotos se cargan a mano antes de devolver la estacion.
+     *
+     * `photoUrls` es una @ElementCollection, o sea LAZY, y quien la lee es el mapeo a
+     * StationResponse, que corre en el controlador: con `open-in-view: false` ahi ya no hay
+     * sesion abierta y el acceso explota con LazyInitializationException. Sin estas dos
+     * lineas, GET /api/estaciones y GET /api/estaciones/{id} responden 500 apenas hay una
+     * estacion cargada.
+     */
     @Override
     /*
      * Las fotos se cargan a mano antes de devolver la estacion.
