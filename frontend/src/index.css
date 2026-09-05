@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tokens propios de la feature Terminales (prefijo `st-`). No pisan los de acá abajo. */
+@import "./features/terminals/terminals.css";
+
 /*
   Tema de la aplicación.
 

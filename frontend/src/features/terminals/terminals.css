@@ -1,0 +1,70 @@
+/*
+  Tokens visuales de la feature Terminales.
+
+  Van acá y no en index.css a propósito: los mockups de Terminales son oscuros y el
+  tema compartido todavía es claro. Redefinir los tokens compartidos le cambiaría la
+  cara a las pantallas de los otros tres carriles sin avisar.
+
+  Por eso los nombres van prefijados con `st-` (station): conviven con los compartidos
+  en vez de pisarlos. Se usan como clases normales de Tailwind: bg-st-surface,
+  text-st-muted, border-st-border.
+
+  Cuando el proyecto unifique el tema oscuro (RNF08), este archivo se borra y los
+  componentes pasan a usar los tokens compartidos.
+*/
+@theme {
+  --color-st-bg: #0e1116;
+  --color-st-surface: #1a2130;
+  --color-st-surface-raised: #232c3d;
+  --color-st-border: #2c3446;
+  --color-st-text: #e6ebf2;
+  --color-st-muted: #7b8798;
+
+  --color-st-accent: #a5e845;
+  --color-st-accent-strong: #8ed52f;
+
+  /* Un color por estado operativo. Son los tres de OperationalStatus. */
+  --color-st-available: #9ede3a;
+  --color-st-occupied: #e8a33d;
+  --color-st-offline: #e05c4e;
+}
+
+/*
+  Contenedor que scrollea sin mostrar la barra.
+
+  Las tiras de fotos, los filtros y los paneles se arrastran con el dedo: la barra no es
+  el control, es ruido encima del contenido. El contenido sigue scrolleando igual, así que
+  la rueda del mouse y el teclado tampoco pierden nada.
+*/
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
+  Barra de scroll fina, para las tiras donde sí conviene verla.
+
+  En una pantalla con mouse la barra no es ruido: es el único indicio de que la fila sigue
+  y la única forma de arrastrarla sin rueda. En el celular sobra, porque ahí se empuja con
+  el dedo; por eso las tiras la ocultan hasta `md` y recién ahí la muestran.
+*/
+@utility slim-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-st-muted) transparent;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--color-st-muted);
+  }
+}

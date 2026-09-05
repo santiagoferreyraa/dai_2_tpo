@@ -68,22 +68,38 @@ function buildUrl(path: string, params: RequestOptions['params']): string {
 }
 
 /**
- * Spring Boot 3 responde los errores como ProblemDetail (RFC 7807): de ahí sale el texto
- * que se le muestra al usuario. Si la respuesta no trae JSON, queda el código de estado.
+ * Saca de la respuesta el texto que se le muestra al usuario.
+ *
+ * El backend contesta los errores de dos formas y las dos traen algo aprovechable:
+ * ProblemDetail de Spring (RFC 7807) cuando el error lo arma el framework, y texto plano
+ * cuando lo arma un `@ExceptionHandler` devolviendo un `String` —ahí vive el mensaje bueno,
+ * el que nombra la estación que no se encontró—. Por eso el cuerpo se lee como texto una
+ * sola vez y recién después se intenta interpretarlo como JSON: leerlo directo con
+ * `.json()` descarta el caso de texto plano y deja al usuario con un "Error 404" pelado.
  */
 async function readError(response: Response): Promise<ApiError> {
+  let text = ''
+  try {
+    text = await response.text()
+  } catch {
+    // El cuerpo no se pudo leer; nos quedamos con el estado.
+  }
+
   let body: unknown = null
   try {
-    body = await response.json()
+    body = text ? JSON.parse(text) : null
   } catch {
-    // La respuesta no traía JSON válido; nos quedamos con el estado.
+    // No era JSON: es el mensaje en texto plano.
   }
 
   const problem = body as { detail?: string; title?: string; message?: string } | null
   const message =
-    problem?.detail ?? problem?.title ?? problem?.message ?? `Error ${response.status}`
+    problem?.detail ??
+    problem?.title ??
+    problem?.message ??
+    (body === null && text.trim() !== '' ? text.trim() : `Error ${response.status}`)
 
-  return new ApiError(message, response.status, body)
+  return new ApiError(message, response.status, body ?? text)
 }
 
 async function request<T>(
