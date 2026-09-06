@@ -1,14 +1,18 @@
 package com.ecopedia.core.terminal;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ecopedia.core.terminal.data.JpaConnectorRepository;
 import com.ecopedia.core.terminal.data.JpaStationRepository;
+import com.ecopedia.core.terminal.domain.Connector;
+import com.ecopedia.core.terminal.domain.ConnectorType;
 import com.ecopedia.core.terminal.domain.Station;
 import com.ecopedia.core.terminal.domain.StationData;
 import com.ecopedia.core.terminal.domain.TerminalService;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -73,7 +78,7 @@ class TerminalApiTest {
     void listsStationsWithTheirPhotos() throws Exception {
         givenStation("YPF Constitución", List.of("https://example.com/a.jpg"));
 
-        mockMvc.perform(get("/api/estaciones"))
+        mockMvc.perform(get("/api/stations"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("YPF Constitución"))
                 .andExpect(jsonPath("$[0].photoUrls[0]").value("https://example.com/a.jpg"));
@@ -89,7 +94,7 @@ class TerminalApiTest {
     void listsStationsWithoutPhotos() throws Exception {
         givenStation("Estación sin fotos", List.of());
 
-        mockMvc.perform(get("/api/estaciones"))
+        mockMvc.perform(get("/api/stations"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].photoUrls").isEmpty());
     }
@@ -99,8 +104,59 @@ class TerminalApiTest {
     void readsOneStationWithItsPhotos() throws Exception {
         Station station = givenStation("YPF Constitución", List.of("https://example.com/a.jpg"));
 
-        mockMvc.perform(get("/api/estaciones/{id}", station.getId()))
+        mockMvc.perform(get("/api/stations/{id}", station.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.photoUrls[0]").value("https://example.com/a.jpg"));
+    }
+
+    /*
+     * La potencia la validaba solo el formulario del ABM, así que por API se podía dejar un
+     * conector en 0 kW o en negativo. Ningún filtro de potencia de la búsqueda lo devuelve
+     * nunca, o sea que la estación queda con un conector que el conductor no ve jamás.
+     */
+    @Test
+    @DisplayName("El alta de un conector rechaza la potencia en cero")
+    void rejectsZeroPowerOnCreate() throws Exception {
+        Station station = givenStation("YPF Constitución", List.of());
+
+        mockMvc.perform(post("/api/stations/{id}/connectors", station.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"connectorType\":\"CCS2\",\"maxPowerKw\":0}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("El alta de un conector rechaza la potencia negativa")
+    void rejectsNegativePowerOnCreate() throws Exception {
+        Station station = givenStation("YPF Constitución", List.of());
+
+        mockMvc.perform(post("/api/stations/{id}/connectors", station.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"connectorType\":\"CCS2\",\"maxPowerKw\":-50}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    /* El mismo DTO viaja en la reconfiguración: si solo se cubriera el alta, se entra por acá. */
+    @Test
+    @DisplayName("La reconfiguración de un conector rechaza la potencia en cero")
+    void rejectsZeroPowerOnConfigure() throws Exception {
+        Station station = givenStation("YPF Constitución", List.of());
+        Connector connector = terminalService.addConnector(station.getId(), ConnectorType.CCS2, new BigDecimal("50"));
+
+        mockMvc.perform(post("/api/connectors/{id}/configure", connector.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"connectorType\":\"CCS2\",\"maxPowerKw\":0}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    /* Un radio en cero o negativo no describe ninguna superficie: no hay búsqueda que hacer. */
+    @Test
+    @DisplayName("La búsqueda rechaza un radio que no es positivo")
+    void rejectsNonPositiveSearchRadius() throws Exception {
+        mockMvc.perform(get("/api/search")
+                        .param("lat", "-34.6")
+                        .param("lon", "-58.38")
+                        .param("radiusKm", "-1"))
+                .andExpect(status().isBadRequest());
     }
 }

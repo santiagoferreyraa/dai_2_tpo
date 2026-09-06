@@ -176,7 +176,7 @@ public class TerminalServiceImpl implements TerminalService {
      * `photoUrls` es una @ElementCollection, o sea LAZY, y quien la lee es el mapeo a
      * StationResponse, que corre en el controlador: con `open-in-view: false` ahi ya no hay
      * sesion abierta y el acceso explota con LazyInitializationException. Sin estas dos
-     * lineas, GET /api/estaciones y GET /api/estaciones/{id} responden 500 apenas hay una
+     * lineas, GET /api/stations y GET /api/stations/{id} responden 500 apenas hay una
      * estacion cargada.
      */
     @Override
