@@ -11,7 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/usuarios")
+@RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;
@@ -21,7 +21,7 @@ public class UserController {
     }
 
     /** Consulta del perfil del usuario autenticado. */
-    @GetMapping("/perfil")
+    @GetMapping("/profile")
     public ResponseEntity<UserProfileResponse> getMyProfile(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
             return ResponseEntity.status(401).build();
