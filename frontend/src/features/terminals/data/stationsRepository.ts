@@ -16,9 +16,9 @@ import type {
  * motivo es que el contrato REST y lo que la pantalla necesita no se parecen, y la costura
  * conviene que esté en un solo archivo:
  *
- * - Una estación con sus conectores no existe como recurso. `GET /api/estaciones` devuelve
+ * - Una estación con sus conectores no existe como recurso. `GET /api/stations` devuelve
  *   `StationResponse`, que no los incluye, y no hay endpoint que dé los conectores de una
- *   estación. El único lugar donde el backend los devuelve agrupados es `GET /api/busqueda`,
+ *   estación. El único lugar donde el backend los devuelve agrupados es `GET /api/search`,
  *   así que el listado sale de combinar las dos llamadas. Ver `listStations`.
  * - Guardar una estación no es una llamada sino varias: la estación por un lado y cada
  *   conector por el suyo, con el tipo y la potencia en un endpoint y el estado operativo en
@@ -29,13 +29,13 @@ import type {
  */
 
 /**
- * Centro y radio con los que `GET /api/busqueda` deja de filtrar nada.
+ * Centro y radio con los que `GET /api/search` deja de filtrar nada.
  *
  * La búsqueda descarta por distancia al punto consultado, y no hay forma de pedirle "todas".
  * 20.100 km es algo más de media circunferencia terrestre: desde cualquier punto alcanza al
  * resto del planeta, así que ninguna estación queda afuera.
  */
-const EVERYWHERE = { lat: 0, lon: 0, radioKm: 20100 }
+const EVERYWHERE = { lat: 0, lon: 0, radiusKm: 20100 }
 
 /** Lo que el backend recibe para dar de alta o editar una estación (StationRequest). */
 interface StationRequestBody {
@@ -62,7 +62,7 @@ function toRequestBody(input: StationInput): StationRequestBody {
  * Sale de la búsqueda sin filtros, que es el único endpoint que los devuelve agrupados.
  */
 async function connectorsByStation(signal?: AbortSignal): Promise<Map<number, Connector[]>> {
-  const results = await api.get<StationResult[]>('/busqueda', { params: EVERYWHERE, signal })
+  const results = await api.get<StationResult[]>('/search', { params: EVERYWHERE, signal })
 
   return new Map(
     results.map((result) => [
@@ -85,7 +85,7 @@ async function connectorsByStation(signal?: AbortSignal): Promise<Map<number, Co
  */
 export async function listStations(signal?: AbortSignal): Promise<StationDetail[]> {
   const [stations, connectors] = await Promise.all([
-    api.get<Station[]>('/estaciones', { signal }),
+    api.get<Station[]>('/stations', { signal }),
     connectorsByStation(signal),
   ])
 
@@ -98,7 +98,7 @@ export async function listStations(signal?: AbortSignal): Promise<StationDetail[
 /** Una estación con sus conectores. */
 export async function getStation(id: number, signal?: AbortSignal): Promise<StationDetail> {
   const [station, connectors] = await Promise.all([
-    api.get<Station>(`/estaciones/${id}`, { signal }),
+    api.get<Station>(`/stations/${id}`, { signal }),
     connectorsByStation(signal),
   ])
 
@@ -126,7 +126,7 @@ async function saveConnectors(
 
   const removals = previous
     .filter((connector) => !keptIds.has(connector.id))
-    .map((connector) => api.delete(`/conectores/${connector.id}`))
+    .map((connector) => api.delete(`/connectors/${connector.id}`))
 
   const writes = drafts.map(async (draft) => {
     const body = { connectorType: draft.connectorType, maxPowerKw: draft.maxPowerKw }
@@ -134,19 +134,19 @@ async function saveConnectors(
     if (draft.id === undefined) {
       const created = await api.post<Connector>(`/stations/${stationId}/connectors`, body)
       if (draft.operationalStatus !== 'AVAILABLE') {
-        await api.patch(`/conectores/${created.id}/estado`, {
+        await api.patch(`/connectors/${created.id}/status`, {
           operationalStatus: draft.operationalStatus,
         })
       }
       return
     }
 
-    await api.post(`/conectores/${draft.id}/configurar`, body)
+    await api.post(`/connectors/${draft.id}/configure`, body)
 
     /* El estado solo se toca si cambió: es una llamada más y la mayoría de las ediciones no lo mueven. */
     const before = previous.find((connector) => connector.id === draft.id)
     if (before?.operationalStatus !== draft.operationalStatus) {
-      await api.patch(`/conectores/${draft.id}/estado`, {
+      await api.patch(`/connectors/${draft.id}/status`, {
         operationalStatus: draft.operationalStatus,
       })
     }
@@ -157,7 +157,7 @@ async function saveConnectors(
 
 /** Alta de una estación con sus conectores. */
 export async function createStation(input: StationInput): Promise<StationDetail> {
-  const station = await api.post<Station>('/estaciones', toRequestBody(input))
+  const station = await api.post<Station>('/stations', toRequestBody(input))
   await saveConnectors(station.id, input.connectors, [])
   /*
    * Se relee en vez de armar el resultado a mano: los conectores recién creados tienen ids
@@ -170,7 +170,7 @@ export async function createStation(input: StationInput): Promise<StationDetail>
 export async function updateStation(id: number, input: StationInput): Promise<StationDetail> {
   const current = await getStation(id)
 
-  await api.put<Station>(`/estaciones/${id}`, toRequestBody(input))
+  await api.put<Station>(`/stations/${id}`, toRequestBody(input))
   await saveConnectors(id, input.connectors, current.connectors)
 
   return getStation(id)
@@ -179,8 +179,8 @@ export async function updateStation(id: number, input: StationInput): Promise<St
 /**
  * Baja lógica, no borrado: la estación puede tener reservas y sesiones colgando.
  *
- * El backend la marca inactiva, y `GET /api/estaciones` deja de devolverla.
+ * El backend la marca inactiva, y `GET /api/stations` deja de devolverla.
  */
 export function deactivateStation(id: number): Promise<void> {
-  return api.delete(`/estaciones/${id}`)
+  return api.delete(`/stations/${id}`)
 }
