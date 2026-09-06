@@ -1,36 +1,45 @@
 package com.ecopedia.core.config;
 
+import com.ecopedia.core.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * Configuración de seguridad del artefacto {@code ecopedia-core}.
- *
- * <p><b>Esqueleto deliberado.</b> Hoy deja pasar todas las peticiones. Está así porque el
- * componente de Usuarios todavía no existe: sin esta clase, el solo hecho de tener Spring
- * Security en el classpath bloquearía todos los endpoints detrás de un usuario y una
- * contraseña autogenerada en el log, y nadie podría probar nada a mano.
- *
- * <p>Lo que sí queda habilitado es {@link EnableMethodSecurity}, que es lo que hace que
- * {@code @PreAuthorize} funcione sobre los métodos. Cuando exista la autenticación, lo único
- * que cambia acá es la cadena de filtros: las anotaciones de cada operación ya van a estar
- * escritas y no hay que tocarlas.
- *
- * <p>CSRF va desactivado a propósito: la API es sin estado y la consume un cliente
- * JavaScript, no un formulario con sesión.
+ * Habilita autenticación por JWT y seguridad declarativa mediante {@code @PreAuthorize}.
  */
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .authorizeHttpRequests(requests -> requests.anyRequest().permitAll())
+                .authorizeHttpRequests(requests -> requests.requestMatchers("/api/auth/**")
+                        .permitAll()
+                        .requestMatchers("/h2-console/**")
+                        .permitAll()
+                        .anyRequest()
+                        .permitAll())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
