@@ -307,7 +307,7 @@ export default function StationCarousel({
         }`}
       >
         {stations.length === 0 && (
-          <p className="border-border bg-background/95 text-text-muted my-auto rounded-xl border p-4 text-sm">
+          <p className="border-border bg-background/95 text-text-muted my-auto border p-4 text-sm">
             Ninguna estación coincide con la búsqueda.
           </p>
         )}

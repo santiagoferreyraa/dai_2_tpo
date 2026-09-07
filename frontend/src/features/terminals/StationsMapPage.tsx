@@ -240,20 +240,48 @@ export default function StationsMapPage() {
         )}
 
         {/*
-          Pantalla ancha: el detalle anclado abajo a la izquierda, sin tapar el carrusel de la
-          derecha ni cubrir el mapa entero.
+          Pantalla ancha: el detalle sube desde el borde de abajo, pegado a él y sin esquinas
+          redondeadas. Apoya contra el borde en vez de flotar sobre el mapa, que es lo que lo
+          hace leer como una parte de la pantalla y no como una tarjeta suelta. Queda a la
+          izquierda para no taparle el carrusel de la derecha.
+
+          `left-12` y no menos: el control de zoom de Leaflet vive abajo a la izquierda y
+          ocupa hasta los 40px del borde. Pegado al borde, el panel lo dejaba tapado y sin
+          forma de alejar el mapa mientras hubiera una estación abierta.
         */}
         {wide && detail && (
-          <aside className="border-border bg-surface/95 absolute bottom-6 left-6 z-[1120] w-[26rem] rounded-2xl border p-5 shadow-lg shadow-black/40 backdrop-blur">
+          <aside className="station-panel border-border bg-surface/95 absolute bottom-0 left-12 z-[1120] flex w-[26rem] flex-col border border-b-0 shadow-lg shadow-black/40 backdrop-blur">
+            {/*
+              La flecha ocupa el ancho entero y no es un ícono en una esquina: apunta hacia
+              abajo, que es a donde se va el panel, y esa franja es el blanco más grande que
+              se puede dar para cerrarlo.
+            */}
             <button
               type="button"
               onClick={closePanel}
               aria-label="Cerrar detalle"
-              className="text-text-muted hover:text-text absolute top-4 right-4 text-sm leading-none"
+              className="border-border text-text-muted hover:text-text hover:bg-surface focus-visible:outline-primary flex w-full shrink-0 justify-center border-b py-2 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2"
             >
-              ✕
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
             </button>
-            {detail}
+
+            {/*
+              El contenido scrollea por su cuenta y el panel se topa contra el alto del mapa:
+              una estación con muchos conectores no puede empujar el botón de reservar fuera
+              de la pantalla.
+            */}
+            <div className="no-scrollbar max-h-[60vh] overflow-y-auto p-5">{detail}</div>
           </aside>
         )}
       </div>

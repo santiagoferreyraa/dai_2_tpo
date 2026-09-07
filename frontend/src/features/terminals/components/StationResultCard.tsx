@@ -41,7 +41,7 @@ export default function StationResultCard({ station, expanded = false }: Station
   const free = availableConnectorCount(station)
 
   return (
-    <article className="border-border bg-background/95 w-full rounded-xl border p-3 shadow-lg">
+    <article className="border-border bg-background/95 w-full border p-3 shadow-lg">
       <div className="flex items-center gap-2">
         <h3 className="text-text min-w-0 flex-1 truncate text-sm font-semibold">{station.name}</h3>
 

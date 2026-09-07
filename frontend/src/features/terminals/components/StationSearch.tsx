@@ -73,7 +73,7 @@ export default function StationSearch({
   }
 
   return (
-    <div className="border-border bg-surface/95 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur">
+    <div className="border-border bg-surface/95 flex items-center gap-3 border px-4 py-3 shadow-lg backdrop-blur">
       <SearchIcon className="text-text-muted h-5 w-5 shrink-0" />
 
       <input

@@ -113,6 +113,34 @@
 }
 
 /*
+  Entrada del panel de detalle en pantalla ancha: sube desde el borde de abajo.
+
+  Es solo la entrada y no la salida. Animar la salida obligaría a mantener el panel montado
+  mientras dura —el baile de `mounted`/`entered` que hace BottomSheet— y acá no compra lo
+  mismo: el panel se cierra con la flecha, que ya dice hacia dónde se va.
+
+  `prefers-reduced-motion` lo apaga: para quien pidió menos movimiento, el panel aparece.
+*/
+@keyframes station-panel-rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.station-panel {
+  animation: station-panel-rise 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-panel {
+    animation: none;
+  }
+}
+
+/*
   Leaflet trae sus propios colores, pensados para un mapa claro: los controles y el tooltip
   vienen con fondo blanco y texto negro, y el contenedor con un gris claro que aparece como un
   flash mientras bajan los mosaicos. Sobre el tema oscuro se ven como parches.
