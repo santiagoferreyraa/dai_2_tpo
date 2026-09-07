@@ -18,6 +18,7 @@ import com.ecopedia.core.terminal.domain.TerminalService;
 import com.ecopedia.core.user.domain.Role;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -98,15 +99,18 @@ class TerminalAuthorizationTest {
     }
 
     /**
-     * Las siete operaciones de ABM, con ids que no existen a propósito: si la autorización
-     * rechaza, nunca se llega al cuerpo del método, así que el id da igual. Ese es justamente
-     * el punto — {@code @PreAuthorize} corta antes de entrar.
+     * Las seis operaciones de ABM que son **exclusivas del operador**: la baja de estación
+     * queda afuera porque el backoffice también la puede ejecutar (RF03), y por eso se prueba
+     * aparte en {@link #allowsStationDeactivationForAdmins()}.
+     *
+     * <p>Los ids no existen a propósito: si la autorización rechaza, nunca se llega al cuerpo
+     * del método, así que el id da igual. Ese es justamente el punto — {@code @PreAuthorize}
+     * corta antes de entrar.
      */
-    private List<MockHttpServletRequestBuilder> abmRequests() {
+    private List<MockHttpServletRequestBuilder> operatorOnlyRequests() {
         return List.of(
                 post("/api/stations").contentType(MediaType.APPLICATION_JSON).content(STATION_JSON),
                 put("/api/stations/1").contentType(MediaType.APPLICATION_JSON).content(STATION_JSON),
-                delete("/api/stations/1"),
                 post("/api/stations/1/connectors")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CONNECTOR_JSON),
@@ -117,6 +121,12 @@ class TerminalAuthorizationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(STATUS_JSON),
                 delete("/api/connectors/1"));
+    }
+
+    /** Las siete: las seis del operador más la baja de estación. */
+    private List<MockHttpServletRequestBuilder> abmRequests() {
+        return Stream.concat(operatorOnlyRequests().stream(), Stream.of(delete("/api/stations/1")))
+                .toList();
     }
 
     @Test
@@ -142,17 +152,29 @@ class TerminalAuthorizationTest {
     }
 
     /*
-     * El ADMIN tampoco entra, y no es un descuido: según §2.3 el ABM es del OPERATOR dueño, y
-     * lo único que el backoffice puede hacer sobre una estación es darla de baja (RF03). Esa
-     * excepción no está implementada todavía, así que hoy el ADMIN queda afuera de las siete.
+     * El ADMIN queda afuera del ABM salvo por la baja, y la asimetría es del dominio: el
+     * backoffice existe para retirar contenido (RF03), no para administrarle las estaciones a
+     * un operador. Si alguna vez alguien le agrega ADMIN al resto de las anotaciones "para que
+     * pueda todo", estas dos pruebas se ponen en rojo y lo obligan a justificarlo.
      */
     @Test
-    @DisplayName("Con token de ADMIN, el ABM de estaciones también es rechazado")
-    void rejectsTheWholeAbmForAdmins() throws Exception {
-        for (MockHttpServletRequestBuilder request : abmRequests()) {
+    @DisplayName("Con token de ADMIN, las seis operaciones exclusivas del operador son rechazadas")
+    void rejectsOperatorOnlyOperationsForAdmins() throws Exception {
+        for (MockHttpServletRequestBuilder request : operatorOnlyRequests()) {
             mockMvc.perform(request.header(HttpHeaders.AUTHORIZATION, bearer(Role.ADMIN)))
                     .andExpect(status().isForbidden());
         }
+    }
+
+    @Test
+    @DisplayName("Con token de ADMIN, la baja de una estación sí está permitida (RF03)")
+    void allowsStationDeactivationForAdmins() throws Exception {
+        Station station = terminalService.createStation(
+                new StationData("Estación del backoffice", "Av. San Juan 2901", -34.603754, -58.381659, List.of()));
+
+        mockMvc.perform(delete("/api/stations/" + station.getId())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(Role.ADMIN)))
+                .andExpect(status().isNoContent());
     }
 
     @Test

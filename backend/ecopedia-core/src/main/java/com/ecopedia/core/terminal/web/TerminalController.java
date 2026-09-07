@@ -57,7 +57,7 @@ public class TerminalController {
 
     /** RF04: Baja lógica de una estación. */
     @DeleteMapping("/stations/{id}")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<Void> deactivateStation(@PathVariable Long id) {
         terminalService.deactivateStation(id);
         return ResponseEntity.noContent().build();
