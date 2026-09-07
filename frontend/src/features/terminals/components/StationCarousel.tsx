@@ -27,6 +27,15 @@ const MIN_SCALE = 0.72
 const MIN_OPACITY = 0.25
 
 /**
+ * Cuánto crece la ficha que tiene el mouse encima.
+ *
+ * Multiplica a la escala del efecto en vez de reemplazarla: una ficha lejana crece un poco
+ * respecto de su tamaño, no salta al de la del centro. Si la reemplazara, pasar el mouse por
+ * la columna haría saltar cada ficha al frente y el efecto de foco dejaría de leerse.
+ */
+const HOVER_SCALE = 1.06
+
+/**
  * Cuántas veces se repite la lista, una atrás de la otra.
  *
  * El scroll infinito es una ilusión sostenida por dos piezas: la lista está repetida tres
@@ -60,6 +69,13 @@ export default function StationCarousel({
 }: StationCarouselProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const itemsRef = useRef(new Map<string, HTMLElement>())
+
+  /*
+   * La ficha que tiene el mouse encima, como ref y no como estado: igual que la escala del
+   * scroll, se pinta escribiendo el estilo, así que pasarla por React solo agregaría un
+   * render por cada entrada y salida del mouse sin cambiar nada de lo que se ve.
+   */
+  const hoveredRef = useRef<string | null>(null)
   const frameRef = useRef<number | null>(null)
 
   // Mientras corre un desplazamiento suave no se puede tocar scrollTop: cualquier escritura lo
@@ -114,11 +130,13 @@ export default function StationCarousel({
     const center = list.scrollTop + list.clientHeight / 2
     const reach = list.clientHeight / 2
 
-    for (const element of itemsRef.current.values()) {
+    for (const [key, element] of itemsRef.current.entries()) {
       const offset = Math.abs(element.offsetTop + element.offsetHeight / 2 - center)
       const distance = reach === 0 ? 0 : Math.min(1, offset / reach)
 
-      element.style.transform = `scale(${1 - (1 - MIN_SCALE) * distance})`
+      const hover = key === hoveredRef.current ? HOVER_SCALE : 1
+
+      element.style.transform = `scale(${(1 - (1 - MIN_SCALE) * distance) * hover})`
       element.style.opacity = String(1 - (1 - MIN_OPACITY) * distance)
     }
   }, [])
@@ -327,6 +345,20 @@ export default function StationCarousel({
                 else itemsRef.current.set(key, element)
               }}
               onClick={() => onSelect(station.stationId)}
+              /*
+                Mouse y no pointer: en una pantalla táctil los eventos de puntero disparan al
+                tocar, y la ficha quedaría agrandada después del toque hasta que se toque otra.
+                Repintar a mano —en vez de esperar al próximo scroll— es lo que hace que el
+                cambio se vea en el momento.
+              */
+              onMouseEnter={() => {
+                hoveredRef.current = itemKey(copy, station.stationId)
+                paint()
+              }}
+              onMouseLeave={() => {
+                hoveredRef.current = null
+                paint()
+              }}
               // La escala crece hacia la izquierda: el borde derecho queda fijo contra la
               // columna y las fichas lejanas se leen como más angostas, no como corridas.
               className="origin-right shrink-0 text-left transition-transform duration-150"

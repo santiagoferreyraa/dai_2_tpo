@@ -141,7 +141,7 @@
 }
 
 /*
-  Leaflet trae sus propios colores, pensados para un mapa claro: los controles y el tooltip
+  Leaflet trae sus propios colores, pensados para un mapa claro: la atribución y el tooltip
   vienen con fondo blanco y texto negro, y el contenedor con un gris claro que aparece como un
   flash mientras bajan los mosaicos. Sobre el tema oscuro se ven como parches.
 */
@@ -149,24 +149,10 @@
   background-color: var(--color-background);
 }
 
-.leaflet-bar a {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-}
-
 /* Con .leaflet-control-attribution a secas no alcanza: Leaflet pinta su fondo blanco desde
    `.leaflet-container .leaflet-control-attribution`, que tiene más especificidad y gana. */
 .leaflet-container .leaflet-control-attribution {
   background-color: var(--color-surface);
-  color: var(--color-text);
-}
-
-.leaflet-bar a {
-  border-bottom-color: var(--color-border);
-}
-
-.leaflet-bar a:hover {
-  background-color: var(--color-border);
   color: var(--color-text);
 }
 

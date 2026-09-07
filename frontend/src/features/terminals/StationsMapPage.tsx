@@ -245,9 +245,9 @@ export default function StationsMapPage() {
           hace leer como una parte de la pantalla y no como una tarjeta suelta. Queda a la
           izquierda para no taparle el carrusel de la derecha.
 
-          `left-12` y no menos: el control de zoom de Leaflet vive abajo a la izquierda y
-          ocupa hasta los 40px del borde. Pegado al borde, el panel lo dejaba tapado y sin
-          forma de alejar el mapa mientras hubiera una estación abierta.
+          Separado del borde izquierdo y no pegado a él: apoyado contra la esquina el panel
+          se lee como un pedazo de la ventana, y separado se lee como algo apoyado sobre el
+          mapa, que es lo que es.
         */}
         {wide && detail && (
           <aside className="station-panel border-border bg-surface/95 absolute bottom-0 left-12 z-[1120] flex w-[26rem] flex-col border border-b-0 shadow-lg shadow-black/40 backdrop-blur">

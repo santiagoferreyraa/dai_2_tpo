@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer, Tooltip, useMap, ZoomControl } from 'react-leaflet'
+import { MapContainer, Marker, TileLayer, Tooltip, useMap } from 'react-leaflet'
 
 import {
   ARGENTINA_BOUNDS,
@@ -151,8 +151,9 @@ export default function StationMap({
       maxBounds={ARGENTINA_BOUNDS}
       // Sin esto el borde es elástico: se puede arrastrar afuera y el mapa vuelve solo.
       maxBoundsViscosity={1}
-      // El control propio de Leaflet se dibuja arriba a la izquierda, que es donde va el
-      // buscador. Se apaga acá y se vuelve a poner abajo, con ZoomControl.
+      // Sin botones de zoom: se acerca con la rueda, con pellizco y tocando una estación,
+      // que son los tres gestos con los que se usa un mapa. Los botones ocupaban la esquina
+      // de abajo a la izquierda, que es justo por donde sube el panel de detalle.
       zoomControl={false}
       // Absoluto contra el contenedor, y no h-full, por un motivo concreto: un height en
       // porcentaje se resuelve contra la altura ESPECIFICADA del padre, y la del padre la
@@ -160,8 +161,6 @@ export default function StationMap({
       // y no dibuja nada, sin un solo error en consola. inset-0 no depende de porcentajes.
       className="absolute inset-0"
     >
-      <ZoomControl position="bottomleft" />
-
       <InvalidateSizeOnResize />
       <FlyToStation station={selectedStation} bottomInsetPx={bottomInsetPx} />
 
