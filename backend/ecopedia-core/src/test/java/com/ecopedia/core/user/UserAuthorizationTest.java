@@ -147,7 +147,7 @@ class UserAuthorizationTest {
         givenUser("conductor@ecopedia.test", Role.CONDUCTOR);
         givenUser("operador@ecopedia.test", Role.CPO);
 
-        mockMvc.perform(get("/api/users").param("rol", "CPO").header(HttpHeaders.AUTHORIZATION, bearer(Role.ADMIN)))
+        mockMvc.perform(get("/api/users").param("role", "CPO").header(HttpHeaders.AUTHORIZATION, bearer(Role.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].email").value("operador@ecopedia.test"));
@@ -193,22 +193,42 @@ class UserAuthorizationTest {
     }
 
     /*
-     * El perfil propio responde 401 y no 403 cuando falta el token, porque el controlador lo
-     * chequea a mano en vez de delegarlo en una anotación. Queda documentado acá para que la
-     * diferencia con el 403 del resto no parezca un error cuando alguien la vea en la demo.
+     * El perfil propio es la única operación autenticada que no pide un rol: la responde
+     * cualquiera que haya entrado, con sus propios datos. La regla sigue estando declarada
+     * —`isAuthenticated()`— y por eso el rechazo es un 403 como el de todas las demás.
      */
     @Test
     @DisplayName("El perfil propio exige token, pero no exige un rol en particular")
     void keepsOwnProfileOpenToEveryAuthenticatedRole() throws Exception {
-        givenUser("conductor@ecopedia.test", Role.CONDUCTOR);
+        mockMvc.perform(get("/api/users/profile")).andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/api/users/profile")).andExpect(status().isUnauthorized());
+        for (Role role : Role.values()) {
+            givenUser(role.name().toLowerCase() + "@ecopedia.test", role);
+            mockMvc.perform(get("/api/users/profile").header(HttpHeaders.AUTHORIZATION, bearer(role)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.role").value(role.name()));
+        }
+    }
+
+    /*
+     * Y la propiedad que va a sostener la pantalla de perfil: devuelve al dueño del token y no
+     * a otro. Con dos usuarios en la base, un método que se equivoque de fila —el listado
+     * filtrado en memoria, por ejemplo— falla acá y no en la demo.
+     */
+    @Test
+    @DisplayName("El perfil propio devuelve al dueño del token, no al primero de la base")
+    void answersWithTheTokenOwner() throws Exception {
+        givenUser("primero@ecopedia.test", Role.ADMIN);
+        User owner = givenUser("segundo@ecopedia.test", Role.CONDUCTOR);
 
         mockMvc.perform(get("/api/users/profile")
                         .header(
                                 HttpHeaders.AUTHORIZATION,
-                                "Bearer " + tokenProvider.generateToken(1L, "conductor@ecopedia.test", Role.CONDUCTOR)))
+                                "Bearer "
+                                        + tokenProvider.generateToken(
+                                                owner.getId(), owner.getEmail(), owner.getRole())))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("segundo@ecopedia.test"))
                 .andExpect(jsonPath("$.role").value("CONDUCTOR"));
     }
 }
