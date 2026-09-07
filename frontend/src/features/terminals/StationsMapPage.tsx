@@ -262,6 +262,15 @@ export default function StationsMapPage() {
           /* Ver el comentario de la prop: acá atrás está el mapa, y taparlo sería esconder
              el pin que se acaba de elegir. */
           dimBackground={false}
+          /*
+            El mismo gris que la tarjeta de escritorio: es el mismo panel en dos formas, y con
+            el fondo por omisión del ABM se veía casi negro solo en el celular.
+
+            /95 y no opaco: las filas de conector son `bg-surface/40`, así que sobre un fondo
+            del MISMO color al 100% quedarían exactamente del tono del panel y se borrarían.
+            Con el panel apenas translúcido conservan el escalón que se ve en el diseño.
+          */
+          backgroundClass="bg-surface/95 backdrop-blur"
         >
           {detail}
         </BottomSheet>

@@ -34,6 +34,16 @@ interface BottomSheetProps {
    * que transparente—, así que el gesto no cambia.
    */
   dimBackground?: boolean
+  /**
+   * Clase de fondo del panel. Por omisión el oscuro de los tokens `st-` del ABM.
+   *
+   * El mapa lo cambia por `bg-surface` porque esa pantalla está escrita contra los tokens
+   * compartidos y no contra los de Terminales: con el fondo por omisión, el mismo panel se
+   * veía casi negro en el celular y gris en la tarjeta de escritorio. Es un parche hasta que
+   * RNF08 unifique el tema oscuro y los dos juegos de tokens sean uno solo —ahí este prop se
+   * borra junto con terminals.css—.
+   */
+  backgroundClass?: string
   children: ReactNode
 }
 
@@ -42,6 +52,7 @@ export default function BottomSheet({
   onClose,
   label,
   dimBackground = true,
+  backgroundClass = 'bg-st-bg',
   children,
 }: BottomSheetProps) {
   /*
@@ -215,7 +226,7 @@ export default function BottomSheet({
           dedo. El arrastre del panel no lo necesita, porque el tirador ya declara
           `touch-none` por su cuenta.
         */
-        className="bg-st-bg relative flex max-h-[92svh] w-full flex-col rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.5)]"
+        className={`${backgroundClass} relative flex max-h-[92svh] w-full flex-col rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.5)]`}
         style={{
           transform: `translateY(${translate}px)`,
           /* Durante el arrastre no hay transición: el panel tiene que seguir al dedo. */
