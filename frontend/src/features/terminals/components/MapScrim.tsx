@@ -6,14 +6,17 @@
  * leerse. Oscurecer los bordes le da un fondo estable a lo que flota ahí.
  *
  * El de abajo crece cuando se abre el panel de detalle: es lo que hace que el panel apoye
- * sobre una zona oscura en vez de cortar el mapa con una línea.
+ * sobre una zona oscura en vez de cortar el mapa con una línea. Eso vale en celular, donde el
+ * panel ocupa todo el ancho; en pantalla ancha el panel es una tarjeta en una esquina y
+ * agrandar el degradado oscurecería medio mapa para enmarcar algo que no lo necesita. Quien
+ * decide es la pantalla, vía `expanded`.
  *
  * `pointer-events-none` en los dos: son una capa visual y el mapa se sigue arrastrando a
  * través de ellos. Sin eso, la franja de arriba se comería el paneo.
  */
 
 interface MapScrimProps {
-  /** Si el panel de detalle está abierto, que es cuando el degradado de abajo se agranda. */
+  /** Si el degradado de abajo tiene que agrandarse para recibir al panel de detalle. */
   expanded: boolean
 }
 

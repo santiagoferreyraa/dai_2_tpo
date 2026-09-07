@@ -205,7 +205,12 @@ export default function StationsMapPage() {
           dimUnselected={selectedStation !== null}
         />
 
-        <MapScrim expanded={selectedStation !== null} />
+        {/*
+          El degradado de abajo se agranda solo en celular. Ahí el panel ocupa el ancho entero
+          y necesita apoyarse sobre algo oscuro; acá el panel es una tarjeta en la esquina, y
+          un degradado de dos tercios a todo el ancho oscurece medio mapa para enmarcarla.
+        */}
+        <MapScrim expanded={!wide && selectedStation !== null} />
 
         {/*
           Centrado en celular y pegado a la izquierda de ahí para arriba.
