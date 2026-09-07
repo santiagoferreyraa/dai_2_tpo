@@ -6,6 +6,12 @@ import { ApiError } from '@/lib/api'
 import AuthLayout from './components/AuthLayout'
 import FormField from './components/FormField'
 import { register } from './data/authRepository'
+import {
+  MINIMUM_PASSWORD_LENGTH,
+  validateEmail,
+  validateNewPassword,
+  validatePasswordConfirmation,
+} from './validation'
 
 /**
  * Pantalla de registro (RF01 / ECO-36).
@@ -17,18 +23,48 @@ import { register } from './data/authRepository'
  *
  * El rol tampoco se pide. Todo el que se registra nace conductor; elevar a operador o
  * administrador es una operación administrativa, no una casilla de este formulario.
+ *
+ * **La confirmación de contraseña no viaja al backend**, y no es un olvido: no hay nada que
+ * verificar del otro lado, porque el servidor recibe una sola contraseña. Existe para atajar
+ * el error de tipeo en un campo que se escribe a ciegas —si se cuela, el usuario queda con una
+ * cuenta cuya clave no conoce y el único camino de vuelta es registrarse de nuevo—.
  */
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [attempted, setAttempted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
 
+  const fieldErrors = {
+    fullName: fullName.trim() === '' ? 'Ingresá tu nombre completo.' : undefined,
+    email: validateEmail(email),
+    password: validateNewPassword(password),
+    confirmation: validatePasswordConfirmation(password, confirmation),
+  }
+  const hasFieldErrors = Object.values(fieldErrors).some((message) => message !== undefined)
+
+  /*
+   * Los errores aparecen recién al intentar enviar, para no ir señalando en rojo campos que el
+   * usuario todavía no terminó de escribir. La confirmación es la excepción: en cuanto hay algo
+   * escrito ahí, avisar que no coincide es útil de inmediato —es el momento en que se puede
+   * corregir mirando lo que se acaba de tipear, y no dos campos después—.
+   */
+  function errorOf(field: keyof typeof fieldErrors): string | undefined {
+    if (attempted) return fieldErrors[field]
+    if (field === 'confirmation' && confirmation !== '') return fieldErrors.confirmation
+    return undefined
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    setAttempted(true)
     setError(null)
+    if (hasFieldErrors) return
+
     setSending(true)
     try {
       await register({ email: email.trim(), password, fullName: fullName.trim() })
@@ -69,6 +105,7 @@ export default function RegisterPage() {
           autoComplete="name"
           value={fullName}
           onChange={setFullName}
+          error={errorOf('fullName')}
           required
         />
         <FormField
@@ -78,6 +115,7 @@ export default function RegisterPage() {
           autoComplete="email"
           value={email}
           onChange={setEmail}
+          error={errorOf('email')}
           required
         />
         <FormField
@@ -87,7 +125,18 @@ export default function RegisterPage() {
           autoComplete="new-password"
           value={password}
           onChange={setPassword}
-          hint="Al menos 6 caracteres."
+          hint={`Al menos ${MINIMUM_PASSWORD_LENGTH} caracteres.`}
+          error={errorOf('password')}
+          required
+        />
+        <FormField
+          id="register-password-confirmation"
+          label="Repetir contraseña"
+          type="password"
+          autoComplete="new-password"
+          value={confirmation}
+          onChange={setConfirmation}
+          error={errorOf('confirmation')}
           required
         />
 
