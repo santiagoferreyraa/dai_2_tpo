@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import BottomSheet from './components/BottomSheet'
 import StationCard from './components/StationCard'
@@ -51,13 +52,48 @@ const POWER_STEPS = [50, 150]
 /** A partir de acá entran las dos columnas. Es el `lg` de Tailwind. */
 const WIDE_QUERY = '(min-width: 1024px)'
 
+/**
+ * Parámetro de URL que abre una estación directamente: `/stations?station=3`.
+ *
+ * Existe para el enlace del nombre en el panel del mapa: el conductor toca el nombre y llega
+ * acá con el detalle ya abierto, en vez de aterrizar en la lista y tener que buscarla otra vez.
+ * Va en la query y no en el path para no partir la ruta en dos (`/stations` y `/stations/:id`)
+ * por un estado que la pantalla ya sabía manejar por su cuenta.
+ */
+const STATION_PARAM = 'station'
+
 export default function StationsPage() {
   const [stations, setStations] = useState<StationDetail[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
-  const [sheet, setSheet] = useState<Sheet>({ kind: 'none' })
+
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  /*
+   * El parámetro se lee UNA vez, como valor inicial, y no en cada render. Si el panel siguiera
+   * atado a la URL, cerrarlo volvería a abrirlo: se limpia el parámetro, el efecto lo relee y
+   * el estado se reconstruye. El parámetro es de dónde se arranca, no lo que se está mirando.
+   */
+  const [sheet, setSheet] = useState<Sheet>(() => {
+    const requested = Number(searchParams.get(STATION_PARAM))
+    return Number.isInteger(requested) && requested > 0
+      ? { kind: 'info', stationId: requested }
+      : { kind: 'none' }
+  })
+
+  /*
+   * Y se saca de la URL apenas se usó. Deja la dirección limpia para compartir o recargar, y
+   * evita que el botón de atrás del navegador reabra un panel que el usuario ya cerró.
+   */
+  useEffect(() => {
+    if (!searchParams.has(STATION_PARAM)) return
+
+    const next = new URLSearchParams(searchParams)
+    next.delete(STATION_PARAM)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const wide = useMediaQuery(WIDE_QUERY)
   const filtersRef = useWheelToHorizontal<HTMLDivElement>()

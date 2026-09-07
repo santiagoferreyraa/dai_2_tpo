@@ -5,9 +5,19 @@
  * conductor busca dónde cargar. Comparten los tipos, el acceso a datos y los cálculos
  * derivados; no comparten la pantalla, porque no comparten ni la tarea ni el rol.
  *
- * Dueña del estado compartido: el texto buscado y cuál es la estación elegida. El mapa y el
- * carrusel los reciben, ninguno de los dos los guarda — si cada uno tuviera los suyos, se
- * desincronizan.
+ * Dueña del estado compartido: el texto buscado, cuál es la estación elegida y cuál su
+ * conector. El mapa, el carrusel y el panel los reciben, ninguno de los tres los guarda — si
+ * cada uno tuviera los suyos, se desincronizan.
+ *
+ * La pantalla tiene dos formas, y la diferencia no es de estilos sino de dónde aparece la
+ * estación elegida:
+ *
+ * - En el celular no hay carrusel: los pines son la lista, y el detalle sube desde abajo como
+ *   panel. Un carrusel al costado le comería el ancho al mapa, que es la pantalla.
+ * - En pantalla ancha el carrusel queda, y el detalle se ancla abajo sin taparlo.
+ *
+ * Lo que NO cambia entre las dos es el estado: hay una sola estación elegida y un solo
+ * conector elegido, y cada forma los dibuja donde le corresponde.
  *
  * Lo que sigue: la búsqueda por viewport y los filtros de `SearchCriteria`. Hoy pide una sola
  * vez todas las estaciones del país y filtra el texto en memoria, que con las quince del seed
@@ -16,19 +26,51 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-
 import type { LatLngTuple } from 'leaflet'
 
+import BottomSheet from './components/BottomSheet'
+import MapScrim from './components/MapScrim'
 import StationCarousel from './components/StationCarousel'
+import StationDetailPanel from './components/StationDetailPanel'
 import StationMap from './components/StationMap'
 import StationSearch from './components/StationSearch'
 import { searchStations } from './data/stationsRepository'
 import { matchesQuery } from './format'
 import { COUNTRY_RADIUS_KM, DEFAULT_CENTER } from './mapConfig'
-import type { StationResult } from './types'
+import { useMediaQuery } from './useMediaQuery'
+import type { ConnectorSummary, StationResult } from './types'
 
 /* El centro de la consulta, como par de números: es lo que espera `SearchCriteria`. */
 const center = DEFAULT_CENTER as LatLngTuple
+
+/**
+ * A partir de acá entra el carrusel. Es el `lg` de Tailwind, el mismo corte que usa el ABM
+ * para pasar a dos columnas: las dos pantallas de la feature entienden lo mismo por "ancha".
+ */
+const WIDE_QUERY = '(min-width: 1024px)'
+
+/**
+ * Cuánto le tapa el panel al mapa en celular, aproximado.
+ *
+ * Es para correr el centro del mapa al elegir una estación, no para dibujar nada, así que no
+ * necesita ser el alto exacto del panel —que además depende de cuántos conectores tenga—.
+ * Errarle por poco deja el pin un poco más arriba o más abajo del medio del hueco; medirlo de
+ * verdad obligaría a un ResizeObserver sobre un panel que entra animado.
+ */
+const SHEET_INSET_PX = 380
+
+/**
+ * El conector que viene elegido de arranque: el más rápido de los que están libres.
+ *
+ * Libre primero y potencia después, en ese orden, porque es el orden en que decide alguien que
+ * quiere cargar: de nada sirve ofrecerle el de 150 kW si está fuera de servicio. Si no hay
+ * ninguno libre, el más rápido a secas, que deja el panel mostrando lo mejor que hay aunque no
+ * se pueda reservar ahora.
+ */
+function defaultConnector(station: StationResult): ConnectorSummary | null {
+  const byPower = [...station.matchingConnectors].sort((a, b) => b.maxPowerKw - a.maxPowerKw)
+  return byPower.find((c) => c.operationalStatus === 'AVAILABLE') ?? byPower[0] ?? null
+}
 
 export default function StationsMapPage() {
   const [allStations, setAllStations] = useState<StationResult[]>([])
@@ -37,6 +79,9 @@ export default function StationsMapPage() {
 
   const [query, setQuery] = useState('')
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null)
+  const [selectedConnectorId, setSelectedConnectorId] = useState<number | null>(null)
+
+  const wide = useMediaQuery(WIDE_QUERY)
 
   useEffect(() => {
     /*
@@ -81,9 +126,41 @@ export default function StationsMapPage() {
    * la vuelve a encontrar elegida donde la dejó. Borrando el estado, ese ida y vuelta le
    * costaría volver a buscarla.
    */
-  const visibleSelectedId = stations.some((station) => station.stationId === selectedStationId)
-    ? selectedStationId
-    : null
+  const selectedStation = stations.find((s) => s.stationId === selectedStationId) ?? null
+
+  /*
+   * El conector elegido se resuelve contra la estación de ahora y cae en el de por omisión si
+   * el guardado no le pertenece. Sin eso, cambiar de estación dejaría el panel apuntando al
+   * conector de la anterior, que en esta ni existe.
+   */
+  const selectedConnector =
+    selectedStation === null
+      ? null
+      : (selectedStation.matchingConnectors.find((c) => c.connectorId === selectedConnectorId) ??
+        defaultConnector(selectedStation))
+
+  function selectStation(stationId: number) {
+    setSelectedStationId(stationId)
+    /* El conector arranca de nuevo en cada estación: lo resuelve `defaultConnector`. */
+    setSelectedConnectorId(null)
+  }
+
+  function closePanel() {
+    setSelectedStationId(null)
+    setSelectedConnectorId(null)
+  }
+
+  function handleReserve() {
+    /*
+     * RF08 —reserva de slot con seña— todavía no existe: no hay BookingService ni pantalla de
+     * reserva. El botón se deja activo igual para que la regla que sí está implementada —un
+     * conector fuera de servicio no se reserva— se pueda probar de verdad contra el estado
+     * habilitado. Cuando entre RF08, este cuerpo pasa a ser la navegación al alta.
+     */
+    window.alert(
+      'La reserva todavía no está disponible: llega con RF08, que incluye el cobro de la seña.',
+    )
+  }
 
   /* El encabezado dice tres cosas distintas, y ninguna sirve mientras las otras dos aplican. */
   const summary = loading
@@ -93,6 +170,16 @@ export default function StationsMapPage() {
       : query === ''
         ? `${allStations.length} estaciones.`
         : `${stations.length} de ${allStations.length} estaciones.`
+
+  /* El panel, escrito una sola vez para las dos formas de la pantalla. */
+  const detail = selectedStation && (
+    <StationDetailPanel
+      station={selectedStation}
+      selectedConnector={selectedConnector}
+      onSelectConnector={setSelectedConnectorId}
+      onReserve={handleReserve}
+    />
+  )
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -104,40 +191,81 @@ export default function StationsMapPage() {
       </header>
 
       {/*
-        relative + min-h-0. El mapa, el buscador y el carrusel se posicionan absolutos contra
-        este div, así que necesita ser el contenedor de referencia; y min-h-0 porque un ítem
-        flex se niega por omisión a achicarse por debajo de su contenido, con lo que empujaría
-        la página hacia abajo en vez de ocupar el hueco que queda.
-
-        El carrusel va DENTRO y no al lado: se superpone al mapa en vez de empujarlo, así el
-        mapa conserva todo el ancho de la pantalla.
+        relative + min-h-0. El mapa, el buscador, los degradados y el panel se posicionan
+        absolutos contra este div, así que necesita ser el contenedor de referencia; y min-h-0
+        porque un ítem flex se niega por omisión a achicarse por debajo de su contenido, con lo
+        que empujaría la página hacia abajo en vez de ocupar el hueco que queda.
       */}
       <div className="relative min-h-0 flex-1">
         <StationMap
           stations={stations}
-          selectedStationId={visibleSelectedId}
-          onSelect={setSelectedStationId}
+          selectedStationId={selectedStation?.stationId ?? null}
+          onSelect={selectStation}
+          bottomInsetPx={!wide && selectedStation !== null ? SHEET_INSET_PX : 0}
+          dimUnselected={selectedStation !== null}
         />
+
+        <MapScrim expanded={selectedStation !== null} />
 
         {/*
           Centrado en celular y pegado a la izquierda de ahí para arriba.
 
           En celular el ancho se acota a lo disponible menos 6rem, que deja 3rem de cada lado:
-          lo justo para no montarse sobre nada en una pantalla angosta.
+          lo justo para no montarse sobre nada en una pantalla angosta. Plegado como burbuja no
+          usa ese ancho, pero lo reserva, así que al desplegarse no salta.
 
           z-index por encima de los 1000 que usa Leaflet para sus controles; el porqué está
           explicado en StationCarousel.
         */}
-        <div className="absolute top-4 left-1/2 z-[1120] w-[min(30rem,calc(100%-6rem))] -translate-x-1/2 md:left-4 md:w-96 md:translate-x-0">
-          <StationSearch value={query} onChange={setQuery} />
+        <div className="absolute top-4 left-4 z-[1120] w-[min(30rem,calc(100%-6rem))] md:w-96">
+          <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
         </div>
 
-        <StationCarousel
-          stations={stations}
-          selectedStationId={visibleSelectedId}
-          onSelect={setSelectedStationId}
-        />
+        {/*
+          El carrusel es de pantalla ancha nada más. En celular la lista de estaciones son los
+          pines, y quien quiere ver una la toca: una segunda lista encima del mapa competiría
+          por el mismo espacio con el panel que se abre justo abajo.
+        */}
+        {wide && (
+          <StationCarousel
+            stations={stations}
+            selectedStationId={selectedStation?.stationId ?? null}
+            onSelect={selectStation}
+          />
+        )}
+
+        {/*
+          Pantalla ancha: el detalle anclado abajo a la izquierda, sin tapar el carrusel de la
+          derecha ni cubrir el mapa entero.
+        */}
+        {wide && detail && (
+          <aside className="border-border bg-surface/95 absolute bottom-6 left-6 z-[1120] w-[26rem] rounded-2xl border p-5 shadow-lg shadow-black/40 backdrop-blur">
+            <button
+              type="button"
+              onClick={closePanel}
+              aria-label="Cerrar detalle"
+              className="text-text-muted hover:text-text absolute top-4 right-4 text-sm leading-none"
+            >
+              ✕
+            </button>
+            {detail}
+          </aside>
+        )}
       </div>
+
+      {/* Celular: lo mismo, como panel que sube desde abajo. */}
+      {!wide && (
+        <BottomSheet
+          open={selectedStation !== null}
+          onClose={closePanel}
+          label="Detalle de la estación"
+          /* Ver el comentario de la prop: acá atrás está el mapa, y taparlo sería esconder
+             el pin que se acaba de elegir. */
+          dimBackground={false}
+        >
+          {detail}
+        </BottomSheet>
+      )}
     </section>
   )
 }

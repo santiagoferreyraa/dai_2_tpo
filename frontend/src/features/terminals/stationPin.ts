@@ -39,16 +39,22 @@ const BOLT_SVG =
  *
  * En el HTML no se interpola ningún texto que venga del backend —solo un número ya calculado—,
  * así que un nombre de estación con comillas o con `<script>` no puede romper nada acá.
+ *
+ * `dimmed` apaga el pin: es lo que pasa con los que NO están elegidos mientras el panel de
+ * detalle está abierto. Se apagan en vez de esconderse porque siguen siendo la referencia de
+ * dónde está parada la estación elegida respecto de las demás.
  */
-export function stationPin(station: StationResult, selected: boolean): L.DivIcon {
+export function stationPin(station: StationResult, selected: boolean, dimmed = false): L.DivIcon {
   const ring = isAvailable(station) ? AVAILABLE_RING : UNAVAILABLE_RING
   const selectedRing = selected ? 'station-pin__ring--selected' : ''
+  /* Clase completa, no interpolada: ver el comentario de arriba sobre Tailwind. */
+  const dim = dimmed ? 'opacity-40' : ''
 
   return L.divIcon({
     // Vacío a propósito: con el valor por omisión Leaflet le mete su fondo blanco y su borde.
     className: '',
     html: `
-      <div class="flex flex-col items-center">
+      <div class="flex flex-col items-center ${dim} transition-opacity duration-300">
         <div class="station-pin__ring ${selectedRing} bg-background ${ring} grid h-10 w-10 place-items-center rounded-full border-2 shadow-md">
           ${BOLT_SVG}
         </div>

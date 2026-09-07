@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import L from 'leaflet'
 import { MapContainer, Marker, TileLayer, Tooltip, useMap, ZoomControl } from 'react-leaflet'
 
 import {
@@ -64,14 +65,38 @@ function InvalidateSizeOnResize() {
  * Recibe la estación entera y no su id para que el efecto dependa del objeto: `find` sobre el
  * arreglo devuelve siempre la misma referencia mientras no cambie la selección, así que un
  * repintado cualquiera no vuelve a mover el mapa.
+ *
+ * `bottomInsetPx` es el alto que le tapa el panel al mapa. Sin compensarlo, en celular el pin
+ * queda centrado en la ventana y por lo tanto DEBAJO del panel que se acaba de abrir: el mapa
+ * se mueve hacia una estación que no se ve. Se corrige subiendo el centro la mitad de lo
+ * tapado, que es lo que vuelve a dejar el pin en el medio del hueco visible.
  */
-function FlyToStation({ station }: { station: StationResult | null }) {
+function FlyToStation({
+  station,
+  bottomInsetPx,
+}: {
+  station: StationResult | null
+  bottomInsetPx: number
+}) {
   const map = useMap()
 
   useEffect(() => {
     if (station === null) return
-    map.flyTo([station.latitude, station.longitude], FOCUS_ZOOM)
-  }, [map, station])
+
+    const target = L.latLng(station.latitude, station.longitude)
+    if (bottomInsetPx === 0) {
+      map.flyTo(target, FOCUS_ZOOM)
+      return
+    }
+
+    /*
+     * La corrección se hace en píxeles y no en grados: cuántos grados son 150 px depende del
+     * zoom y de la latitud, y al zoom de destino, que todavía no es el actual. `project` a ese
+     * zoom convierte una vez y evita las dos cuentas.
+     */
+    const point = map.project(target, FOCUS_ZOOM).add([0, bottomInsetPx / 2])
+    map.flyTo(map.unproject(point, FOCUS_ZOOM), FOCUS_ZOOM)
+  }, [map, station, bottomInsetPx])
 
   return null
 }
@@ -80,9 +105,19 @@ interface StationMapProps {
   stations: StationResult[]
   selectedStationId: number | null
   onSelect: (stationId: number) => void
+  /** Alto que el panel de detalle le tapa al mapa desde abajo. Ver FlyToStation. */
+  bottomInsetPx?: number
+  /** Apaga los pines que no son el elegido. Se usa con el panel abierto. */
+  dimUnselected?: boolean
 }
 
-export default function StationMap({ stations, selectedStationId, onSelect }: StationMapProps) {
+export default function StationMap({
+  stations,
+  selectedStationId,
+  onSelect,
+  bottomInsetPx = 0,
+  dimUnselected = false,
+}: StationMapProps) {
   const [hoveredStationId, setHoveredStationId] = useState<number | null>(null)
   const selectedStation = stations.find((s) => s.stationId === selectedStationId) ?? null
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -128,7 +163,7 @@ export default function StationMap({ stations, selectedStationId, onSelect }: St
       <ZoomControl position="bottomleft" />
 
       <InvalidateSizeOnResize />
-      <FlyToStation station={selectedStation} />
+      <FlyToStation station={selectedStation} bottomInsetPx={bottomInsetPx} />
 
       <TileLayer
         url={TILES.dark}
@@ -141,7 +176,11 @@ export default function StationMap({ stations, selectedStationId, onSelect }: St
         <Marker
           key={station.stationId}
           position={[station.latitude, station.longitude]}
-          icon={stationPin(station, station.stationId === selectedStationId)}
+          icon={stationPin(
+            station,
+            station.stationId === selectedStationId,
+            dimUnselected && station.stationId !== selectedStationId,
+          )}
           eventHandlers={{
             mouseover: () => startHover(station.stationId),
             mouseout: cancelHover,

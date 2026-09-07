@@ -25,10 +25,25 @@ interface BottomSheetProps {
   onClose: () => void
   /** Nombre del panel para lectores de pantalla; no se ve. */
   label: string
+  /**
+   * Si el fondo se oscurece detrás del panel. Por omisión sí.
+   *
+   * El mapa lo apaga: ahí lo que está atrás no es una lista que se pueda tapar, es el mapa
+   * con el pin de la estación que se acaba de elegir, y oscurecerlo sería esconder el motivo
+   * por el que el panel se abrió. El fondo sigue existiendo y sigue cerrando al tocarlo —solo
+   * que transparente—, así que el gesto no cambia.
+   */
+  dimBackground?: boolean
   children: ReactNode
 }
 
-export default function BottomSheet({ open, onClose, label, children }: BottomSheetProps) {
+export default function BottomSheet({
+  open,
+  onClose,
+  label,
+  dimBackground = true,
+  children,
+}: BottomSheetProps) {
   /*
    * `open` es lo que pide el padre; `mounted` es lo que hay en el DOM. Son distintos porque
    * al cerrar el panel tiene que seguir montado mientras dura la animación de salida.
@@ -169,13 +184,20 @@ export default function BottomSheet({ open, onClose, label, children }: BottomSh
   const translate = visible ? dragOffset : window.innerHeight
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    /*
+      z por encima de los 1000 que usa Leaflet para sus panes y controles. Con el z-50 que
+      tenía, sobre el mapa el panel quedaba por DEBAJO del control de zoom. En el ABM, que no
+      tiene mapa, subirlo no cambia nada: no hay con qué competir.
+    */
+    <div className="fixed inset-0 z-[1200] flex flex-col justify-end">
       {/* Fondo. Tocarlo cierra: es la otra forma de salir que pide el diseño. */}
       <button
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full cursor-default bg-black/60 transition-opacity duration-[260ms]"
+        className={`absolute inset-0 h-full w-full cursor-default transition-opacity duration-[260ms] ${
+          dimBackground ? 'bg-black/60' : 'bg-transparent'
+        }`}
         style={{ opacity: visible ? 1 : 0 }}
       />
 
