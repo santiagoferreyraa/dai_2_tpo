@@ -1,11 +1,11 @@
 /**
  * Tarjeta que aparece al dejar el mouse sobre un pin del mapa.
  *
- * Es un componente aparte de StationCard —la ficha del carrusel— aunque muestren datos
+ * Es un componente aparte de StationResultCard —la ficha del carrusel— aunque muestren datos
  * parecidos. Antes eran uno solo, y tenía sentido mientras el diseño era el mismo; dejó de
  * tenerlo cuando esta pasó a llevar el círculo montado sobre su borde izquierdo y otra
  * jerarquía tipográfica. Lo que sí comparten, que es lo que importa que no se bifurque, son
- * los datos derivados de model.ts.
+ * los datos derivados de format.ts.
  *
  * El círculo de la izquierda NO es el pin del mapa: es propio, y queda justo encima del pin,
  * tapándolo. Se dibuja acá y no allá por el orden de capas de Leaflet — el pane de los
@@ -15,12 +15,12 @@
 
 import {
   availableConnectorCount,
-  CONNECTOR_LABELS,
+  CONNECTOR_TYPE_LABEL,
   fastestConnector,
   isAvailable,
   maxPowerKw,
-} from './model'
-import type { StationResult } from './types'
+} from '../format'
+import type { StationResult } from '../types'
 
 /* Clases completas en cada rama, nunca concatenadas: ver el comentario de stationPin.ts. */
 const DOT_AVAILABLE = 'bg-primary'
@@ -78,7 +78,7 @@ export default function StationHoverCard({ station }: StationHoverCardProps) {
 
         {fastest !== null && (
           <span className="border-border text-text-muted ml-auto shrink-0 rounded-lg border px-2 py-1 text-xs">
-            {CONNECTOR_LABELS[fastest.connectorType]}
+            {CONNECTOR_TYPE_LABEL[fastest.connectorType]}
           </span>
         )}
       </div>

@@ -3,6 +3,9 @@
    Sin esto el mapa sale como una pila de imágenes sueltas, no como un mapa. */
 @import "leaflet/dist/leaflet.css";
 
+/* Tokens propios de la feature Terminales (prefijo `st-`). No pisan los de acá abajo. */
+@import "./features/terminals/terminals.css";
+
 /*
   Tema de la aplicación.
 

@@ -18,10 +18,10 @@ import {
   MIN_ZOOM,
   TILES,
   TILE_ATTRIBUTION,
-} from './mapConfig'
+} from '../mapConfig'
 import StationHoverCard from './StationHoverCard'
-import { stationPin } from './stationPin'
-import type { StationResult } from './types'
+import { stationPin } from '../stationPin'
+import type { StationResult } from '../types'
 
 /**
  * Cuánto hay que sostener el mouse sobre un pin antes de que aparezca la tarjeta.

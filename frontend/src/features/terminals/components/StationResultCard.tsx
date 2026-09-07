@@ -1,23 +1,24 @@
 /**
- * Ficha de una estación.
+ * Ficha de un resultado de búsqueda, tal como la muestra el carrusel del mapa.
  *
- * La usan dos lugares con la misma información y distinto detalle: la tarjeta flotante que
- * aparece al dejar el mouse sobre un pin, y las fichas del carrusel. Es un solo componente a
- * propósito — si fueran dos, el día que cambie qué se muestra habría que acordarse de los dos.
+ * Es la tarjeta del conductor y no la del operador: trabaja sobre `StationResult` —lo que
+ * devuelve la búsqueda, con los conectores que pasaron el filtro— mientras que la del ABM
+ * (components/StationCard.tsx) trabaja sobre `StationDetail`. Son dos pantallas distintas
+ * con dos audiencias distintas; lo que comparten, y lo que importa que no se bifurque, son
+ * los datos derivados de format.ts.
  *
- * No fija su ancho: lo pone quien la usa. El tooltip la quiere angosta y el carrusel la quiere
- * del ancho de la columna.
+ * No fija su ancho: lo pone quien la usa.
  */
 
 import {
   availableConnectorCount,
-  CONNECTOR_LABELS,
+  CONNECTOR_TYPE_LABEL,
   fastestConnector,
   isAvailable,
   maxPowerKw,
-  STATUS_LABELS,
-} from './model'
-import type { StationResult } from './types'
+  STATUS_LABEL,
+} from '../format'
+import type { StationResult } from '../types'
 
 /* Clases completas en cada rama, nunca concatenadas: ver el comentario de stationPin.ts. */
 const DOT_AVAILABLE = 'bg-primary'
@@ -29,13 +30,13 @@ const STATUS_TEXT = {
   OUT_OF_SERVICE: 'text-text-muted',
 }
 
-interface StationCardProps {
+interface StationResultCardProps {
   station: StationResult
   /** Con el detalle de cada conector. Solo la ficha elegida del carrusel lo despliega. */
   expanded?: boolean
 }
 
-export default function StationCard({ station, expanded = false }: StationCardProps) {
+export default function StationResultCard({ station, expanded = false }: StationResultCardProps) {
   const fastest = fastestConnector(station)
   const free = availableConnectorCount(station)
 
@@ -57,7 +58,7 @@ export default function StationCard({ station, expanded = false }: StationCardPr
 
         {fastest !== null && (
           <span className="border-border text-text-muted shrink-0 rounded-md border px-1.5 py-0.5 text-[10px]">
-            {CONNECTOR_LABELS[fastest.connectorType]}
+            {CONNECTOR_TYPE_LABEL[fastest.connectorType]}
           </span>
         )}
       </div>
@@ -87,10 +88,12 @@ export default function StationCard({ station, expanded = false }: StationCardPr
         <ul className="border-border mt-3 flex flex-col gap-2 border-t pt-3">
           {station.matchingConnectors.map((connector) => (
             <li key={connector.connectorId} className="flex items-baseline gap-2 text-xs">
-              <span className="text-text flex-1">{CONNECTOR_LABELS[connector.connectorType]}</span>
+              <span className="text-text flex-1">
+                {CONNECTOR_TYPE_LABEL[connector.connectorType]}
+              </span>
               <span className="text-text-muted">{connector.maxPowerKw} kW</span>
               <span className={`w-28 text-right ${STATUS_TEXT[connector.operationalStatus]}`}>
-                {STATUS_LABELS[connector.operationalStatus]}
+                {STATUS_LABEL[connector.operationalStatus]}
               </span>
             </li>
           ))}

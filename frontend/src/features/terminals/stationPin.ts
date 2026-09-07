@@ -8,7 +8,7 @@
 
 import L from 'leaflet'
 
-import { isAvailable, maxPowerKw } from './model'
+import { isAvailable, maxPowerKw } from './format'
 import type { StationResult } from './types'
 
 /**

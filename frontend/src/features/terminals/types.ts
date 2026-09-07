@@ -69,3 +69,33 @@ export interface StationResult {
   distanceKm: number
   matchingConnectors: ConnectorSummary[]
 }
+
+/*
+ * ---------------------------------------------------------------------------
+ * Tipos de la pantalla (no del backend)
+ *
+ * Los de arriba espejan el contrato REST. Los de acá abajo son los que consume la UI,
+ * que necesita algo que el contrato todavía no da: la estación con sus conectores
+ * adentro. `StationResponse` no los trae, así que la pantalla arma esta vista combinando
+ * dos llamadas (ver data/stationsRepository.ts).
+ * ---------------------------------------------------------------------------
+ */
+
+/** Una estación con sus conectores: la unidad que muestran el listado y el detalle. */
+export interface StationDetail extends Station {
+  connectors: Connector[]
+}
+
+/** Un conector todavía sin guardar: lo que edita el formulario antes del alta. */
+export interface ConnectorDraft {
+  /** Presente solo si el conector ya existe en el backend. */
+  id?: number
+  connectorType: ConnectorType
+  maxPowerKw: number
+  operationalStatus: OperationalStatus
+}
+
+/** Alta y edición completas tal como las envía el formulario. */
+export interface StationInput extends StationData {
+  connectors: ConnectorDraft[]
+}

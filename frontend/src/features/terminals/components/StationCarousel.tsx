@@ -14,8 +14,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-import StationCard from './StationCard'
-import type { StationResult } from './types'
+import StationResultCard from './StationResultCard'
+import type { StationResult } from '../types'
 
 /**
  * Cuánto se encoge y se apaga la ficha más lejana del centro.
@@ -331,7 +331,10 @@ export default function StationCarousel({
               // columna y las fichas lejanas se leen como más angostas, no como corridas.
               className="origin-right shrink-0 text-left transition-transform duration-150"
             >
-              <StationCard station={station} expanded={station.stationId === selectedStationId} />
+              <StationResultCard
+                station={station}
+                expanded={station.stationId === selectedStationId}
+              />
             </button>
           )),
         )}

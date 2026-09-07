@@ -67,6 +67,16 @@ export const MAX_ZOOM = 18
 /** Obelisco. Punto de partida mientras no haya geolocalización del usuario. */
 export const DEFAULT_CENTER: L.LatLngExpression = [-34.6037, -58.3816]
 
+/**
+ * Radio de la búsqueda mientras no exista la búsqueda por viewport.
+ *
+ * 4.000 km desde el Obelisco cubre el país entero con margen —Ushuaia está a unos 2.400— así
+ * que ninguna estación queda afuera. El centro NO es arbitrario: `distanceKm` la calcula el
+ * backend contra el punto consultado y el carrusel la muestra, así que buscar desde otro lado
+ * pondría en cada ficha una distancia que no significa nada para quien mira este mapa.
+ */
+export const COUNTRY_RADIUS_KM = 4000
+
 export const DEFAULT_ZOOM = 12
 
 /** Alejarse más que esto saca al país entero de escala y no muestra nada útil. */
