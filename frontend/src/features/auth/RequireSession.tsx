@@ -11,7 +11,7 @@ interface RequireSessionProps {
 }
 
 /**
- * Guard de las rutas privadas: sin sesión manda al login, y con el rol equivocado avisa.
+ * Guard de las rutas privadas: sin sesión manda al login, y sin el rol a acceso denegado.
  *
  * <p><b>Esto es experiencia de usuario, no seguridad, y conviene tenerlo clarísimo para la
  * defensa.</b> Cualquiera puede saltear este componente tocando el estado del navegador. Lo
@@ -33,19 +33,14 @@ export default function RequireSession({ roles, children }: RequireSessionProps)
 
   if (roles !== undefined && !roles.includes(session.role)) {
     /*
-     * Con sesión pero sin el rol no se redirige al login: mandarlo a autenticarse a alguien
-     * que ya está autenticado es un lazo que no lleva a ninguna parte. Se le dice que esa
-     * pantalla no es para él.
+     * Con sesión pero sin el rol no se manda al login: pedirle que se autentique a alguien
+     * que ya está autenticado es un lazo que no lleva a ninguna parte. Va a la pantalla de
+     * acceso denegado, que además le da una salida.
+     *
+     * `replace` para que el botón de atrás no lo devuelva a la ruta prohibida, que lo
+     * rebotaría acá de nuevo.
      */
-    return (
-      <section className="flex h-full flex-col items-center justify-center gap-2 p-8">
-        <h1 className="text-lg font-semibold">Esta sección no es para tu cuenta</h1>
-        <p className="text-text-muted max-w-sm text-center text-sm">
-          Entraste como <span className="font-medium">{session.email}</span>. Para administrar
-          estaciones hace falta una cuenta de operador.
-        </p>
-      </section>
-    )
+    return <Navigate to="/forbidden" replace />
   }
 
   return children
