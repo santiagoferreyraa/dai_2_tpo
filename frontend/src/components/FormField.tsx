@@ -6,6 +6,14 @@ interface FormFieldProps {
   onChange: (value: string) => void
   autoComplete?: string
   required?: boolean
+  /**
+   * Teclado que ofrece el celular. `numeric` es la diferencia entre escribir dieciséis dígitos
+   * en un teclado de números y buscarlos en uno alfabético.
+   */
+  inputMode?: 'text' | 'numeric'
+  /** Tope de caracteres. Frena el tipeo en el campo en vez de avisar después de enviar. */
+  maxLength?: number
+  placeholder?: string
   hint?: string
   /** Mensaje de validación del campo. Reemplaza a la pista mientras esté presente. */
   error?: string
@@ -13,6 +21,10 @@ interface FormFieldProps {
 
 /**
  * Un campo de formulario con su etiqueta.
+ *
+ * Vivía dentro de la feature Auth hasta que ECO-26 lo necesitó para el alta de tarjetas. La
+ * regla del README es esa: un componente se promueve a compartido recién cuando lo usa una
+ * segunda feature, no cuando parece que va a usarlo.
  *
  * El `id` no es decorativo: enlaza la etiqueta con el campo, que es lo que hace que el lector
  * de pantalla anuncie "Contraseña" al llegar y que se pueda hacer clic en el texto para
@@ -32,6 +44,9 @@ export default function FormField({
   onChange,
   autoComplete,
   required,
+  inputMode,
+  maxLength,
+  placeholder,
   hint,
   error,
 }: FormFieldProps) {
@@ -53,6 +68,9 @@ export default function FormField({
         value={value}
         autoComplete={autoComplete}
         required={required}
+        inputMode={inputMode}
+        maxLength={maxLength}
+        placeholder={placeholder}
         aria-invalid={invalid}
         aria-describedby={showMessage ? messageId : undefined}
         onChange={(event) => onChange(event.target.value)}

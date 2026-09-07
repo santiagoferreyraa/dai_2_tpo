@@ -12,8 +12,15 @@
 # Los comandos son los mismos scripts del package.json, no comandos sueltos: así `pnpm dev`
 # y `pnpm dev:back` levantan exactamente lo mismo y no hay dos definiciones que mantener
 # sincronizadas.
+#
+# Desde ECO-26 son TRES: el componente de Pagos vive en ecopedia-integration, que es otro
+# artefacto desplegable y por lo tanto otro proceso (puerto 8083). Ver ARQUITECTURA §6.4.
+# Para trabajar solo en el mapa o en el ABM alcanza con 'back' y 'front'; 'pay' hace falta
+# para la pantalla de medios de pago.
 procs:
   back:
     shell: pnpm dev:back
+  pay:
+    shell: pnpm dev:pay
   front:
     shell: pnpm dev:front

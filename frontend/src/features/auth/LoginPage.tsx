@@ -1,10 +1,10 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 
+import FormField from '@/components/FormField'
 import { ApiError } from '@/lib/api'
 
 import AuthLayout from './components/AuthLayout'
-import FormField from './components/FormField'
 import { login } from './data/authRepository'
 import { openSession } from './session'
 import { validateEmail, validateRequiredPassword } from './validation'

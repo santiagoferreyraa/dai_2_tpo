@@ -32,13 +32,77 @@
         </dependency>
 
         <!--
-            Sin JPA todavía: este módulo no tiene tablas propias. Si PaymentService termina
-            guardando medios de pago, se agregan acá spring-boot-starter-data-jpa, Flyway y
-            el datasource en application.yml, igual que en core y charging.
+            Seguridad declarativa: habilita @PreAuthorize sobre las operaciones de Pagos.
 
-            Falta también spring-boot-starter-web-services (Spring-WS) para el cliente SOAP;
+            Este artefacto valida el token por su cuenta, con la misma clave que lo firmó core.
+            No depende de ecopedia-core para eso: la autenticación stateless de RNF07 existe
+            justamente para que cada artefacto resuelva el token en su propia capa de
+            presentación, sin preguntarle a nadie. Ver ARQUITECTURA §2.2.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Lectura del token JWT. Acá solo se valida y se leen claims: emitirlo es de Usuarios. -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!--
+            Con JPA desde ECO-26: este módulo SÍ tiene tabla propia.
+
+            El comentario que estaba acá decía que si PaymentService terminaba guardando medios
+            de pago había que agregar JPA, Flyway y el datasource. Eso es exactamente lo que
+            pasó: RF02 obliga a persistir marca, últimos cuatro y token del conductor. El
+            número completo sigue sin guardarse en ninguna parte.
+
+            Falta todavía spring-boot-starter-web-services (Spring-WS) para el cliente SOAP;
             se agrega cuando se genere el WSDL de la distribuidora. Ver ARQUITECTURA §3.1.
         -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- El esquema lo gobierna Flyway, no Hibernate. Ver README, "Migraciones". -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- Motor de base de datos objetivo (perfil por defecto) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Solo para el perfil 'dev': levantar el módulo sin PostgreSQL instalado. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

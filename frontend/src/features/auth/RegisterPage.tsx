@@ -1,10 +1,10 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
+import FormField from '@/components/FormField'
 import { ApiError } from '@/lib/api'
 
 import AuthLayout from './components/AuthLayout'
-import FormField from './components/FormField'
 import { register } from './data/authRepository'
 import {
   MINIMUM_PASSWORD_LENGTH,
