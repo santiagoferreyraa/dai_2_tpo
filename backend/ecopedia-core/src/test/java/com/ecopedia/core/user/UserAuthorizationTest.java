@@ -2,6 +2,7 @@ package com.ecopedia.core.user;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -149,6 +151,45 @@ class UserAuthorizationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].email").value("operador@ecopedia.test"));
+    }
+
+    /*
+     * La prueba que sostiene el cierre del escalamiento de privilegios. El registro es público
+     * —tiene que serlo, es el alta de conductores—, así que si aceptara el rol por parámetro
+     * cualquiera se emitiría una cuenta de administrador y las diez anotaciones del sistema
+     * dejarían de valer: el atacante no las esquiva, llega con el rol que piden.
+     *
+     * El cuerpo manda "role":"ADMIN" a propósito. Jackson descarta la propiedad porque el
+     * record no la declara, así que la petición entra igual y el usuario nace CONDUCTOR. Si
+     * alguien vuelve a agregarle el campo al DTO, esta prueba se pone en rojo.
+     */
+    @Test
+    @DisplayName("El registro público ignora el rol que le manden: siempre nace CONDUCTOR")
+    void neverGrantsTheRequestedRoleOnPublicRegistration() throws Exception {
+        String body =
+                """
+                {"email":"intruso@ecopedia.test","password":"unaClave123",
+                 "fullName":"Intruso","role":"ADMIN"}
+                """;
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("CONDUCTOR"));
+
+        /*
+         * Y la consecuencia que importa: con esa cuenta el backoffice sigue cerrado. Se pide
+         * un token emitido para ese usuario tal como quedó guardado, no uno fabricado.
+         */
+        User created = userRepository.findByEmail("intruso@ecopedia.test").orElseThrow();
+        mockMvc.perform(get("/api/users")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer "
+                                        + tokenProvider.generateToken(
+                                                created.getId(), created.getEmail(), created.getRole())))
+                .andExpect(status().isForbidden());
     }
 
     /*
