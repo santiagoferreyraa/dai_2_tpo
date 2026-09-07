@@ -2,8 +2,25 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 
+import { clearSessionIfExpired, restoreSession } from '@/features/auth/session'
 import '@/index.css'
+import { onAuthRejected } from '@/lib/api'
 import { router } from '@/routes/routes'
+
+/*
+ * La sesión se rehidrata ANTES del primer render, no dentro de un efecto: si se hiciera
+ * después, la primera pasada del guard vería "sin sesión" y mandaría al login a alguien que
+ * la tenía guardada.
+ */
+restoreSession()
+
+/*
+ * Y se le enseña al cliente HTTP qué hacer cuando el backend rechaza una llamada. Cierra la
+ * sesión solo si el token venció: un 403 no distingue "token vencido" de "rol equivocado",
+ * así que cerrarla ante cualquiera dejaría afuera a un conductor por tocar una pantalla que
+ * no le corresponde. El porqué completo está en features/auth/session.ts.
+ */
+onAuthRejected(clearSessionIfExpired)
 
 const container = document.getElementById('root')
 

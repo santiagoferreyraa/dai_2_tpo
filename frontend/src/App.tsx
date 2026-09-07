@@ -1,4 +1,6 @@
-import { Outlet } from 'react-router'
+import { Link, Outlet } from 'react-router'
+
+import SessionMenu from '@/features/auth/components/SessionMenu'
 
 /**
  * Layout raíz de la aplicación: lo que se ve en todas las pantallas.
@@ -20,8 +22,11 @@ export default function App() {
       contenido.
     */
     <div className="flex h-full flex-col">
-      <header className="border-border bg-surface shrink-0 border-b px-6 py-4">
-        <span className="text-primary text-lg font-semibold">Ecopedia</span>
+      <header className="border-border bg-surface flex shrink-0 items-center justify-between border-b px-6 py-4">
+        <Link className="text-primary text-lg font-semibold" to="/">
+          Ecopedia
+        </Link>
+        <SessionMenu />
       </header>
 
       <main className="min-h-0 flex-1">
