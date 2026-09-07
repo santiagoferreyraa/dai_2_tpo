@@ -15,5 +15,7 @@ public interface ConnectorRepository {
 
     List<Connector> findByStationId(Long stationId);
 
+    List<Connector> findAll();
+
     void delete(Connector connector);
 }
