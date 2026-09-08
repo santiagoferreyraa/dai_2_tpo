@@ -39,22 +39,28 @@ body {
   algo que tiembla está esperando que lo borres o lo muevas. Sin esto, la única señal de que
   se entró a un modo distinto serían unas cruces chicas en una esquina, que es fácil no ver.
 
-  Los ángulos son mínimos a propósito. Con más grados la tarjeta deja de leerse mientras se
-  mueve, y el número —que es lo único que permite distinguir una tarjeta de otra— se vuelve
-  imposible de comparar justo cuando hay que decidir cuál se borra.
+  El ángulo es un compromiso entre dos cosas que tiran para lados opuestos. Con muy poco no se
+  aprecia —una tarjeta de 380px girando medio grado mueve las esquinas menos de dos píxeles, que
+  a simple vista es nada—; con mucho, el número deja de leerse mientras se mueve, y es lo único
+  que distingue una tarjeta de otra justo cuando hay que decidir cuál se borra. Poco más de un
+  grado mueve las esquinas unos cuatro píxeles: se ve sin que el texto se maree.
+
+  Lo que más ayuda a que se note no es el ángulo sino que las tarjetas NO tiemblen al unísono.
+  Ver `CardStack`: las de posición impar corren la animación al revés, así en cada momento hay
+  vecinas girando en sentidos opuestos. Todas en fase se leen como una sola pieza sacudiéndose.
 */
 @keyframes card-jiggle {
   0%,
   100% {
-    transform: rotate(-0.55deg) translateY(-0.5px);
+    transform: rotate(-1.15deg) translate(-1px, -1px);
   }
   50% {
-    transform: rotate(0.55deg) translateY(0.5px);
+    transform: rotate(1.15deg) translate(1px, 1px);
   }
 }
 
 .card-jiggle {
-  animation: card-jiggle 0.22s ease-in-out infinite;
+  animation: card-jiggle 0.25s ease-in-out infinite;
 }
 
 /*

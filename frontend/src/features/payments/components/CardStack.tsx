@@ -16,8 +16,14 @@ const PEEK_PX = 72
 /** La proporción de una tarjeta real: 85,60 × 53,98 mm. La misma que usa `CardPreview`. */
 const CARD_RATIO = 1.586
 
-/** Cuánto hay que mantener el dedo apoyado para entrar al modo de eliminar. */
-const LONG_PRESS_MS = 2000
+/**
+ * Cuánto hay que mantener el dedo apoyado para entrar al modo de eliminar.
+ *
+ * 600 ms es lo que usan los sistemas para el mismo gesto: alcanza para que un toque normal
+ * —incluso uno lento— no lo dispare, y es lo bastante corto como para que no parezca que la
+ * pantalla se colgó. Con dos segundos, quien no sabía cuánto había que esperar soltaba antes.
+ */
+const LONG_PRESS_MS = 600
 
 /**
  * Cuánto se puede mover el dedo sin que la pulsación se cancele.
@@ -186,13 +192,18 @@ export default function CardStack({ cards, onRemove }: CardStackProps) {
               dos usan `transform`, así que compartir nodo hace que la animación pise el
               desplazamiento de la pila y las tarjetas salten al apilarse.
 
-              El desfase por posición evita que tiemblen todas al mismo tiempo, que se ve como
-              una sola pieza sacudiéndose en vez de varias tarjetas sueltas.
+              Las de posición impar corren la animación al revés. Es lo que más hace por que el
+              temblor se note: con todas en fase la pila se lee como una sola pieza sacudiéndose,
+              y con vecinas girando en sentidos opuestos se ven tarjetas sueltas moviéndose.
             */}
             <div
               /* `relative` para que la cruz se ubique contra la tarjeta y tiemble con ella. */
               className={`relative ${removingMode ? 'card-jiggle' : ''}`}
-              style={removingMode ? { animationDelay: `${(index % 3) * 70}ms` } : undefined}
+              style={
+                removingMode
+                  ? { animationDirection: index % 2 === 0 ? 'normal' : 'reverse' }
+                  : undefined
+              }
             >
               <button
                 type="button"
