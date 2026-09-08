@@ -36,7 +36,13 @@ export default function CardPreview({ brand, digits, holderName, expiry }: CardP
   return (
     <div
       aria-hidden="true"
-      className={`relative mb-6 aspect-[1.586/1] w-full max-w-sm overflow-hidden rounded-2xl p-5 text-white shadow-xl transition-[background] duration-500 ${
+      /*
+        `mx-auto` centra la tarjeta cuando el formulario es más ancho que ella, que es lo que
+        pasa en tablet y escritorio: `max-w-sm` la frena antes de que se estire y sin esto
+        quedaba pegada al borde izquierdo, con un hueco muerto a la derecha. En celular no se
+        nota, porque ahí la tarjeta ocupa todo el ancho disponible.
+      */
+      className={`relative mx-auto mb-6 aspect-[1.586/1] w-full max-w-sm overflow-hidden rounded-2xl p-5 text-white shadow-xl transition-[background] duration-500 ${
         SURFACE[brand ?? 'UNKNOWN']
       }`}
     >

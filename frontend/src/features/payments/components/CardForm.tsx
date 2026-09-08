@@ -185,16 +185,6 @@ export default function CardForm({ onSubmit, onCancel, error, sending }: CardFor
         </p>
       )}
 
-      {/*
-        El aviso va acá abajo y no en un ícono con globito: es la respuesta a la pregunta que
-        cualquiera se hace antes de escribir dieciséis dígitos en una pantalla, y merece estar
-        escrita donde se la está haciendo.
-      */}
-      <p className="text-text-muted text-xs">
-        Guardamos solo la marca, los últimos cuatro dígitos y un identificador de la pasarela. El
-        número completo no queda en Ecopedia.
-      </p>
-
       <div className="flex gap-3">
         <button
           className="bg-primary flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
