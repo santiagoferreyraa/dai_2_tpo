@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import type {
   Connector,
   ConnectorDraft,
+  SearchCriteria,
   Station,
   StationDetail,
   StationInput,
@@ -57,12 +58,63 @@ function toRequestBody(input: StationInput): StationRequestBody {
 }
 
 /**
+ * RF07: búsqueda geolocalizada con filtros.
+ *
+ * Los nombres de los parámetros de la query NO son los del contrato de dominio: el
+ * controlador espera `lat` y `lon` donde `SearchCriteria` dice `latitude` y `longitude`. La
+ * traducción vive acá, en el único archivo del frontend que conoce la forma de los endpoints.
+ *
+ * `connectorType` y `minimumPowerKw` en `undefined` no se envían —el cliente HTTP descarta
+ * las claves indefinidas—, y el backend los toma como "sin filtro".
+ *
+ * @param signal para cancelar la petición si el usuario vuelve a mover el mapa antes de que
+ *               responda; sin esto, dos respuestas fuera de orden dejan la lista con los
+ *               resultados de la búsqueda vieja.
+ */
+export function searchStations(
+  criteria: SearchCriteria,
+  signal?: AbortSignal,
+): Promise<StationResult[]> {
+  return api.get<StationResult[]>('/search', {
+    params: {
+      lat: criteria.latitude,
+      lon: criteria.longitude,
+      radiusKm: criteria.radiusKm,
+      connectorType: criteria.connectorType,
+      minimumPowerKw: criteria.minimumPowerKw,
+      onlyAvailable: criteria.onlyAvailable,
+    },
+    signal,
+  })
+}
+
+/**
+ * Todas las estaciones como resultados de búsqueda, sin filtrar por distancia ni conector.
+ *
+ * No se exporta: `distanceKm` sale calculada contra un centro que no es el de nadie, así que
+ * solo sirve para lo de acá abajo —sacar los conectores de cada estación—, nunca para
+ * mostrarle una distancia a un usuario. Quien necesite eso llama a `searchStations` con el
+ * punto que le importa.
+ */
+function searchEverywhere(signal?: AbortSignal): Promise<StationResult[]> {
+  return searchStations(
+    {
+      latitude: EVERYWHERE.lat,
+      longitude: EVERYWHERE.lon,
+      radiusKm: EVERYWHERE.radiusKm,
+      onlyAvailable: false,
+    },
+    signal,
+  )
+}
+
+/**
  * Conectores de todas las estaciones, indexados por estación.
  *
  * Sale de la búsqueda sin filtros, que es el único endpoint que los devuelve agrupados.
  */
 async function connectorsByStation(signal?: AbortSignal): Promise<Map<number, Connector[]>> {
-  const results = await api.get<StationResult[]>('/search', { params: EVERYWHERE, signal })
+  const results = await searchEverywhere(signal)
 
   return new Map(
     results.map((result) => [
