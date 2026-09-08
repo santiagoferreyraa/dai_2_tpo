@@ -56,3 +56,16 @@ export function groupCardNumber(digits: string): string {
 
   return parts.join(' ')
 }
+
+/**
+ * Cuántos caracteres ocupa en pantalla un número de `digits` dígitos de esa marca.
+ *
+ * Se calcula agrupando un número de mentira en vez de sumar separadores a mano, y no es
+ * rebusque: la cantidad de espacios depende de la agrupación —cuatro en una Visa de 19
+ * dígitos, dos en una AMEX—, así que una fórmula escrita aparte se desincroniza el día que
+ * `groupCardNumber` cambie. Derivándolo de la misma función, no puede.
+ */
+export function formattedLengthFor(brand: CardBrand | undefined, digits: number): number {
+  const prefix = brand === 'AMEX' ? '34' : '4'
+  return groupCardNumber(prefix.padEnd(digits, '0')).length
+}

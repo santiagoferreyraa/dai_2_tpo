@@ -2,13 +2,14 @@ import { type FormEvent, useState } from 'react'
 
 import FormField from '@/components/FormField'
 
-import { BRAND_LABEL, groupCardNumber } from '../format'
+import { BRAND_LABEL, formattedLengthFor, groupCardNumber } from '../format'
 import type { RegisterCardInput } from '../types'
 import {
   brandOf,
   digitsOf,
   expiryMonthOf,
   expiryYearOf,
+  maxDigitsFor,
   validateCardNumber,
   validateExpiry,
   validateHolderName,
@@ -35,8 +36,9 @@ interface CardFormProps {
  * cambia el número por un token— pedirlo sería juntar un dato que no se puede usar ni guardar.
  *
  * **La marca se muestra pero no se elige.** Aparece sola al escribir el número y es la
- * confirmación visible de que el sistema lo está entendiendo bien: si alguien copió un dígito de
- * más, la marca desaparece antes de que llegue a enviar.
+ * confirmación visible de que el sistema lo está entendiendo bien. Además es la que define
+ * cuántos dígitos entran: en cuanto se sabe que es una Mastercard, el campo corta en dieciséis
+ * en vez de dejar llegar al máximo teórico de diecinueve.
  */
 export default function CardForm({ onSubmit, onCancel, error, sending }: CardFormProps) {
   const [number, setNumber] = useState('')
@@ -63,9 +65,17 @@ export default function CardForm({ onSubmit, onCancel, error, sending }: CardFor
     return attempted ? fieldErrors[field] : undefined
   }
 
-  /** Reformatea en cada tecla para que lo que se ve coincida con la tarjeta física. */
+  /**
+   * Reformatea en cada tecla para que lo que se ve coincida con la tarjeta física.
+   *
+   * **El corte es por marca, no en el máximo teórico de 19 dígitos.** En cuanto los primeros
+   * dígitos dicen que es una Mastercard, el campo deja de aceptar después del dieciséis. Con un
+   * tope único de 19 se puede seguir escribiendo tres dígitos de más y el campo los toma: el
+   * número queda imposible, y lo que se ve en pantalla ya no es lo que hay en la mano.
+   */
   function handleNumberChange(value: string) {
-    setNumber(groupCardNumber(digitsOf(value).slice(0, 19)))
+    const typed = digitsOf(value)
+    setNumber(groupCardNumber(typed.slice(0, maxDigitsFor(brandOf(typed)))))
   }
 
   /**
@@ -103,8 +113,12 @@ export default function CardForm({ onSubmit, onCancel, error, sending }: CardFor
         label="Número de tarjeta"
         type="text"
         inputMode="numeric"
-        // Un número de 19 dígitos con sus espacios ocupa 23 caracteres.
-        maxLength={23}
+        /*
+          El tope del navegador acompaña al corte por marca. Sin esto se puede seguir tipeando
+          aunque handleNumberChange descarte lo que sobra, y se ve un cursor que avanza sin que
+          aparezca nada.
+        */
+        maxLength={formattedLengthFor(brand, maxDigitsFor(brand))}
         placeholder="4111 1111 1111 1111"
         autoComplete="cc-number"
         value={number}

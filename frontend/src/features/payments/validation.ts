@@ -1,3 +1,4 @@
+import { BRAND_LABEL } from './format'
 import type { CardBrand } from './types'
 
 /**
@@ -68,14 +69,47 @@ export function brandOf(digits: string): CardBrand | undefined {
   return undefined
 }
 
+/**
+ * Cuántos dígitos tiene el número de cada marca.
+ *
+ * Visa admite tres largos: los 13 de las tarjetas viejas, los 16 de casi todas, y los 19 de
+ * algunas emisiones nuevas. Mastercard y AMEX tienen uno solo. Es lo que permite frenar el
+ * tipeo en el largo correcto en vez de dejar escribir hasta el máximo teórico de cualquier
+ * tarjeta: pasarse de largo en una Mastercard es el error que este dato evita.
+ */
+const BRAND_LENGTHS: Record<CardBrand, number[]> = {
+  VISA: [13, 16, 19],
+  MASTERCARD: [16],
+  AMEX: [15],
+}
+
+/** El largo mayor que admite la marca; 19 mientras no se sepa cuál es. */
+export function maxDigitsFor(brand: CardBrand | undefined): number {
+  if (brand === undefined) return 19
+  return Math.max(...BRAND_LENGTHS[brand])
+}
+
 export function validateCardNumber(value: string): string | undefined {
   const digits = digitsOf(value)
 
   if (digits === '') return 'Ingresá el número de la tarjeta.'
   if (digits.length < 13 || digits.length > 19)
     return 'El número tiene que tener entre 13 y 19 dígitos.'
-  if (brandOf(digits) === undefined)
-    return 'Por ahora solo aceptamos Visa, Mastercard y American Express.'
+
+  const brand = brandOf(digits)
+  if (brand === undefined) return 'Por ahora solo aceptamos Visa, Mastercard y American Express.'
+
+  /*
+   * El largo se revisa contra la marca ANTES que el dígito verificador, y el orden importa.
+   * Un número con dígitos de más falla Luhn igual, pero contestar "no es válido, revisá que
+   * esté bien copiado" deja a quien lo escribió releyendo dieciséis dígitos que están todos
+   * bien: lo que sobra es la cantidad, y eso hay que decirlo.
+   */
+  if (!BRAND_LENGTHS[brand].includes(digits.length)) {
+    const expected = BRAND_LENGTHS[brand].join(' o ')
+    return `Una ${BRAND_LABEL[brand]} tiene ${expected} dígitos, y escribiste ${digits.length}.`
+  }
+
   if (!passesLuhn(digits)) return 'Ese número no es válido. Revisá que esté bien copiado.'
 
   return undefined
