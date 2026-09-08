@@ -15,6 +15,8 @@ import {
   validateHolderName,
 } from '../validation'
 
+import CardPreview from './CardPreview'
+
 interface CardFormProps {
   onSubmit: (input: RegisterCardInput) => Promise<void>
   onCancel: () => void
@@ -108,6 +110,13 @@ export default function CardForm({ onSubmit, onCancel, error, sending }: CardFor
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+      {/*
+        La tarjeta va arriba de los campos y no al costado: en celular no hay costado, y
+        partir el componente en dos disposiciones para ganar una columna en escritorio es
+        mantener dos veces la misma pantalla.
+      */}
+      <CardPreview brand={brand} digits={numberDigits} holderName={holderName} expiry={expiry} />
+
       <FormField
         id="card-number"
         label="Número de tarjeta"

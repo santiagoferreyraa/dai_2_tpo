@@ -37,9 +37,19 @@ export function formatExpiry(month: number, year: number): string {
  * 4-6-5 y el resto 4-4-4-4, y respetar cada agrupación es lo que hace que el número en
  * pantalla se vea igual que el de la mano.
  */
+export function groupSizesFor(brand: CardBrand | undefined): number[] {
+  if (brand === 'AMEX') return [4, 6, 5]
+  return [4, 4, 4, 4, 3]
+}
+
 export function groupCardNumber(digits: string): string {
-  const isAmex = /^3[47]/.test(digits)
-  const groups = isAmex ? [4, 6, 5] : [4, 4, 4, 4, 3]
+  /*
+   * La marca se deduce acá del prefijo en vez de recibirla como parámetro, y es para no
+   * importar `brandOf`: vive en validation.ts, que importa de este archivo, así que la
+   * dependencia daría vuelta redonda. Lo único que hace falta saber para agrupar es si es
+   * AMEX, y eso lo dicen los dos primeros dígitos.
+   */
+  const groups = groupSizesFor(/^3[47]/.test(digits) ? 'AMEX' : undefined)
 
   const parts: string[] = []
   let cursor = 0
@@ -68,4 +78,31 @@ export function groupCardNumber(digits: string): string {
 export function formattedLengthFor(brand: CardBrand | undefined, digits: number): number {
   const prefix = brand === 'AMEX' ? '34' : '4'
   return groupCardNumber(prefix.padEnd(digits, '0')).length
+}
+
+/**
+ * El número tal como se lee en la tarjeta dibujada: lo escrito, y puntos por lo que falta.
+ *
+ * Los huecos se muestran desde el primer momento en vez de ir apareciendo. Es lo que hace que
+ * la tarjeta se vea como una tarjeta apenas se abre el formulario, y no como una caja de color
+ * que se va llenando de a poco; y además el número no se corre de lugar mientras se tipea,
+ * porque el ancho ya está tomado.
+ */
+export function maskedCardNumber(digits: string, brand: CardBrand | undefined): string {
+  // Lo habitual de cada marca —15 en AMEX, 16 en el resto—, salvo que ya se haya escrito más:
+  // una Visa de 19 dígitos existe y no hay que recortarla.
+  const slots = Math.max(brand === 'AMEX' ? 15 : 16, digits.length)
+  const filled = digits.padEnd(slots, '•')
+
+  const parts: string[] = []
+  let cursor = 0
+
+  for (const size of groupSizesFor(brand)) {
+    if (cursor >= filled.length) break
+    parts.push(filled.slice(cursor, cursor + size))
+    cursor += size
+  }
+  if (cursor < filled.length) parts.push(filled.slice(cursor))
+
+  return parts.join(' ')
 }

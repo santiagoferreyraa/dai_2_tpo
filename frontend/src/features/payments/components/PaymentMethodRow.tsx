@@ -1,6 +1,8 @@
 import { describeCard, formatExpiry } from '../format'
 import type { PaymentMethod } from '../types'
 
+import BrandMark from './BrandMark'
+
 interface PaymentMethodRowProps {
   card: PaymentMethod
   onRemove: (card: PaymentMethod) => void
@@ -23,6 +25,19 @@ export default function PaymentMethodRow({ card, onRemove, removing }: PaymentMe
         card.expired ? 'opacity-70' : ''
       }`}
     >
+      {/*
+        El logo repite lo que ya dice el texto de al lado, y esa redundancia es el punto:
+        recorrer una lista de tarjetas buscando la propia se hace mirando, no leyendo. El
+        recuadro oscuro está porque los tres logos son claros y sobre el fondo de la tarjeta
+        se pierden.
+      */}
+      <span
+        aria-hidden="true"
+        className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg bg-[#1c1c1e]"
+      >
+        <BrandMark brand={card.brand} height={16} />
+      </span>
+
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">
           {describeCard(card.brand, card.lastFour)}
