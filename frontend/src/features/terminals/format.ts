@@ -48,6 +48,47 @@ export const STATUS_DOT_CLASS: Record<OperationalStatus, string> = {
 
 export const CONNECTOR_TYPES: ConnectorType[] = ['CCS2', 'CHADEMO', 'TYPE_2']
 
+/**
+ * Escalones de potencia del filtro.
+ *
+ * No son redondos por gusto: 50 kW es el piso de la carga rápida y 150 kW el de la ultra
+ * rápida. Filtrar de a 10 kW no le cambia la decisión a nadie.
+ */
+export const POWER_STEPS = [50, 150]
+
+/**
+ * Los dos filtros de conector, tal como los eligió el usuario. `null` es "sin filtrar", que
+ * es lo único que distingue "cualquier potencia" de "potencia cero".
+ */
+export interface ConnectorFilters {
+  connectorType: ConnectorType | null
+  minPowerKw: number | null
+}
+
+/**
+ * Si la estación tiene un conector que cumple los dos filtros A LA VEZ.
+ *
+ * El "a la vez" es la regla, y es fácil de errar: "CCS2 + 150 kW" son las estaciones con un
+ * conector CCS2 que además da 150 kW, no las que tienen un CCS2 lento y otro rápido de otro
+ * tipo. Evaluar cada filtro por separado sobre la estación devolvería de más. Es el mismo
+ * criterio que aplica `matchingConnectors` en la búsqueda del backend.
+ *
+ * Toma la lista de conectores y no la estación porque las dos formas —la del ABM y la de la
+ * búsqueda— guardan sus conectores en campos distintos pero con los mismos dos datos.
+ */
+export function matchesFilters(
+  connectors: readonly Pick<Connector, 'connectorType' | 'maxPowerKw'>[],
+  { connectorType, minPowerKw }: ConnectorFilters,
+): boolean {
+  if (connectorType === null && minPowerKw === null) return true
+
+  return connectors.some(
+    (connector) =>
+      (connectorType === null || connector.connectorType === connectorType) &&
+      (minPowerKw === null || connector.maxPowerKw >= minPowerKw),
+  )
+}
+
 export const OPERATIONAL_STATUSES: OperationalStatus[] = ['AVAILABLE', 'OCCUPIED', 'OUT_OF_SERVICE']
 
 /** Potencia con coma decimal y sin ceros de relleno: 8,2 kW / 22 kW. */

@@ -11,7 +11,7 @@ import {
   listStations,
   updateStation,
 } from './data/stationsRepository'
-import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL } from './format'
+import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL, POWER_STEPS, matchesFilters } from './format'
 import type { ConnectorType, StationDetail, StationInput } from './types'
 import { useMediaQuery } from './useMediaQuery'
 import { useWheelToHorizontal } from './useWheelToHorizontal'
@@ -40,14 +40,6 @@ type Sheet =
   | { kind: 'info'; stationId: number }
   | { kind: 'edit'; stationId: number }
   | { kind: 'add' }
-
-/**
- * Escalones de potencia del filtro.
- *
- * No son redondos por gusto: 50 kW es el piso de la carga rápida y 150 kW el de la ultra
- * rápida. Filtrar de a 10 kW no le cambia la decisión a nadie.
- */
-const POWER_STEPS = [50, 150]
 
 /** A partir de acá entran las dos columnas. Es el `lg` de Tailwind. */
 const WIDE_QUERY = '(min-width: 1024px)'
@@ -98,12 +90,7 @@ export default function StationsPage() {
   const wide = useMediaQuery(WIDE_QUERY)
   const filtersRef = useWheelToHorizontal<HTMLDivElement>()
 
-  /*
-   * Los dos filtros son independientes y se combinan, pero se aplican sobre el MISMO
-   * conector: "CCS2 + 150 kW" son las estaciones con un conector CCS2 que además da 150 kW,
-   * no las que tienen un CCS2 lento y otro rápido de otro tipo. Es el mismo criterio que
-   * usa `matchingConnectors` en la búsqueda del backend.
-   */
+  /* Los dos filtros son independientes y se combinan; la regla la aplica `matchesFilters`. */
   const [connectorType, setConnectorType] = useState<ConnectorType | null>(null)
   const [minPowerKw, setMinPowerKw] = useState<number | null>(null)
 
@@ -137,15 +124,10 @@ export default function StationsPage() {
 
     return stations.filter((station) => {
       if (needle !== '' && !station.name.toLowerCase().includes(needle)) return false
-      if (!filtering) return true
 
-      return station.connectors.some(
-        (connector) =>
-          (connectorType === null || connector.connectorType === connectorType) &&
-          (minPowerKw === null || connector.maxPowerKw >= minPowerKw),
-      )
+      return matchesFilters(station.connectors, { connectorType, minPowerKw })
     })
-  }, [stations, query, connectorType, minPowerKw, filtering])
+  }, [stations, query, connectorType, minPowerKw])
 
   /*
    * El panel se referencia por id y no por objeto: si no, después de guardar seguiría

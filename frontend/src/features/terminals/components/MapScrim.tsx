@@ -2,14 +2,19 @@
  * Los dos degradados de negro a transparente que enmarcan el mapa, arriba y abajo.
  *
  * No son decoración: el mapa es una imagen con zonas claras y zonas oscuras, y encima van el
- * buscador y el panel. Sin el degradado, el buscador cae sobre una avenida clara y deja de
- * leerse. Oscurecer los bordes le da un fondo estable a lo que flota ahí.
+ * buscador y el panel de detalle. Sin el degradado, el buscador cae sobre una avenida clara y
+ * deja de leerse. Oscurecer los bordes le da un fondo estable a lo que flota ahí.
  *
- * El de abajo crece cuando se abre el panel de detalle: es lo que hace que el panel apoye
- * sobre una zona oscura en vez de cortar el mapa con una línea. Eso vale en celular, donde el
- * panel ocupa todo el ancho; en pantalla ancha el panel es una tarjeta en una esquina y
- * agrandar el degradado oscurecería medio mapa para enmarcar algo que no lo necesita. Quien
- * decide es la pantalla, vía `expanded`.
+ * Los dos son solo de celular, y por eso el componente entero se apaga en `md`. Es la pantalla
+ * chica la que obliga a apilar todo sobre el mapa: el buscador ocupa el ancho arriba y el panel
+ * de detalle sube desde abajo, de ahí que el degradado inferior crezca con `expanded` para
+ * recibirlo. De tablet para arriba la interfaz deja de estar encima del mapa —el carrusel se va
+ * al costado derecho, con su propio degradado— y estas dos franjas no enmarcarían nada: serían
+ * bandas negras tapando mapa.
+ *
+ * Van a media opacidad y no a negro pleno. El trabajo es darle contraste a lo que flota
+ * encima, no esconder el mapa: si el borde queda opaco, en una pantalla chica —donde el mapa
+ * ES la pantalla— se pierde justo la parte que le da contexto a los pines de arriba y abajo.
  *
  * `pointer-events-none` en los dos: son una capa visual y el mapa se sigue arrastrando a
  * través de ellos. Sin eso, la franja de arriba se comería el paneo.
@@ -29,12 +34,12 @@ export default function MapScrim({ expanded }: MapScrimProps) {
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1050] h-32 bg-gradient-to-b from-black/80 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1050] h-32 bg-gradient-to-b from-black/55 to-transparent md:hidden"
       />
 
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1050] bg-gradient-to-t from-black via-black/70 to-transparent transition-[height] duration-300 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1050] bg-gradient-to-t from-black/75 via-black/40 to-transparent transition-[height] duration-300 md:hidden ${
           expanded ? 'h-2/3' : 'h-40'
         }`}
       />

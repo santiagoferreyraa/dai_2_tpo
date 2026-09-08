@@ -18,7 +18,6 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   TILES,
-  TILE_ATTRIBUTION,
 } from '../mapConfig'
 import StationHoverCard from './StationHoverCard'
 import { stationPin } from '../stationPin'
@@ -30,7 +29,7 @@ import type { StationResult } from '../types'
  * La espera es el punto: sin ella, cruzar el mapa con el mouse abre y cierra media docena de
  * tarjetas al pasar. Con la demora solo aparece la de la estación en la que uno se detuvo.
  */
-const HOVER_DELAY_MS = 1500
+const HOVER_DELAY_MS = 800
 
 /**
  * Le avisa a Leaflet cuando cambia el tamaño del contenedor.
@@ -155,6 +154,14 @@ export default function StationMap({
       // que son los tres gestos con los que se usa un mapa. Los botones ocupaban la esquina
       // de abajo a la izquierda, que es justo por donde sube el panel de detalle.
       zoomControl={false}
+      // Tampoco va el cartel de atribución que Leaflet dibuja abajo a la derecha: en celular
+      // se monta sobre el panel de detalle y en el resto queda debajo del carrusel.
+      //
+      // OJO: apagar el cartel NO exime de acreditar a Esri y a OpenStreetMap, que la licencia
+      // de los mosaicos sigue exigiendo. El crédito tiene que estar visible en algún otro lugar
+      // de la aplicación —un pie de página o una pantalla "acerca de"—, y el texto para ponerlo
+      // es TILE_ATTRIBUTION, que sigue exportado en mapConfig justo para eso.
+      attributionControl={false}
       // Absoluto contra el contenedor, y no h-full, por un motivo concreto: un height en
       // porcentaje se resuelve contra la altura ESPECIFICADA del padre, y la del padre la
       // calcula el flex (height: auto). El porcentaje queda sin referencia, Leaflet mide 0px
@@ -164,12 +171,7 @@ export default function StationMap({
       <InvalidateSizeOnResize />
       <FlyToStation station={selectedStation} bottomInsetPx={bottomInsetPx} />
 
-      <TileLayer
-        url={TILES.dark}
-        attribution={TILE_ATTRIBUTION}
-        maxNativeZoom={MAX_NATIVE_ZOOM}
-        maxZoom={MAX_ZOOM}
-      />
+      <TileLayer url={TILES.dark} maxNativeZoom={MAX_NATIVE_ZOOM} maxZoom={MAX_ZOOM} />
 
       {stations.map((station) => (
         <Marker

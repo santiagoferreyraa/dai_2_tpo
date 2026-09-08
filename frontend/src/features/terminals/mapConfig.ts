@@ -47,7 +47,13 @@ export const TILES = {
  * en casi todo lo demás. Invertidos, el mapa carga igual pero muestra otro lugar del mundo.
  */
 
-/** Obligatoria por licencia. No se saca. */
+/**
+ * Obligatoria por licencia de los mosaicos. No se saca.
+ *
+ * El cartel que Leaflet dibujaba sobre el mapa sí se sacó, porque se montaba con el panel y el
+ * carrusel; el crédito en sí no es opcional y tiene que aparecer en otro lado de la aplicación
+ * —pie de página o pantalla "acerca de"—. Esta constante es el texto para ponerlo ahí.
+ */
 export const TILE_ATTRIBUTION =
   'Mosaicos &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
@@ -55,14 +61,23 @@ export const TILE_ATTRIBUTION =
  * El servicio tiene mosaicos hasta el zoom 16. Del 17 en adelante devuelve 200 con un mosaico
  * vacío: el mapa se pondría negro sin un solo error que lo explique.
  *
- * De ahí los dos valores. MAX_NATIVE_ZOOM es hasta dónde se piden mosaicos; MAX_ZOOM es hasta
- * dónde puede acercarse el usuario. Entre uno y otro, Leaflet agranda el último mosaico real:
- * se ve algo borroso, pero se ve, que es mejor que negro. Y a nivel de calle hace falta pasar
- * de 16 para distinguir dos estaciones en la misma cuadra.
+ * MAX_NATIVE_ZOOM es hasta dónde se piden mosaicos. Hoy queda por encima de MAX_ZOOM, o sea
+ * que no llega a actuar; se deja igual porque es el límite real del proveedor y es lo que
+ * evita el mapa negro si alguna vez se sube el techo de acá abajo.
  */
 export const MAX_NATIVE_ZOOM = 16
 
-export const MAX_ZOOM = 18
+/**
+ * Hasta dónde puede acercarse el usuario.
+ *
+ * El mapa es para elegir a qué estación ir, no para mirar una fachada. Pasando de 15 la
+ * pantalla queda con una sola estación y ninguna referencia alrededor, que es justo lo que no
+ * sirve para decidir. A 15 se llega a la cuadra sin perder las calles de alrededor.
+ *
+ * Queda un nivel por debajo del techo del proveedor (16), así que los mosaicos siguen siendo
+ * reales: es una decisión de producto y no una limitación técnica.
+ */
+export const MAX_ZOOM = 15
 
 /** Obelisco. Punto de partida mientras no haya geolocalización del usuario. */
 export const DEFAULT_CENTER: L.LatLngExpression = [-34.6037, -58.3816]
@@ -85,9 +100,8 @@ export const MIN_ZOOM = 4
 /**
  * Zoom al que se acerca el mapa cuando se elige una estación.
  *
- * Va al máximo permitido, que es lo pedido: ver la esquina exacta. Como el proveedor solo
- * tiene mosaicos hasta MAX_NATIVE_ZOOM, los dos últimos niveles son el mosaico del 16
- * agrandado y se ven algo borrosos. Bajarlo a MAX_NATIVE_ZOOM da una imagen nítida a cambio de
- * quedar más lejos; es un solo número y se cambia acá.
+ * Atado a MAX_ZOOM a propósito: elegir una estación tiene que dejar el mapa tan cerca como el
+ * usuario podría ponerlo a mano, ni más ni menos. Con los dos valores sueltos, mover uno solo
+ * dejaba el vuelo y el zoom manual desalineados.
  */
 export const FOCUS_ZOOM = MAX_ZOOM

@@ -32,10 +32,12 @@ import BottomSheet from './components/BottomSheet'
 import MapScrim from './components/MapScrim'
 import StationCarousel from './components/StationCarousel'
 import StationDetailPanel from './components/StationDetailPanel'
+import StationFilters from './components/StationFilters'
 import StationMap from './components/StationMap'
 import StationSearch from './components/StationSearch'
 import { searchStations } from './data/stationsRepository'
-import { matchesQuery } from './format'
+import { matchesFilters, matchesQuery } from './format'
+import type { ConnectorFilters } from './format'
 import { COUNTRY_RADIUS_KM, DEFAULT_CENTER } from './mapConfig'
 import { useMediaQuery } from './useMediaQuery'
 import type { ConnectorSummary, StationResult } from './types'
@@ -78,6 +80,18 @@ export default function StationsMapPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
+
+  /*
+   * Los filtros viven acá arriba y no adentro de StationFilters por el mismo motivo que el
+   * texto buscado: el mapa, el carrusel y el encabezado tienen que estar mirando la misma
+   * lista de estaciones. Con el estado adentro del componente, los filtros serían suyos y
+   * nadie más se enteraría de que hay algo filtrado.
+   */
+  const [filters, setFilters] = useState<ConnectorFilters>({
+    connectorType: null,
+    minPowerKw: null,
+  })
+
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null)
   const [selectedConnectorId, setSelectedConnectorId] = useState<number | null>(null)
 
@@ -115,8 +129,12 @@ export default function StationsMapPage() {
   }, [])
 
   const stations = useMemo(
-    () => allStations.filter((station) => matchesQuery(station, query)),
-    [allStations, query],
+    () =>
+      allStations.filter(
+        (station) =>
+          matchesQuery(station, query) && matchesFilters(station.matchingConnectors, filters),
+      ),
+    [allStations, query, filters],
   )
 
   /**
@@ -167,7 +185,7 @@ export default function StationsMapPage() {
     ? 'Cargando estaciones…'
     : loadError !== null
       ? loadError
-      : query === ''
+      : query === '' && filters.connectorType === null && filters.minPowerKw === null
         ? `${allStations.length} estaciones.`
         : `${stations.length} de ${allStations.length} estaciones.`
 
@@ -222,8 +240,34 @@ export default function StationsMapPage() {
           z-index por encima de los 1000 que usa Leaflet para sus controles; el porqué está
           explicado en StationCarousel.
         */}
-        <div className="absolute top-4 left-4 z-[1120] w-[min(30rem,calc(100%-6rem))] md:w-96">
-          <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
+        <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] items-start gap-2 lg:w-[calc(100%-23rem)]">
+          {/*
+            En celular el buscador toma el ancho entero de la fila, que ya viene con 1rem de
+            aire de cada lado: desplegado queda centrado por simetría, sin cálculos. El `mx-auto`
+            cubre el caso de la tablet angosta, donde el tope de 30rem deja espacio libre y sin
+            él la barra quedaría pegada a la izquierda.
+
+            Plegado como burbuja el ancho igual se reserva, así que al desplegarse no salta.
+
+            En pantalla ancha la fila se corta antes de llegar al carrusel (20rem de fichas más
+            aire). No es estético: esta capa va por ENCIMA del carrusel, así que una burbuja que
+            llegue hasta allá le queda dibujada arriba de las fichas.
+          */}
+          <div className="mx-auto w-[min(30rem,100%)] shrink-0 md:mx-0 md:w-96">
+            <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
+          </div>
+
+          {/*
+            Los filtros no van en celular: ver el comentario de StationFilters.
+
+            Envuelven en vez de scrollear de costado, al revés que en el ABM. Ahí la fila de
+            filtros es un renglón dedicado y el scroll horizontal se entiende; acá flotan sobre
+            el mapa, sin barra ni borde que insinúe que hay más a la derecha, y lo que no entra
+            simplemente no se encontraría. Envolviendo se ven todos, que son seis.
+          */}
+          <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+            <StationFilters value={filters} onChange={setFilters} />
+          </div>
         </div>
 
         {/*

@@ -308,13 +308,19 @@ export default function StationCarousel({
         capa. Con z-index automático, el carrusel queda DEBAJO de los mosaicos aunque venga
         después en el DOM: se ve mientras los mosaicos no cargaron y desaparece cuando cargan.
 
+        El ancho es el mínimo entre 28rem y el 35%, y ninguno de los dos sobra. El porcentaje
+        solo evita que en una pantalla chica el degradado se coma media ventana; el tope en rem
+        evita lo contrario, que en un monitor ancho siga creciendo mucho más allá de las fichas,
+        que miden 20rem y no cambian de tamaño. Lo que tiene que oscurecer es la columna más un
+        poco de aire para desvanecerse, no medio mapa.
+
         En celular no va ninguna de las dos capas. Una columna de 320px sobre una pantalla de
         390 no deja mapa: taparía justo lo que se vino a mirar. Ahí el patrón es el panel que
         sube desde abajo, que todavía no está.
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 z-[1100] hidden w-[45%] bg-gradient-to-l from-black via-black/75 to-transparent md:block"
+        className="pointer-events-none absolute inset-y-0 right-0 z-[1100] hidden w-[min(28rem,35%)] bg-gradient-to-l from-black via-black/75 to-transparent md:block"
       />
 
       <div

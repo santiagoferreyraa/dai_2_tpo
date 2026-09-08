@@ -10,16 +10,20 @@
  * El círculo de la izquierda NO es el pin del mapa: es propio, y queda justo encima del pin,
  * tapándolo. Se dibuja acá y no allá por el orden de capas de Leaflet — el pane de los
  * tooltips va por encima del de los marcadores, así que un pin nunca podría pisar la tarjeta.
- * Al ser parte de la tarjeta, el círculo y el borde forman una sola pieza continua.
+ * Al ser parte de la tarjeta, el círculo y el borde forman una sola pieza continua. Es la
+ * única forma redonda que queda: la tarjeta va en ángulo recto, igual que el buscador, los
+ * filtros y el panel de detalle.
+ *
+ * Muestra poco a propósito: nombre, dirección, potencia y libres. Es lo que se lee de paso,
+ * mientras el mouse va camino a otro lado; el tipo de conector y el resto del detalle están
+ * en el panel, a un click del pin.
+ *
+ * Y no recibe clicks: los tooltips de Leaflet no son interactivos salvo que se los declare
+ * así, y aun entonces el mouse tendría que cruzar el hueco entre el pin y la tarjeta sin que
+ * se cierre. Lo que abre el detalle es el pin, no esto.
  */
 
-import {
-  availableConnectorCount,
-  CONNECTOR_TYPE_LABEL,
-  fastestConnector,
-  isAvailable,
-  maxPowerKw,
-} from '../format'
+import { availableConnectorCount, isAvailable, maxPowerKw } from '../format'
 import type { StationResult } from '../types'
 
 /* Clases completas en cada rama, nunca concatenadas: ver el comentario de stationPin.ts. */
@@ -41,13 +45,12 @@ interface StationHoverCardProps {
 }
 
 export default function StationHoverCard({ station }: StationHoverCardProps) {
-  const fastest = fastestConnector(station)
   const free = availableConnectorCount(station)
   const available = isAvailable(station)
 
   return (
     <article
-      className={`bg-background relative w-80 rounded-2xl border-2 py-3 pr-4 pl-9 shadow-2xl ${
+      className={`bg-background relative w-80 border-2 py-3 pr-4 pl-9 shadow-2xl ${
         available ? ACCENT_AVAILABLE : ACCENT_UNAVAILABLE
       }`}
     >
@@ -75,12 +78,6 @@ export default function StationHoverCard({ station }: StationHoverCardProps) {
           }`}
           aria-label={available ? 'Disponible' : 'Sin conectores libres'}
         />
-
-        {fastest !== null && (
-          <span className="border-border text-text-muted ml-auto shrink-0 rounded-lg border px-2 py-1 text-xs">
-            {CONNECTOR_TYPE_LABEL[fastest.connectorType]}
-          </span>
-        )}
       </div>
 
       <p className="text-text-muted mt-2 flex items-center gap-2 text-sm">
@@ -112,18 +109,6 @@ export default function StationHoverCard({ station }: StationHoverCardProps) {
             {free}/{station.matchingConnectors.length}
           </p>
         </div>
-
-        {/*
-          Señal de "hay más acá adentro", no un botón: los tooltips de Leaflet no reciben clicks
-          salvo que se los declare interactivos, y aun así el mouse tendría que cruzar el hueco
-          entre el pin y la tarjeta sin que se cierre. Lo que abre el detalle es el pin.
-        */}
-        <span
-          aria-hidden="true"
-          className="border-border text-text ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border"
-        >
-          →
-        </span>
       </div>
     </article>
   )

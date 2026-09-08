@@ -141,23 +141,15 @@
 }
 
 /*
-  Leaflet trae sus propios colores, pensados para un mapa claro: la atribución y el tooltip
-  vienen con fondo blanco y texto negro, y el contenedor con un gris claro que aparece como un
-  flash mientras bajan los mosaicos. Sobre el tema oscuro se ven como parches.
+  Leaflet trae sus propios colores, pensados para un mapa claro: el tooltip viene con fondo
+  blanco y texto negro, y el contenedor con un gris claro que aparece como un flash mientras
+  bajan los mosaicos. Sobre el tema oscuro se ven como parches.
+
+  El cartel de atribución está apagado desde StationMap, así que las reglas que lo repintaban
+  se fueron con él.
 */
 .leaflet-container {
   background-color: var(--color-background);
-}
-
-/* Con .leaflet-control-attribution a secas no alcanza: Leaflet pinta su fondo blanco desde
-   `.leaflet-container .leaflet-control-attribution`, que tiene más especificidad y gana. */
-.leaflet-container .leaflet-control-attribution {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-}
-
-.leaflet-control-attribution a {
-  color: var(--color-primary);
 }
 
 .leaflet-tooltip {
