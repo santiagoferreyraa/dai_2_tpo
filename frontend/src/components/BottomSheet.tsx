@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 /**
  * Panel que entra desde abajo y se cierra arrastrándolo hacia abajo, tocando fuera o con Escape.
  *
- * Lo usan las tres pantallas de la feature (detalle, alta y edición), así que el gesto vive
- * acá una sola vez: si el arrastre se siente mal, se arregla en un solo lugar.
+ * Lo usan el ABM de estaciones (detalle, alta y edición) y el alta de medios de pago, así que
+ * el gesto vive acá una sola vez: si el arrastre se siente mal, se arregla en un solo lugar.
+ * Vivía dentro de la feature Terminales hasta que Pagos lo necesitó; la regla del README es
+ * promover a compartido recién cuando aparece el segundo consumidor.
  *
  * El arrastre no se puede enganchar a cualquier toque. Adentro del panel hay una lista que
  * scrollea y hay campos de formulario, y ambos usan el mismo dedo. Las reglas están en
@@ -25,10 +27,28 @@ interface BottomSheetProps {
   onClose: () => void
   /** Nombre del panel para lectores de pantalla; no se ve. */
   label: string
+  /**
+   * Fondo del panel. Por omisión el gris oscuro del ABM, que es de donde salió este componente.
+   *
+   * Es una prop y no un valor fijo porque las dos pantallas que lo usan viven en juegos de
+   * colores distintos: Terminales todavía usa los tokens `st-*`, oscuros y propios de esa
+   * feature, y Pagos usa los compartidos de `index.css`. Con el fondo escrito adentro, el panel
+   * de tarjetas quedaba negro en una pantalla clara. El valor por omisión es el que ya tenía,
+   * así que el ABM no cambia en nada.
+   *
+   * Cuando RNF08 unifique los dos juegos de tokens, esta prop se puede sacar.
+   */
+  backgroundClass?: string
   children: ReactNode
 }
 
-export default function BottomSheet({ open, onClose, label, children }: BottomSheetProps) {
+export default function BottomSheet({
+  open,
+  onClose,
+  label,
+  backgroundClass = 'bg-st-bg',
+  children,
+}: BottomSheetProps) {
   /*
    * `open` es lo que pide el padre; `mounted` es lo que hay en el DOM. Son distintos porque
    * al cerrar el panel tiene que seguir montado mientras dura la animación de salida.
@@ -193,7 +213,7 @@ export default function BottomSheet({ open, onClose, label, children }: BottomSh
           dedo. El arrastre del panel no lo necesita, porque el tirador ya declara
           `touch-none` por su cuenta.
         */
-        className="bg-st-bg relative flex max-h-[92svh] w-full flex-col rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.5)]"
+        className={`relative flex max-h-[92svh] w-full flex-col rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.5)] ${backgroundClass}`}
         style={{
           transform: `translateY(${translate}px)`,
           /* Durante el arrastre no hay transición: el panel tiene que seguir al dedo. */
@@ -211,7 +231,9 @@ export default function BottomSheet({ open, onClose, label, children }: BottomSh
           data-drag-handle
           className="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing"
         >
-          <span className="bg-st-muted/60 h-1 w-28 rounded-full" />
+          {/* `bg-current` con opacidad: el tirador se tiñe del color de texto del panel, así
+              se ve tanto sobre el fondo oscuro del ABM como sobre el claro de Pagos. */}
+          <span className="h-1 w-28 rounded-full bg-current opacity-25" />
         </div>
 
         <div

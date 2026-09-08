@@ -1,50 +1,62 @@
-import { maskedCardNumber } from '../format'
 import type { CardBrand } from '../types'
 
 import BrandMark from './BrandMark'
 
 interface CardPreviewProps {
   brand: CardBrand | undefined
-  /** Solo los dígitos escritos hasta ahora. Lo que falta se dibuja como puntos. */
-  digits: string
-  holderName: string
-  /** El vencimiento como se escribe en el campo: "09/29", o a medias. */
+  /** El número ya enmascarado y agrupado. Lo arma quien llama, con los helpers de `format`. */
+  numberText: string
+  /**
+   * Qué decir abajo a la izquierda, donde el plástico trae el titular.
+   *
+   * Es un par etiqueta/valor y no un nombre suelto porque las dos pantallas ponen cosas
+   * distintas: el formulario muestra el titular que se está escribiendo, y una tarjeta ya
+   * guardada muestra su etiqueta —el titular no se guarda, así que ahí no hay nombre que
+   * poner—. Sin nada que decir, el hueco no se dibuja.
+   */
+  holder?: { label: string; value: string }
+  /** El vencimiento como se lee: "09/29". */
   expiry: string
+  /** Marca la tarjeta como vencida, cruzándole una banda. */
+  expired?: boolean
+  /** Posicionamiento y márgenes. La tarjeta no decide dónde va. */
+  className?: string
 }
 
 /**
- * La tarjeta dibujada, que se va completando mientras se escribe el formulario.
+ * Una tarjeta de crédito dibujada, con el diseño de su marca.
  *
- * **Para qué sirve, más allá de que quede lindo.** El error que hay que atajar en esta pantalla
+ * La usan el formulario —donde se completa sola mientras se escribe— y el listado del celular,
+ * que apila las tarjetas guardadas como una billetera.
+ *
+ * **Para qué sirve en el formulario, más allá de que quede lindo.** El error que hay que atajar
  * es copiar mal el número, y el modo natural de revisarlo es comparar contra el plástico que se
  * tiene en la mano. Un campo de texto no se parece a una tarjeta; esto sí, con la misma
- * agrupación de dígitos y los mismos datos en los mismos lugares. Comparar deja de ser leer una
- * línea de texto y pasa a ser mirar dos objetos iguales.
+ * agrupación de dígitos y los mismos datos en los mismos lugares.
  *
  * **El diseño cambia con la marca**, y eso también es información: si alguien va a cargar su
  * Visa y la tarjeta se pone gris con los círculos de Mastercard, algo se escribió mal en los
  * primeros dígitos — se ve antes de terminar de tipear, no al apretar Guardar.
  *
- * **No tiene dorso ni CVV.** Este formulario no pide el código de seguridad: no hace falta para
+ * **No tiene dorso ni CVV.** El formulario no pide el código de seguridad: no hace falta para
  * cambiar el número por un token y guardarlo está prohibido por PCI-DSS. Sin ese dato no hay
  * nada que mostrar del otro lado.
  *
- * `aria-hidden` porque no aporta nada a quien no la ve: todo lo que dice está en los campos del
- * formulario, cada uno con su etiqueta. Anunciarla sería leer dos veces lo mismo.
+ * `aria-hidden` porque no aporta nada a quien no la ve: en el formulario todo lo que dice está
+ * en los campos, y en el listado está en el texto de cada fila. Anunciarla sería duplicar.
  */
-export default function CardPreview({ brand, digits, holderName, expiry }: CardPreviewProps) {
+export default function CardPreview({
+  brand,
+  numberText,
+  holder,
+  expiry,
+  expired = false,
+  className = '',
+}: CardPreviewProps) {
   return (
     <div
       aria-hidden="true"
-      /*
-        `mx-auto` centra la tarjeta cuando el formulario es más ancho que ella, que es lo que
-        pasa en tablet y escritorio: `max-w-sm` la frena antes de que se estire y sin esto
-        quedaba pegada al borde izquierdo, con un hueco muerto a la derecha. En celular no se
-        nota, porque ahí la tarjeta ocupa todo el ancho disponible.
-      */
-      className={`relative mx-auto mb-6 aspect-[1.586/1] w-full max-w-sm overflow-hidden rounded-2xl p-5 text-white shadow-xl transition-[background] duration-500 ${
-        SURFACE[brand ?? 'UNKNOWN']
-      }`}
+      className={`relative aspect-[1.586/1] w-full overflow-hidden rounded-2xl p-5 text-white shadow-xl transition-[background] duration-500 ${SURFACE[brand ?? 'UNKNOWN']} ${className}`}
     >
       {/*
         Un brillo diagonal apenas visible. Es lo que separa una tarjeta de un rectángulo de
@@ -52,33 +64,43 @@ export default function CardPreview({ brand, digits, holderName, expiry }: CardP
       */}
       <div className="pointer-events-none absolute -top-1/2 -right-1/4 h-[200%] w-[80%] rotate-12 bg-gradient-to-b from-white/15 to-transparent" />
 
+      {/* Una tarjeta vencida se apaga, además de decirlo. El color solo no alcanza. */}
+      {expired && <div className="pointer-events-none absolute inset-0 bg-black/45" />}
+
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between">
           <span className="text-sm font-semibold tracking-wide opacity-90">Ecopedia</span>
-          <ContactlessIcon />
+          {expired ? (
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold tracking-widest uppercase">
+              Vencida
+            </span>
+          ) : (
+            <ContactlessIcon />
+          )}
         </div>
 
         <Chip />
 
-        <p className="font-mono text-lg tracking-[0.12em] tabular-nums sm:text-xl">
-          {maskedCardNumber(digits, brand)}
-        </p>
+        <p className="font-mono text-lg tracking-[0.12em] tabular-nums sm:text-xl">{numberText}</p>
 
         <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] tracking-widest uppercase opacity-70">Titular</p>
-            {/*
-              Mayúsculas como están impresas en el plástico, y `truncate` porque un nombre largo
-              no puede empujar al vencimiento fuera de la tarjeta.
-            */}
-            <p className="truncate text-sm font-medium uppercase">
-              {holderName.trim() === '' ? 'NOMBRE APELLIDO' : holderName}
-            </p>
-          </div>
+          {holder !== undefined ? (
+            <div className="min-w-0">
+              <p className="text-[10px] tracking-widest uppercase opacity-70">{holder.label}</p>
+              {/*
+                Mayúsculas como están impresas en el plástico, y `truncate` porque un nombre
+                largo no puede empujar al vencimiento fuera de la tarjeta.
+              */}
+              <p className="truncate text-sm font-medium uppercase">{holder.value}</p>
+            </div>
+          ) : (
+            /* Sin titular el vencimiento se va a la izquierda, en vez de quedar suelto. */
+            <span className="flex-1" />
+          )}
 
           <div className="shrink-0">
             <p className="text-[10px] tracking-widest uppercase opacity-70">Vence</p>
-            <p className="font-mono text-sm tabular-nums">{expiry === '' ? 'MM/AA' : expiry}</p>
+            <p className="font-mono text-sm tabular-nums">{expiry}</p>
           </div>
 
           <div className="shrink-0">

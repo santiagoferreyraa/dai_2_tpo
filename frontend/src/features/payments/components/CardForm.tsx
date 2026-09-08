@@ -2,7 +2,7 @@ import { type FormEvent, useState } from 'react'
 
 import FormField from '@/components/FormField'
 
-import { BRAND_LABEL, formattedLengthFor, groupCardNumber } from '../format'
+import { BRAND_LABEL, formattedLengthFor, groupCardNumber, maskedCardNumber } from '../format'
 import type { RegisterCardInput } from '../types'
 import {
   brandOf,
@@ -115,7 +115,16 @@ export default function CardForm({ onSubmit, onCancel, error, sending }: CardFor
         partir el componente en dos disposiciones para ganar una columna en escritorio es
         mantener dos veces la misma pantalla.
       */}
-      <CardPreview brand={brand} digits={numberDigits} holderName={holderName} expiry={expiry} />
+      <CardPreview
+        className="mx-auto mb-2 max-w-sm"
+        brand={brand}
+        numberText={maskedCardNumber(numberDigits, brand)}
+        holder={{
+          label: 'Titular',
+          value: holderName.trim() === '' ? 'NOMBRE APELLIDO' : holderName,
+        }}
+        expiry={expiry === '' ? 'MM/AA' : expiry}
+      />
 
       <FormField
         id="card-number"

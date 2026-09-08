@@ -92,17 +92,38 @@ export function maskedCardNumber(digits: string, brand: CardBrand | undefined): 
   // Lo habitual de cada marca —15 en AMEX, 16 en el resto—, salvo que ya se haya escrito más:
   // una Visa de 19 dígitos existe y no hay que recortarla.
   const slots = Math.max(brand === 'AMEX' ? 15 : 16, digits.length)
-  const filled = digits.padEnd(slots, '•')
+  return group(digits.padEnd(slots, '•'), brand)
+}
 
+/**
+ * Agrupa un texto ya armado —dígitos, puntos o los dos— según la marca.
+ *
+ * Lo comparten los dos enmascarados de abajo, que solo se diferencian en de qué lado va el
+ * relleno.
+ */
+function group(text: string, brand: CardBrand | undefined): string {
   const parts: string[] = []
   let cursor = 0
 
   for (const size of groupSizesFor(brand)) {
-    if (cursor >= filled.length) break
-    parts.push(filled.slice(cursor, cursor + size))
+    if (cursor >= text.length) break
+    parts.push(text.slice(cursor, cursor + size))
     cursor += size
   }
-  if (cursor < filled.length) parts.push(filled.slice(cursor))
+  if (cursor < text.length) parts.push(text.slice(cursor))
 
   return parts.join(' ')
+}
+
+/**
+ * El número de una tarjeta ya guardada: puntos y los cuatro dígitos que sí conocemos.
+ *
+ * Es la contracara de {@link maskedCardNumber}. Ahí los puntos están a la derecha y son lo que
+ * todavía no se escribió; acá están a la izquierda y son lo que el sistema nunca tuvo — de una
+ * tarjeta registrada solo se guardan los últimos cuatro (RF02), así que este relleno no oculta
+ * nada: representa una ausencia.
+ */
+export function maskedFromLastFour(lastFour: string, brand: CardBrand): string {
+  const slots = brand === 'AMEX' ? 15 : 16
+  return group('•'.repeat(slots - 4) + lastFour, brand)
 }

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 
+import BottomSheet from '@/components/BottomSheet'
 import { ApiError } from '@/lib/api'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 
 import CardForm from './components/CardForm'
+import CardStack from './components/CardStack'
 import PaymentMethodRow from './components/PaymentMethodRow'
 import { listCards, registerCard, removeCard } from './data/paymentMethodsRepository'
 import { describeCard } from './format'
@@ -15,6 +18,12 @@ import type { PaymentMethod, RegisterCardInput } from './types'
  * precondición de toda transacción del sistema: sin eso no se reserva (RF08) ni se inicia una
  * carga (RF10). Es la única pantalla que puede desbloquear al conductor, así que cuando la
  * lista está vacía no se limita a estar vacía — lo dice y ofrece la salida.
+ *
+ * **Tiene dos formas, y la diferencia no es de estilos.** En pantalla ancha las tarjetas van en
+ * una lista y el alta se abre en su lugar; en celular se apilan como en una billetera y el alta
+ * sube desde abajo, igual que el detalle de una estación en el ABM. No alcanza con esconder una
+ * de las dos por CSS: el panel seguiría montado, bloqueando el scroll del fondo y atrapando el
+ * foco. Por eso decide `useMediaQuery` y se renderiza una sola.
  *
  * **El estado se recarga del servidor después de cada cambio.** El alta devuelve la tarjeta
  * creada y se la podría agregar a la lista en memoria; la baja, quitarla. Se prefiere volver a
@@ -31,6 +40,12 @@ export default function PaymentMethodsPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [removingId, setRemovingId] = useState<number | null>(null)
+
+  /*
+   * El mismo corte que usa el ABM de estaciones. Está escrito acá y no importado de allá porque
+   * es una decisión de esta pantalla que hoy coincide, no una regla compartida.
+   */
+  const wide = useMediaQuery('(min-width: 1024px)')
 
   /* Se recarga cambiando esta marca. Es lo que dispara el efecto después de un alta o una baja. */
   const [reloadToken, setReloadToken] = useState(0)
@@ -111,6 +126,20 @@ export default function PaymentMethodsPage() {
 
   const hasUsableCard = cards.some((card) => !card.expired)
 
+  function closeForm() {
+    setAdding(false)
+    setFormError(null)
+  }
+
+  /*
+   * El formulario se arma una sola vez y se ubica en los dos lugares. Escribirlo dos veces
+   * —una en la tarjeta de escritorio y otra adentro del panel— es tenerlo que cambiar dos
+   * veces cada vez que se le agrega un campo.
+   */
+  const form = (
+    <CardForm onSubmit={handleRegister} onCancel={closeForm} error={formError} sending={sending} />
+  )
+
   return (
     <section className="mx-auto flex h-full w-full max-w-2xl flex-col gap-6 overflow-y-auto p-6">
       <header>
@@ -142,7 +171,7 @@ export default function PaymentMethodsPage() {
 
       {loading ? (
         <p className="text-text-muted text-sm">Cargando tus tarjetas…</p>
-      ) : (
+      ) : wide ? (
         <ul className="flex flex-col gap-3">
           {cards.map((card) => (
             <PaymentMethodRow
@@ -153,20 +182,19 @@ export default function PaymentMethodsPage() {
             />
           ))}
         </ul>
+      ) : (
+        <CardStack cards={cards} onRemove={handleRemove} removingId={removingId} />
       )}
 
-      {adding ? (
+      {/*
+        En pantalla ancha el formulario se abre en su lugar, abajo del listado: hay sitio de
+        sobra y taparle al usuario lo que ya tiene sería esconder información sin motivo. En
+        celular no hay sitio, así que sube desde abajo como el detalle de una estación.
+      */}
+      {wide && adding ? (
         <div className="border-border bg-surface rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-semibold">Nueva tarjeta</h2>
-          <CardForm
-            onSubmit={handleRegister}
-            onCancel={() => {
-              setAdding(false)
-              setFormError(null)
-            }}
-            error={formError}
-            sending={sending}
-          />
+          {form}
         </div>
       ) : (
         <button
@@ -177,6 +205,17 @@ export default function PaymentMethodsPage() {
           Agregar tarjeta
         </button>
       )}
+
+      <BottomSheet
+        open={!wide && adding}
+        onClose={closeForm}
+        label="Nueva tarjeta"
+        // Los tokens compartidos, no los `st-*` oscuros del ABM: esta pantalla es clara.
+        backgroundClass="bg-surface"
+      >
+        <h2 className="mb-4 text-lg font-semibold">Nueva tarjeta</h2>
+        {form}
+      </BottomSheet>
     </section>
   )
 }
