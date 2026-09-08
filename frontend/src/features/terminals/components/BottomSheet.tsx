@@ -25,10 +25,36 @@ interface BottomSheetProps {
   onClose: () => void
   /** Nombre del panel para lectores de pantalla; no se ve. */
   label: string
+  /**
+   * Si el fondo se oscurece detrás del panel. Por omisión sí.
+   *
+   * El mapa lo apaga: ahí lo que está atrás no es una lista que se pueda tapar, es el mapa
+   * con el pin de la estación que se acaba de elegir, y oscurecerlo sería esconder el motivo
+   * por el que el panel se abrió. El fondo sigue existiendo y sigue cerrando al tocarlo —solo
+   * que transparente—, así que el gesto no cambia.
+   */
+  dimBackground?: boolean
+  /**
+   * Clase de fondo del panel. Por omisión el oscuro de los tokens `st-` del ABM.
+   *
+   * El mapa lo cambia por `bg-surface` porque esa pantalla está escrita contra los tokens
+   * compartidos y no contra los de Terminales: con el fondo por omisión, el mismo panel se
+   * veía casi negro en el celular y gris en la tarjeta de escritorio. Es un parche hasta que
+   * RNF08 unifique el tema oscuro y los dos juegos de tokens sean uno solo —ahí este prop se
+   * borra junto con terminals.css—.
+   */
+  backgroundClass?: string
   children: ReactNode
 }
 
-export default function BottomSheet({ open, onClose, label, children }: BottomSheetProps) {
+export default function BottomSheet({
+  open,
+  onClose,
+  label,
+  dimBackground = true,
+  backgroundClass = 'bg-st-bg',
+  children,
+}: BottomSheetProps) {
   /*
    * `open` es lo que pide el padre; `mounted` es lo que hay en el DOM. Son distintos porque
    * al cerrar el panel tiene que seguir montado mientras dura la animación de salida.
@@ -169,13 +195,20 @@ export default function BottomSheet({ open, onClose, label, children }: BottomSh
   const translate = visible ? dragOffset : window.innerHeight
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    /*
+      z por encima de los 1000 que usa Leaflet para sus panes y controles. Con el z-50 que
+      tenía, sobre el mapa el panel quedaba por DEBAJO del control de zoom. En el ABM, que no
+      tiene mapa, subirlo no cambia nada: no hay con qué competir.
+    */
+    <div className="fixed inset-0 z-[1200] flex flex-col justify-end">
       {/* Fondo. Tocarlo cierra: es la otra forma de salir que pide el diseño. */}
       <button
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 h-full w-full cursor-default bg-black/60 transition-opacity duration-[260ms]"
+        className={`absolute inset-0 h-full w-full cursor-default transition-opacity duration-[260ms] ${
+          dimBackground ? 'bg-black/60' : 'bg-transparent'
+        }`}
         style={{ opacity: visible ? 1 : 0 }}
       />
 
@@ -193,7 +226,7 @@ export default function BottomSheet({ open, onClose, label, children }: BottomSh
           dedo. El arrastre del panel no lo necesita, porque el tirador ya declara
           `touch-none` por su cuenta.
         */
-        className="bg-st-bg relative flex max-h-[92svh] w-full flex-col rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.5)]"
+        className={`${backgroundClass} relative flex max-h-[92svh] w-full flex-col rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.5)]`}
         style={{
           transform: `translateY(${translate}px)`,
           /* Durante el arrastre no hay transición: el panel tiene que seguir al dedo. */
