@@ -35,6 +35,47 @@ const LONG_PRESS_MS = 600
 const MOVE_TOLERANCE_PX = 12
 
 /**
+ * Un número entre 0 y 1, siempre el mismo para la misma entrada.
+ *
+ * Se usa para que cada tarjeta tiemble a su ritmo. Tiene que ser estable entre renders y no
+ * `Math.random()`: un valor nuevo en cada render reinicia la animación desde cero, y el temblor
+ * se ve como una sacudida a los saltos en vez de un movimiento continuo. Derivándolo del id, la
+ * misma tarjeta tiembla siempre igual.
+ *
+ * El seno multiplicado por un número grande es el truco de siempre para esto: mezcla lo
+ * suficiente como para que ids consecutivos —que es exactamente lo que devuelve la base— caigan
+ * en lugares bien distintos del rango.
+ */
+function pseudoRandom(seed: number): number {
+  const mixed = Math.sin(seed * 12.9898) * 43758.5453
+  return mixed - Math.floor(mixed)
+}
+
+/**
+ * El ritmo propio de cada tarjeta: cuánto tarda un ciclo, en qué punto arranca y para qué lado.
+ *
+ * **La duración distinta es lo que de verdad las despega.** Con la misma duración, dos tarjetas
+ * que arrancan desfasadas mantienen ese desfase para siempre y el ojo termina leyendo el patrón;
+ * con duraciones distintas se van corriendo solas y no vuelven a coincidir nunca.
+ *
+ * El retraso es negativo a propósito: eso no demora el arranque, sino que empieza la animación
+ * ya empezada, en un punto distinto del ciclo. Con retrasos positivos las tarjetas quedarían
+ * quietas un instante antes de moverse, que se ve como que la pantalla responde a destiempo.
+ */
+function jiggleRhythm(id: number): React.CSSProperties {
+  const speed = pseudoRandom(id)
+  const phase = pseudoRandom(id + 97)
+
+  const duration = 0.22 + speed * 0.12
+
+  return {
+    animationDuration: `${duration}s`,
+    animationDelay: `${(-phase * duration).toFixed(3)}s`,
+    animationDirection: phase > 0.5 ? 'reverse' : 'normal',
+  }
+}
+
+/**
  * Las tarjetas guardadas apiladas como en una billetera, para el celular.
  *
  * **Por qué apiladas y no una lista.** En una pantalla angosta, tres tarjetas dibujadas enteras
@@ -192,18 +233,13 @@ export default function CardStack({ cards, onRemove }: CardStackProps) {
               dos usan `transform`, así que compartir nodo hace que la animación pise el
               desplazamiento de la pila y las tarjetas salten al apilarse.
 
-              Las de posición impar corren la animación al revés. Es lo que más hace por que el
-              temblor se note: con todas en fase la pila se lee como una sola pieza sacudiéndose,
-              y con vecinas girando en sentidos opuestos se ven tarjetas sueltas moviéndose.
+              Cada tarjeta tiembla a su propio ritmo —ver `jiggleRhythm`—, porque todas iguales
+              se leen como una sola pieza sacudiéndose en vez de varias tarjetas sueltas.
             */}
             <div
               /* `relative` para que la cruz se ubique contra la tarjeta y tiemble con ella. */
               className={`relative ${removingMode ? 'card-jiggle' : ''}`}
-              style={
-                removingMode
-                  ? { animationDirection: index % 2 === 0 ? 'normal' : 'reverse' }
-                  : undefined
-              }
+              style={removingMode ? jiggleRhythm(card.id) : undefined}
             >
               <button
                 type="button"
