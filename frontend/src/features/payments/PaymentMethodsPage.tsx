@@ -6,6 +6,7 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 
 import CardForm from './components/CardForm'
 import CardStack from './components/CardStack'
+import ConfirmDialog from './components/ConfirmDialog'
 import PaymentMethodRow from './components/PaymentMethodRow'
 import { listCards, registerCard, removeCard } from './data/paymentMethodsRepository'
 import { describeCard } from './format'
@@ -40,6 +41,9 @@ export default function PaymentMethodsPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [removingId, setRemovingId] = useState<number | null>(null)
+
+  /* La tarjeta que el cartel de confirmación está preguntando si eliminar. */
+  const [pendingRemoval, setPendingRemoval] = useState<PaymentMethod | null>(null)
 
   /*
    * El mismo corte que usa el ABM de estaciones. Está escrito acá y no importado de allá porque
@@ -101,23 +105,29 @@ export default function PaymentMethodsPage() {
     }
   }
 
-  async function handleRemove(card: PaymentMethod) {
-    /*
-     * Se confirma porque la baja no se deshace desde acá, y porque el botón está a un clic de
-     * distancia en una lista donde las filas se parecen entre sí. El texto nombra la tarjeta: un
-     * "¿Estás seguro?" pelado no ayuda a saber cuál se está por borrar.
-     */
-    const confirmed = window.confirm(
-      `¿Eliminar ${describeCard(card.brand, card.lastFour)}? Vas a tener que cargarla de nuevo para usarla.`,
-    )
-    if (!confirmed) return
+  /**
+   * Ejecuta la baja que el cartel ya confirmó.
+   *
+   * Se confirma porque no se deshace desde acá y porque, en una pila de tarjetas parecidas, el
+   * botón está a un toque de distancia. El texto del cartel nombra la tarjeta: un "¿Estás
+   * seguro?" pelado no ayuda a saber cuál se está por borrar.
+   */
+  async function confirmRemoval() {
+    const card = pendingRemoval
+    if (card === null) return
 
     setRemovingId(card.id)
     setLoadError(null)
     try {
       await removeCard(card.id)
+      setPendingRemoval(null)
       reload()
     } catch (cause) {
+      /*
+       * El cartel se cierra igual: el error se muestra en la pantalla, detrás. Dejarlo abierto
+       * con el mensaje adentro invita a reintentar la misma llamada que acaba de fallar.
+       */
+      setPendingRemoval(null)
       setLoadError(cause instanceof ApiError ? cause.message : 'No se pudo eliminar la tarjeta')
     } finally {
       setRemovingId(null)
@@ -177,13 +187,13 @@ export default function PaymentMethodsPage() {
             <PaymentMethodRow
               key={card.id}
               card={card}
-              onRemove={handleRemove}
+              onRemove={setPendingRemoval}
               removing={removingId === card.id}
             />
           ))}
         </ul>
       ) : (
-        <CardStack cards={cards} onRemove={handleRemove} removingId={removingId} />
+        <CardStack cards={cards} onRemove={setPendingRemoval} />
       )}
 
       {/*
@@ -216,6 +226,20 @@ export default function PaymentMethodsPage() {
         <h2 className="mb-4 text-lg font-semibold">Nueva tarjeta</h2>
         {form}
       </BottomSheet>
+
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        title="¿Estás seguro?"
+        message={
+          pendingRemoval === null
+            ? ''
+            : `Vas a eliminar ${describeCard(pendingRemoval.brand, pendingRemoval.lastFour)}. Para volver a usarla vas a tener que cargarla de nuevo.`
+        }
+        confirmLabel="Eliminar"
+        onConfirm={confirmRemoval}
+        onCancel={() => setPendingRemoval(null)}
+        busy={removingId !== null}
+      />
     </section>
   )
 }

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { describeCard, formatExpiry, maskedFromLastFour } from '../format'
 import type { PaymentMethod } from '../types'
@@ -8,8 +8,6 @@ import CardPreview from './CardPreview'
 interface CardStackProps {
   cards: PaymentMethod[]
   onRemove: (card: PaymentMethod) => void
-  /** El id de la tarjeta que se está eliminando, si hay alguna. */
-  removingId: number | null
 }
 
 /** Cuánto de cada tarjeta asoma por debajo de la que tiene encima. */
@@ -17,6 +15,18 @@ const PEEK_PX = 72
 
 /** La proporción de una tarjeta real: 85,60 × 53,98 mm. La misma que usa `CardPreview`. */
 const CARD_RATIO = 1.586
+
+/** Cuánto hay que mantener el dedo apoyado para entrar al modo de eliminar. */
+const LONG_PRESS_MS = 2000
+
+/**
+ * Cuánto se puede mover el dedo sin que la pulsación se cancele.
+ *
+ * No es cero porque un dedo apoyado dos segundos nunca queda perfectamente quieto: exigir
+ * inmovilidad haría que el gesto fallara casi siempre. Pasado este margen ya no es una
+ * pulsación sino un scroll, y ahí sí hay que soltar.
+ */
+const MOVE_TOLERANCE_PX = 12
 
 /**
  * Las tarjetas guardadas apiladas como en una billetera, para el celular.
@@ -27,20 +37,35 @@ const CARD_RATIO = 1.586
  * la última se ve completa. Es cómo se ven las tarjetas en una billetera de verdad, y por eso
  * no hay que explicar el gesto.
  *
- * **Tocar una la trae al frente.** Se despliega mostrándose entera y empujando hacia abajo a las
- * que tenía encima —no a las de atrás—, y recién ahí aparece el botón de eliminar. Que la acción
- * destructiva esté a dos toques y no a uno es a propósito: en una pila de rectángulos parecidos,
- * un botón por tarjeta a la vista es un borrado accidental esperando.
+ * **Un toque despliega; una pulsación larga habilita eliminar.** Son dos gestos separados
+ * porque son dos intenciones distintas y una de las dos borra datos. Mantener el dedo dos
+ * segundos pone todas las tarjetas a temblar y les aparece una cruz roja arriba a la derecha,
+ * igual que los íconos de un teléfono; de ahí se sale con "Listo", tocando fuera o con Escape.
+ *
+ * **La pulsación larga no es descubrible por sí sola**, así que la pantalla lo dice: hay un
+ * renglón abajo de la pila que explica el gesto. Un gesto oculto que es la única forma de
+ * borrar una tarjeta sería una función que no existe para quien no la conoce.
  *
  * **El alto se mide, no se supone.** Las posiciones son píxeles absolutos, y el alto de la
  * tarjeta depende del ancho disponible por su proporción. Se lee del contenedor con un
  * `ResizeObserver` en vez de fijar un número: escrito a mano, la pila se desarma en cuanto
  * alguien cambia un padding o gira el teléfono.
  */
-export default function CardStack({ cards, onRemove, removingId }: CardStackProps) {
+export default function CardStack({ cards, onRemove }: CardStackProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [cardHeight, setCardHeight] = useState(0)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [removingModeAsked, setRemovingMode] = useState(false)
+
+  /*
+   * Derivado y no un estado propio: si se eliminó la última tarjeta, el modo no tiene sobre qué
+   * aplicarse y se apaga solo. Apagarlo desde un efecto sería un render de más y, sobre todo,
+   * un cuadro intermedio con el modo activo sin ninguna tarjeta debajo.
+   */
+  const removingMode = removingModeAsked && cards.length > 0
+
+  /* La pulsación en curso: desde dónde empezó y el temporizador que la va a convertir en larga. */
+  const press = useRef<{ x: number; y: number; timer: number } | null>(null)
 
   useLayoutEffect(() => {
     const container = containerRef.current
@@ -52,6 +77,59 @@ export default function CardStack({ cards, onRemove, removingId }: CardStackProp
     observer.observe(container)
     return () => observer.disconnect()
   }, [])
+
+  /* Salir del modo con Escape, igual que de cualquier otra cosa que se abre encima. */
+  useEffect(() => {
+    if (!removingMode) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setRemovingMode(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [removingMode])
+
+  function cancelPress() {
+    if (press.current === null) return
+    window.clearTimeout(press.current.timer)
+    press.current = null
+  }
+
+  function startPress(event: React.PointerEvent) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    cancelPress()
+
+    const timer = window.setTimeout(() => {
+      press.current = null
+      setRemovingMode(true)
+
+      /*
+       * Un golpecito del motor de vibración, si el teléfono lo tiene. Es lo que confirma que el
+       * gesto se completó sin obligar a mirar: la mano ya está tapando parte de la pantalla.
+       * No todos los navegadores la exponen, y en ninguno es imprescindible.
+       */
+      navigator.vibrate?.(30)
+    }, LONG_PRESS_MS)
+
+    press.current = { x: event.clientX, y: event.clientY, timer }
+  }
+
+  function movePress(event: React.PointerEvent) {
+    const start = press.current
+    if (start === null) return
+
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+    if (moved > MOVE_TOLERANCE_PX) cancelPress()
+  }
+
+  /*
+   * Un toque corto despliega la tarjeta; uno que ya disparó el modo de eliminar, no. Sin esta
+   * distinción, completar la pulsación larga dejaría además una tarjeta abierta que nadie pidió.
+   */
+  function handleCardClick(card: PaymentMethod) {
+    if (removingMode) return
+    setExpandedId(card.id === expandedId ? null : card.id)
+  }
 
   const expandedIndex = cards.findIndex((card) => card.id === expandedId)
 
@@ -67,26 +145,32 @@ export default function CardStack({ cards, onRemove, removingId }: CardStackProp
     return stacked + (cardHeight - PEEK_PX)
   }
 
-  const lastIndex = cards.length - 1
-  const stackHeight = cards.length === 0 ? 0 : offsetOf(lastIndex) + cardHeight
-  const expandedCard = expandedIndex === -1 ? null : cards[expandedIndex]
+  const stackHeight = cards.length === 0 ? 0 : offsetOf(cards.length - 1) + cardHeight
 
   return (
     <div>
+      {removingMode && (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-text-muted text-sm">Tocá la cruz de la tarjeta que querés eliminar.</p>
+          <button
+            type="button"
+            onClick={() => setRemovingMode(false)}
+            className="text-primary shrink-0 text-sm font-semibold"
+          >
+            Listo
+          </button>
+        </div>
+      )}
+
       <div
         ref={containerRef}
         className="relative transition-[height] duration-300"
         style={{ height: stackHeight }}
       >
         {cards.map((card, index) => (
-          <button
+          <div
             key={card.id}
-            type="button"
-            onClick={() => setExpandedId(card.id === expandedId ? null : card.id)}
-            // El texto real de la tarjeta vive acá: `CardPreview` es aria-hidden.
-            aria-label={`${describeCard(card.brand, card.lastFour)}${card.expired ? ', vencida' : ''}`}
-            aria-expanded={card.id === expandedId}
-            className="absolute inset-x-0 block w-full text-left transition-transform duration-300 ease-out"
+            className="absolute inset-x-0 transition-transform duration-300 ease-out"
             style={{
               transform: `translateY(${offsetOf(index)}px)`,
               /*
@@ -97,40 +181,78 @@ export default function CardStack({ cards, onRemove, removingId }: CardStackProp
               zIndex: index,
             }}
           >
-            <CardPreview
-              brand={card.brand}
-              numberText={maskedFromLastFour(card.lastFour, card.brand)}
-              holder={card.label === null ? undefined : { label: 'Etiqueta', value: card.label }}
-              expiry={formatExpiry(card.expiryMonth, card.expiryYear)}
-              expired={card.expired}
-            />
-          </button>
+            {/*
+              El temblor va en un envoltorio propio y no en el mismo nodo que se posiciona: los
+              dos usan `transform`, así que compartir nodo hace que la animación pise el
+              desplazamiento de la pila y las tarjetas salten al apilarse.
+
+              El desfase por posición evita que tiemblen todas al mismo tiempo, que se ve como
+              una sola pieza sacudiéndose en vez de varias tarjetas sueltas.
+            */}
+            <div
+              /* `relative` para que la cruz se ubique contra la tarjeta y tiemble con ella. */
+              className={`relative ${removingMode ? 'card-jiggle' : ''}`}
+              style={removingMode ? { animationDelay: `${(index % 3) * 70}ms` } : undefined}
+            >
+              <button
+                type="button"
+                onClick={() => handleCardClick(card)}
+                onPointerDown={startPress}
+                onPointerMove={movePress}
+                onPointerUp={cancelPress}
+                onPointerCancel={cancelPress}
+                onPointerLeave={cancelPress}
+                // El texto real de la tarjeta vive acá: `CardPreview` es aria-hidden.
+                aria-label={`${describeCard(card.brand, card.lastFour)}${card.expired ? ', vencida' : ''}`}
+                aria-expanded={card.id === expandedId}
+                className="block w-full text-left"
+              >
+                <CardPreview
+                  brand={card.brand}
+                  numberText={maskedFromLastFour(card.lastFour, card.brand)}
+                  holder={
+                    card.label === null ? undefined : { label: 'Etiqueta', value: card.label }
+                  }
+                  expiry={formatExpiry(card.expiryMonth, card.expiryYear)}
+                  expired={card.expired}
+                />
+              </button>
+
+              {/*
+                La cruz va fuera del botón de la tarjeta y no adentro: anidar un botón dentro de
+                otro es HTML inválido, y el clic terminaría disparando los dos.
+
+                Sale medio botón por afuera de la esquina, como los íconos de un teléfono. Es lo
+                que hace que se lea como algo pegado encima de la tarjeta y no como parte de su
+                diseño — que ya tiene un logo en la otra esquina.
+              */}
+              {removingMode && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(card)}
+                  aria-label={`Eliminar ${describeCard(card.brand, card.lastFour)}`}
+                  className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#d7524f] text-white shadow-lg transition-transform active:scale-90"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      stroke="currentColor"
+                      strokeWidth="3.2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
         ))}
       </div>
 
-      {/*
-        Las acciones van abajo de la pila y no flotando sobre la tarjeta: encima taparían el
-        número, que es lo único que permite reconocerla y confirmar que se está por borrar la
-        correcta.
-      */}
-      {expandedCard !== null && (
-        <div className="mt-4 flex items-center gap-3">
-          <p className="text-text-muted min-w-0 flex-1 text-sm">
-            {expandedCard.expired
-              ? `Venció en ${formatExpiry(expandedCard.expiryMonth, expandedCard.expiryYear)}. No sirve para reservar.`
-              : `Vence ${formatExpiry(expandedCard.expiryMonth, expandedCard.expiryYear)}`}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => onRemove(expandedCard)}
-            disabled={removingId === expandedCard.id}
-            aria-label={`Eliminar ${describeCard(expandedCard.brand, expandedCard.lastFour)}`}
-            className="border-border hover:bg-background shrink-0 rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-60"
-          >
-            {removingId === expandedCard.id ? 'Eliminando…' : 'Eliminar'}
-          </button>
-        </div>
+      {/* El renglón que hace descubrible la pulsación larga. Ver el comentario del componente. */}
+      {!removingMode && cards.length > 0 && (
+        <p className="text-text-muted mt-4 text-center text-xs">
+          Mantené pulsada una tarjeta para eliminarla.
+        </p>
       )}
     </div>
   )

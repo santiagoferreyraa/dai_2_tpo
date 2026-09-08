@@ -31,3 +31,40 @@ body {
   background-color: var(--color-background);
   color: var(--color-text);
 }
+
+/*
+  El temblor de las tarjetas cuando se entra al modo de eliminar, en el celular.
+
+  Es el gesto que usa iOS al mantener pulsado un ícono, y se copia porque ya está aprendido:
+  algo que tiembla está esperando que lo borres o lo muevas. Sin esto, la única señal de que
+  se entró a un modo distinto serían unas cruces chicas en una esquina, que es fácil no ver.
+
+  Los ángulos son mínimos a propósito. Con más grados la tarjeta deja de leerse mientras se
+  mueve, y el número —que es lo único que permite distinguir una tarjeta de otra— se vuelve
+  imposible de comparar justo cuando hay que decidir cuál se borra.
+*/
+@keyframes card-jiggle {
+  0%,
+  100% {
+    transform: rotate(-0.55deg) translateY(-0.5px);
+  }
+  50% {
+    transform: rotate(0.55deg) translateY(0.5px);
+  }
+}
+
+.card-jiggle {
+  animation: card-jiggle 0.22s ease-in-out infinite;
+}
+
+/*
+  Movimiento repetido y sin fin, que es exactamente lo que la preferencia de accesibilidad
+  pide desactivar: para alguien con sensibilidad vestibular, una pantalla entera vibrando es
+  motivo de mareo. El modo de eliminar se sigue distinguiendo por las cruces rojas, así que
+  apagarlo no deja a nadie sin saber qué está pasando.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .card-jiggle {
+    animation: none;
+  }
+}
