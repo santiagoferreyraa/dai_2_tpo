@@ -398,3 +398,31 @@ body {
   -webkit-mask-size: contain;
   mask-size: contain;
 }
+
+/*
+  El punto de la sección activa en la barra de escritorio.
+
+  Misma curva y misma duración que el círculo del celular: son el mismo gesto —una marca que viaja
+  hasta la sección nueva— y tienen que sentirse igual. `opacity` entra en la lista para que se
+  desvanezca al entrar en una sección que no está en la barra, en vez de desaparecer de golpe.
+*/
+.top-nav__dot {
+  transition:
+    transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 200ms ease;
+}
+
+/*
+  Arranca sin transición para que el primer salto —de "sin posición" a la sección activa— no se vea
+  como un punto entrando desde el borde. La clase la saca el componente apenas termina esa primera
+  medición.
+*/
+.top-nav__dot--idle {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-nav__dot {
+    transition: opacity 200ms ease;
+  }
+}

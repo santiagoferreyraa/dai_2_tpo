@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router'
 
 import { useTheme } from '@/features/theme/theme'
 
@@ -14,10 +13,10 @@ import { FRAGMENT_SHADER, VERTEX_SHADER } from './shader'
  * red: si el navegador no tiene WebGL 2, si la placa pierde el contexto o si estamos en el mapa,
  * acá no se dibuja nada y abajo sigue habiendo un fondo presentable.
  *
- * **En el mapa no corre**, y no es por estética. Esa pantalla ya tiene a Leaflet moviendo
- * mosaicos, pines y un panel, y el mapa tapa casi todo el fondo: se pagaría el costo de dibujar
- * algo que casi no se ve. Al salir de esa ruta el componente se desmonta y suelta el contexto de
- * video, en vez de quedar pausado ocupándolo.
+ * **Corre en todas las pantallas, incluida la del mapa.** Estuvo un tiempo apagado ahí, cuando el
+ * mapa iba a sangre y tapaba el fondo entero: dibujar algo que no se ve es puro costo. Desde que
+ * el mapa vive adentro de una tarjeta redondeada, el fondo se ve alrededor, y apagarlo dejaba esa
+ * pantalla con un degradado plano mientras el resto de la aplicación se movía.
  *
  * Tres decisiones que bajan el costo sin que se note en pantalla:
  *
@@ -28,9 +27,6 @@ import { FRAGMENT_SHADER, VERTEX_SHADER } from './shader'
  * - **Se apaga con la pestaña.** Sin esto seguiría calculando de fondo, gastando batería por algo
  *   que nadie está mirando.
  */
-
-/** Rutas donde el fondo no se dibuja. Ver el motivo arriba. */
-const HIDDEN_ROUTES = ['/stations/map']
 
 /** Fracción de la resolución real a la que se dibuja. */
 const RENDER_SCALE = 0.5
@@ -96,7 +92,6 @@ function createProgram(gl: WebGL2RenderingContext) {
 }
 
 export default function IridescentBackdrop() {
-  const { pathname } = useLocation()
   const theme = useTheme()
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -112,8 +107,6 @@ export default function IridescentBackdrop() {
 
   /* Para que el lienzo entre con una disolvencia en vez de aparecer de golpe al cargar. */
   const [painted, setPainted] = useState(false)
-
-  const hidden = HIDDEN_ROUTES.includes(pathname)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -265,9 +258,7 @@ export default function IridescentBackdrop() {
         programa y el objeto de vértices es todo lo que hay que hacer a mano.
       */
     }
-  }, [hidden])
-
-  if (hidden) return null
+  }, [])
 
   return (
     <canvas
