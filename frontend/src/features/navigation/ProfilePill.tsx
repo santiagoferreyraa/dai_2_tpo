@@ -5,18 +5,21 @@ import { PROFILE_SECTION } from './navSections'
 import { displayNameFrom, useNavSession } from './useNavSession'
 
 /**
- * La ficha del usuario, a la derecha de la barra de escritorio.
+ * La ficha del usuario, arriba a la derecha en escritorio y tablet.
  *
  * Son dos fichas de la misma forma y el mismo alto, una por estado de sesión. Que midan igual
- * de alto no es un detalle estético: la barra es una grilla de tres columnas y la del medio
- * está centrada contra las otras dos, así que una ficha que cambia de tamaño al iniciar sesión
- * correría las cuatro secciones del centro.
+ * de alto importa porque comparte la fila con el interruptor de tema: una ficha que crece al
+ * iniciar sesión correría el interruptor de lugar y la franja daría un salto.
  *
  * **El cuadrado del rayo cambia de color con la sesión, y al revés de lo que parece.** Sin
- * sesión va en verde y con sesión en blanco: el verde es el color con el que la aplicación
+ * sesión va en verde y con sesión en neutro: el verde es el color con el que la aplicación
  * pide acción, y la acción pendiente es justamente entrar. Una vez adentro no hay nada que
- * reclamar, así que el cuadrado se vuelve neutro y el verde queda libre para señalar en qué
- * sección estamos, que es lo único que sigue cambiando.
+ * reclamar, así que el cuadrado se apaga y el verde queda libre para señalar en qué sección
+ * estamos, que es lo único que sigue cambiando.
+ *
+ * El neutro es `bg-text` y no blanco fijo: en el tema oscuro `--color-text` ES casi blanco, que
+ * es como se ve arriba, pero en el tema claro un cuadrado blanco sobre fondo blanco no se ve.
+ * Atado al token, el cuadrado siempre contrasta contra su fondo.
  */
 
 /** Cómo se lee cada rol en pantalla. El enum viaja en inglés técnico; el usuario no. */
@@ -33,7 +36,7 @@ const ROLE_LABEL = {
  * se lee como una ficha —algo con identidad— y no como un botón más.
  */
 const SHELL =
-  'border-border hover:border-primary/60 hover:bg-surface/60 flex items-center gap-3 border py-1.5 pr-4 pl-1.5 transition-colors'
+  'glass-panel hover:border-primary/60 flex items-center gap-3 rounded-none py-1.5 pr-4 pl-1.5 transition-colors'
 
 /** El cuadrado del rayo. También recto: sigue la forma de la ficha que lo contiene. */
 const BOLT_SQUARE = 'text-background flex h-9 w-9 shrink-0 items-center justify-center'
@@ -59,7 +62,7 @@ export default function ProfilePill() {
 
   return (
     <Link to={PROFILE_SECTION.to} className={SHELL} aria-label={`Perfil de ${session.email}`}>
-      <span className={`${BOLT_SQUARE} bg-white`}>
+      <span className={`${BOLT_SQUARE} bg-text`}>
         <BoltIcon className="h-4 w-4" />
       </span>
 

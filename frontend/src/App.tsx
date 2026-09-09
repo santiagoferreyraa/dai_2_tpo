@@ -9,8 +9,8 @@ import Navbar from '@/features/navigation/Navbar'
  * Las pantallas NO se agregan acá: cada feature declara sus rutas en su propio
  * archivo. Ver src/routes/routes.tsx.
  *
- * La navegación tampoco se escribe acá. Son dos barras distintas —arriba en escritorio,
- * flotando abajo en el celular— y viven en `features/navigation`: este archivo monta una
+ * La navegación tampoco se escribe acá. Son tres piezas —la franja de arriba, el riel de la
+ * izquierda y la barra del celular— y viven en `features/navigation`: este archivo monta una
  * línea y no sabe cuántas secciones hay ni cuál está activa.
  */
 export default function App() {
@@ -24,19 +24,19 @@ export default function App() {
       `min-h-0` en el <main> es la otra mitad: sin eso, un hijo que scrollea estira al padre
       en lugar de recortarse, porque la altura mínima por defecto de un ítem flex es su
       contenido.
+
+      `app-shell` es el degradado del fondo, que cambia con el tema. Ver index.css.
     */
-    <div className="relative flex h-full flex-col">
+    <div className="app-shell flex h-full flex-col">
       {/*
-        Las dos barras están FUERA del flujo, y por eso este contenedor es `relative`.
+        Las tres piezas de la navegación están FUERA del flujo: las de escritorio ancladas a la
+        ventana y la del celular fija abajo. Ninguna ocupa lugar acá, así que el <main> mide la
+        ventana entera y es él quien reserva el espacio con su propio `padding`.
 
-        La del celular va fija abajo: el <main> sigue midiendo la ventana entera, que es lo que
-        deja al mapa llegar hasta el borde de abajo y verse por el hueco de la barra en vez de
-        terminar cortado contra ella.
-
-        La de escritorio va superpuesta arriba, y el `pt` del <main> le devuelve el alto que le
-        sacó. Parece dar lo mismo que dejarla en el flujo, pero no: superpuesta, el contenido
-        que scrollea le pasa por debajo, y eso es lo que hace que el vidrio tenga algo que
-        difuminar. En el flujo, `backdrop-blur` solo difumina el fondo liso de la página.
+        Se hace así y no dejándolas en el flujo por dos motivos. El contenido que scrollea les
+        pasa por debajo, que es lo que le da algo que difuminar al vidrio; y en el celular es lo
+        que deja al mapa llegar hasta el borde de abajo y verse por el hueco de la barra, en vez
+        de terminar cortado contra ella.
       */}
       <Navbar />
 
@@ -44,8 +44,12 @@ export default function App() {
         Columna flex, no un bloque suelto: así una pantalla que quiere ocupar todo el alto
         —el mapa de estaciones— crece como ítem del flex en vez de medir su contenido. El
         ABM no lo necesita, pero tampoco le molesta: sigue scrolleando adentro.
+
+        El `padding` de escritorio es el lugar de las dos piezas flotantes: arriba la franja,
+        a la izquierda el riel. En el celular no hay ninguno de los dos, y la barra de abajo
+        flota sobre el contenido a propósito.
       */}
-      <main className="flex min-h-0 flex-1 flex-col md:pt-16">
+      <main className="flex min-h-0 flex-1 flex-col md:pt-20 md:pl-24">
         <Outlet />
       </main>
     </div>

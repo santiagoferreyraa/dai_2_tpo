@@ -24,12 +24,12 @@ const CONTACT_ROWS: ContactRow[] = [
 export default function ContactPage() {
   return (
     /*
-      `pb-32` en el celular es el lugar de la barra flotante: sin eso, la última fila queda
-      debajo de la navegación y no hay forma de scrollear más. En escritorio la barra está
-      arriba y ocupa su propio alto, así que ese aire sobra.
+      `pb-36` en el celular es el lugar de la barra flotante: sin eso, la última fila queda
+      debajo de la navegación y no hay forma de scrollear más. En escritorio la navegación no
+      está abajo, así que ese aire sobra.
     */
-    <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-32 md:pb-16">
-      <h1 className="text-text text-2xl font-semibold">Contacto</h1>
+    <section className="mx-auto w-full max-w-2xl px-6 pt-8 pb-36 md:pb-12">
+      <h1 className="text-text text-3xl font-extrabold tracking-tight">Contacto</h1>
       <p className="text-text-muted mt-2 text-sm">
         ¿Un cargador que no responde, un cobro que no cierra? Escribinos y lo miramos.
       </p>
@@ -38,7 +38,7 @@ export default function ContactPage() {
         {CONTACT_ROWS.map((row) => (
           <div
             key={row.label}
-            className="border-border bg-surface flex items-center justify-between rounded-xl border px-4 py-3"
+            className="glass-panel flex items-center justify-between rounded-2xl px-4 py-3"
           >
             <dt className="text-text-muted text-sm">{row.label}</dt>
             <dd>

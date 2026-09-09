@@ -7,33 +7,108 @@
 @import "./features/terminals/terminals.css";
 
 /*
-  Tema de la aplicación.
+  Tema de la aplicación (RNF07 y RNF08).
 
-  Los tokens se definen acá una sola vez y se usan como clases de Tailwind
-  (bg-background, text-text, etc.). La base es oscura: los cuatro neutros de la paleta van de
-  más oscuro a más claro y cubren fondo, superficie, borde y texto. Cuando implementemos el
-  cambio de tema en tiempo real (RNF08, puntos extra en la Entrega Final), lo que se agrega es
-  la variante CLARA bajo [data-theme="light"], sin tocar ningún componente.
+  Los tokens se definen acá una sola vez y se usan como clases de Tailwind (bg-background,
+  text-text, etc.). El bloque `@theme` es el tema OSCURO, que es el que manda por omisión; el
+  claro solo redefine los mismos nombres bajo `[data-theme="light"]`.
 
-  Dos valores no salen directo de la paleta:
+  Que se pueda cambiar de tema sin tocar un solo componente es exactamente la razón de que los
+  colores vivan en tokens: `bg-surface` no sabe de qué color es, y no tiene por qué saberlo.
+  Quien decide es `features/theme/theme.ts`, que escribe el atributo en <html>.
 
-  --color-text-muted es un gris agregado. El #6D6D6D de la paleta da 2.77 de contraste sobre el
-  fondo y 1.80 sobre la superficie, contra los 4.5 que pide WCAG: sobre el header el texto
-  secundario quedaba casi del color del header. #9A9A9A llega a 5.11 sobre el fondo, que es
-  donde va a vivir la mayor parte del texto secundario (la lista de resultados). #6D6D6D queda
-  solo para bordes, que es donde el contraste bajo no molesta.
+  **El verde cambia entre los dos temas y no es un descuido.** `#b9fe70` es un verde claro:
+  funciona como FONDO con texto oscuro encima, y así se usa en los botones y en el círculo de la
+  navegación. Pero también se usa como TEXTO (`text-primary`), y sobre el fondo claro un verde
+  así se vuelve ilegible. En el tema claro pasa a ser un verde oscuro, que sirve para las dos
+  cosas: como texto sobre blanco y como fondo con texto claro encima. La pareja
+  `bg-primary text-background` queda legible en los dos temas sin que ningún componente elija.
 
-  --color-primary-strong es el verde apagado un paso: es el estado presionado, y la paleta trae
-  un solo verde. No lo usa nadie todavía.
+  --color-text-muted es un gris agregado, no sale de la paleta: los grises de la paleta original
+  no llegaban a los 4.5 de contraste que pide WCAG contra el fondo. El de cada tema está elegido
+  contra SU fondo.
 */
 @theme {
-  --color-background: #2a2a2a;
-  --color-surface: #474747;
-  --color-border: #6d6d6d;
-  --color-text: #d9d9d9;
-  --color-text-muted: #9a9a9a;
+  --color-background: #0d111c;
+  --color-surface: #1a2130;
+  --color-border: #2b3446;
+  --color-text: #e9edf5;
+  --color-text-muted: #98a3b8;
   --color-primary: #b9fe70;
   --color-primary-strong: #a3e858;
+}
+
+/*
+  Los resplandores del fondo (ver `.app-shell`). Van sueltos y no en `@theme` porque no son
+  colores de la interfaz: nadie los usa como `bg-` ni como `text-`, son las manchas del
+  degradado y solo las lee una regla.
+*/
+:root {
+  --shell-glow-a: rgb(78 96 214 / 0.34);
+  --shell-glow-b: rgb(150 100 250 / 0.26);
+  --shell-glow-c: rgb(120 200 90 / 0.12);
+}
+
+[data-theme="light"] {
+  --color-background: #e9eff8;
+  --color-surface: #ffffff;
+  --color-border: #d2dae9;
+  --color-text: #111827;
+  --color-text-muted: #5b6779;
+  --color-primary: #3f8f0f;
+  --color-primary-strong: #357a0c;
+
+  --shell-glow-a: rgb(150 185 240 / 0.55);
+  --shell-glow-b: rgb(196 178 240 / 0.45);
+  --shell-glow-c: rgb(255 255 255 / 0.75);
+}
+
+/*
+  El fondo de la aplicación: tres manchas de color muy abiertas sobre el color base.
+
+  Es lo que evita que el tema oscuro sea un gris plano. Las manchas son enormes y de opacidad
+  muy baja a propósito —no se leen como formas, se leen como luz— y quedan fijas al contenedor,
+  así que el contenido scrollea por encima sin arrastrarlas.
+*/
+.app-shell {
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(70% 55% at 12% 0%, var(--shell-glow-a), transparent 70%),
+    radial-gradient(60% 60% at 92% 18%, var(--shell-glow-b), transparent 70%),
+    radial-gradient(85% 55% at 50% 112%, var(--shell-glow-c), transparent 70%);
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+/*
+  El vidrio: la superficie de la que están hechas las tarjetas, la franja de arriba y el riel.
+
+  Son tres cosas juntas y ninguna sobra. El fondo semitransparente deja pasar el color de lo que
+  hay abajo; el desenfoque lo vuelve una mancha, que es lo que permite leer texto encima; y la
+  saturación compensa lo que el desenfoque apaga —sin ella el vidrio se ve gris y sucio en vez
+  de translúcido—.
+*/
+.glass-panel {
+  background-color: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease;
+}
+
+/*
+  Sin soporte de `backdrop-filter` no queda un vidrio a medias: el fondo semitransparente sin
+  desenfoque deja leer el contenido de abajo a través del texto de encima. En ese caso se vuelve
+  opaco, que es menos lindo pero legible.
+*/
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel {
+    background-color: var(--color-surface);
+  }
 }
 
 /*
@@ -170,6 +245,21 @@ body,
   height: 100%;
 }
 
+/*
+  La tipografía de la interfaz. `font-feature-settings` apaga las ligaduras de las secuencias
+  tipo "ff" y activa las cifras tabulares: en las tarjetas hay números que cambian solos —kW,
+  kilos, porcentajes— y con cifras de ancho variable el valor se mueve de lugar al actualizarse.
+*/
+body {
+  font-family:
+    "Plus Jakarta Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-text);
@@ -244,61 +334,5 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .mobile-nav {
     transition: none;
-  }
-}
-
-/* ─────────────────────── Navegación de escritorio y tablet ───────────────────────
-  La barra flota sobre el contenido (ver App.tsx y DesktopNav.tsx). El vidrio son dos cosas
-  juntas: un fondo semitransparente que deja pasar el color de lo que hay abajo, y un
-  `backdrop-filter` que lo difumina para que el texto de la barra siga siendo legible cuando
-  por debajo pasa contenido con detalle —el mapa, sin ir más lejos—.
-
-  La saturación va con el desenfoque a propósito: difuminar solo apaga los colores, y sin
-  levantarlos un poco el vidrio se ve gris y sucio en vez de translúcido.
-*/
-.desktop-nav {
-  background-color: color-mix(in srgb, var(--color-surface) 55%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  backdrop-filter: blur(20px) saturate(1.6);
-}
-
-/*
-  Sin soporte de `backdrop-filter` no queda un vidrio a medias: el fondo semitransparente sin
-  desenfoque deja leer el contenido de abajo a través del texto de la barra. En ese caso se
-  vuelve opaco, que es feo pero legible.
-*/
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .desktop-nav {
-    background-color: var(--color-surface);
-  }
-}
-
-.desktop-nav__marker {
-  /*
-    Misma curva y misma duración que el círculo del celular: son el mismo gesto —una marca que
-    viaja hasta la sección nueva— y tienen que sentirse igual.
-
-    `opacity` entra en la lista para que el subrayado se desvanezca al entrar en una sección
-    que no está en la barra, en vez de desaparecer de golpe.
-  */
-  transition:
-    transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
-    width 420ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 200ms ease;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 60%, transparent);
-}
-
-/*
-  Arranca sin transición para que el primer salto —de "sin posición" a la sección activa— no se
-  vea como un subrayado entrando desde el borde. La clase la saca el componente apenas termina
-  esa primera medición.
-*/
-.desktop-nav__marker--idle {
-  transition: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .desktop-nav__marker {
-    transition: opacity 200ms ease;
   }
 }

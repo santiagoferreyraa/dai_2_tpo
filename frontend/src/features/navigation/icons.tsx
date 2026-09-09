@@ -100,3 +100,42 @@ export function BoltIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/** Sol: el tema claro, en el interruptor de tema. */
+export function SunIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4" />
+    </svg>
+  )
+}
+
+/** Luna: el tema oscuro, en el interruptor de tema. */
+export function MoonIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M20 13.4A8.2 8.2 0 1 1 10.6 4a6.6 6.6 0 0 0 9.4 9.4Z" />
+    </svg>
+  )
+}
+
+/** Hoja: lo ambiental, en la home. */
+export function LeafIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4.5 19.5c-1.5-6 2-12 9.5-13 2 0 4 .4 5.5 1 0 8-4.5 13-11 13a6 6 0 0 1-4-1Z" />
+      <path d="M4 20c2-5 5.5-8.5 10-10.5" />
+    </svg>
+  )
+}
+
+/** Reloj: los tiempos y las ventanas de reserva, en la home. */
+export function ClockIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 1.8" />
+    </svg>
+  )
+}
