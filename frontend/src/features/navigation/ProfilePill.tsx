@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
 
+import { useSession } from '@/features/auth/session'
+import { displayNameFrom } from '@/lib/displayName'
+
 import { BoltIcon } from './icons'
 import { PROFILE_SECTION } from './navSections'
-import { displayNameFrom, useNavSession } from './useNavSession'
 
 /**
  * La ficha del usuario, arriba a la derecha en escritorio y tablet.
@@ -51,13 +53,11 @@ const SHELL =
 const BOLT_SQUARE = 'text-background flex h-9 w-9 shrink-0 items-center justify-center rounded-lg'
 
 export default function ProfilePill() {
-  const session = useNavSession()
+  const session = useSession()
 
   if (session === null) {
     /*
-      El destino es `/login`, que es una pantalla de la feature Auth (ECO-36) y **todavía no
-      está en `main`**. El enlace se deja apuntando ahí igual: es la ruta correcta, y el día
-      que auth mergee esto funciona sin tocar nada. Ver `useNavSession.ts`.
+      El destino es `/login`, la pantalla de la feature Auth.
     */
     return (
       <Link to="/login" className={SHELL} aria-label="Iniciar sesión">

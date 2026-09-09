@@ -1,3 +1,5 @@
+import type { Role } from '@/features/auth/types'
+
 import { ContactIcon, HomeIcon, MapIcon, ProfileIcon, StationsIcon } from './icons'
 
 /**
@@ -13,6 +15,17 @@ export interface NavSection {
   to: string
   label: string
   Icon: (props: { className?: string }) => React.ReactElement
+  /**
+   * Qué roles ven esta sección. Sin esto, la ve cualquiera.
+   *
+   * Es la contracara del guard de la ruta: el ABM de estaciones exige rol de operador, así que
+   * mostrarle el enlace a un conductor es ofrecerle un camino que termina en acceso denegado.
+   *
+   * **Esconder un enlace no es seguridad** y no pretende serlo: quien escriba la dirección a mano
+   * llega igual, y ahí lo frena el guard —y al backend, la anotación sobre el método—. Lo que
+   * evita es prometer algo que no se puede cumplir.
+   */
+  roles?: Role[]
   /**
    * Si la ruta solo marca activo cuando coincide exacta.
    *
@@ -31,7 +44,7 @@ export interface NavSection {
  */
 export const MAIN_SECTIONS: NavSection[] = [
   { to: '/', label: 'Inicio', Icon: HomeIcon, end: true },
-  { to: '/stations', label: 'Estaciones', Icon: StationsIcon, end: true },
+  { to: '/stations', label: 'Estaciones', Icon: StationsIcon, end: true, roles: ['CPO'] },
   { to: '/stations/map', label: 'Mapa', Icon: MapIcon },
   { to: '/contact', label: 'Contacto', Icon: ContactIcon },
 ]
@@ -60,4 +73,17 @@ export const MOBILE_SECTIONS: NavSection[] = [...MAIN_SECTIONS, PROFILE_SECTION]
 export function isSectionActive(section: NavSection, pathname: string): boolean {
   if (section.end === true) return pathname === section.to
   return pathname === section.to || pathname.startsWith(`${section.to}/`)
+}
+
+/**
+ * Las secciones que le corresponden a quien está mirando.
+ *
+ * Se filtra en un solo lugar y las dos barras lo usan: si cada una repitiera la condición, la del
+ * celular podría terminar mostrando una sección que la de escritorio esconde. En el celular
+ * además importa doble, porque de la cantidad de secciones sale el ancho de cada una.
+ */
+export function visibleSections(sections: NavSection[], role: Role | null): NavSection[] {
+  return sections.filter(
+    (section) => section.roles === undefined || (role !== null && section.roles.includes(role)),
+  )
 }

@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
 
-import { isSectionActive, MOBILE_SECTIONS } from './navSections'
+import { useSession } from '@/features/auth/session'
+
+import { isSectionActive, MOBILE_SECTIONS, visibleSections } from './navSections'
 import { NAV_GEOMETRY, notchCutPath, sectionCenter } from './notchGeometry'
 
 /**
@@ -29,7 +31,15 @@ import { NAV_GEOMETRY, notchCutPath, sectionCenter } from './notchGeometry'
  */
 export default function MobileNav() {
   const { pathname } = useLocation()
-  const activeIndex = MOBILE_SECTIONS.findIndex((section) => isSectionActive(section, pathname))
+  const session = useSession()
+  /*
+    Solo las que le corresponden a quien mira. Acá el filtro pesa doble: de la CANTIDAD de
+    secciones sale el ancho de cada una y, con él, dónde se para el círculo. Por eso todo lo que
+    sigue cuenta sobre `sections` y no sobre la lista completa.
+  */
+  const sections = visibleSections(MOBILE_SECTIONS, session?.role ?? null)
+
+  const activeIndex = sections.findIndex((section) => isSectionActive(section, pathname))
 
   /*
    * Una ruta que no es ninguna de las cinco —el detalle de una estación, mañana— no tiene
@@ -37,7 +47,7 @@ export default function MobileNav() {
    * lisa y sin círculo: no decir nada es mejor que mentir.
    */
   const hasActive = activeIndex >= 0
-  const ActiveIcon = hasActive ? MOBILE_SECTIONS[activeIndex].Icon : null
+  const ActiveIcon = hasActive ? sections[activeIndex].Icon : null
 
   const navRef = useRef<HTMLElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
@@ -77,7 +87,7 @@ export default function MobileNav() {
       const sampled = Number.parseFloat(getComputedStyle(nav).getPropertyValue('--active-index'))
       const index = Number.isNaN(sampled) ? activeIndex : sampled
 
-      cut.setAttribute('d', notchCutPath(sectionCenter(index, barWidth, MOBILE_SECTIONS.length)))
+      cut.setAttribute('d', notchCutPath(sectionCenter(index, barWidth, sections.length)))
 
       /* Medio milésimo de sección: por debajo de eso no hay píxel que cambie. */
       if (Math.abs(index - activeIndex) > 0.0005) frame = requestAnimationFrame(draw)
@@ -85,7 +95,7 @@ export default function MobileNav() {
 
     draw()
     return () => cancelAnimationFrame(frame)
-  }, [activeIndex, barWidth])
+  }, [activeIndex, barWidth, sections.length])
 
   const { barHeight, barRadius, trackInset } = NAV_GEOMETRY
 
@@ -111,7 +121,7 @@ export default function MobileNav() {
           '--puck-size': `${NAV_GEOMETRY.puckSize}px`,
           '--notch-lift': `${NAV_GEOMETRY.notchLift}px`,
           '--track-inset': `${trackInset}px`,
-          '--section-count': MOBILE_SECTIONS.length,
+          '--section-count': sections.length,
         } as React.CSSProperties
       }
     >
@@ -153,7 +163,7 @@ export default function MobileNav() {
                   <path
                     ref={cutRef}
                     fill="#000"
-                    d={notchCutPath(sectionCenter(activeIndex, barWidth, MOBILE_SECTIONS.length))}
+                    d={notchCutPath(sectionCenter(activeIndex, barWidth, sections.length))}
                   />
                 )}
               </mask>
@@ -180,7 +190,7 @@ export default function MobileNav() {
           className="relative flex h-full items-stretch"
           style={{ paddingLeft: trackInset, paddingRight: trackInset }}
         >
-          {MOBILE_SECTIONS.map((section, index) => {
+          {sections.map((section, index) => {
             const active = index === activeIndex
             return (
               <NavLink

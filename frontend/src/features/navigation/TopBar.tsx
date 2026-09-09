@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router'
 
+import { useSession } from '@/features/auth/session'
 import ThemeToggle from '@/features/theme/ThemeToggle'
 
-import { isSectionActive, MAIN_SECTIONS } from './navSections'
+import { isSectionActive, MAIN_SECTIONS, visibleSections } from './navSections'
 import ProfilePill from './ProfilePill'
 import SearchBox from './SearchBox'
 
@@ -26,6 +27,10 @@ import SearchBox from './SearchBox'
  */
 export default function TopBar() {
   const { pathname } = useLocation()
+  const session = useSession()
+  /* Solo las que le corresponden a quien mira. Ver `visibleSections`. */
+  const sections = visibleSections(MAIN_SECTIONS, session?.role ?? null)
+
   const listRef = useRef<HTMLElement>(null)
   const dotRef = useRef<HTMLSpanElement>(null)
 
@@ -99,7 +104,7 @@ export default function TopBar() {
     const observer = new ResizeObserver(place)
     observer.observe(list)
     return () => observer.disconnect()
-  }, [pathname])
+  }, [pathname, sections.length])
 
   return (
     <header className="fixed inset-x-0 top-0 z-[1050] hidden md:block">
@@ -111,7 +116,7 @@ export default function TopBar() {
           aria-label="Navegación principal"
           className="relative flex items-center gap-1"
         >
-          {MAIN_SECTIONS.map((section) => {
+          {sections.map((section) => {
             const active = isSectionActive(section, pathname)
             return (
               <NavLink

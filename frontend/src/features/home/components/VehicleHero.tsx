@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 
-import { displayNameFrom, useNavSession } from '@/features/navigation/useNavSession'
+import { useSession } from '@/features/auth/session'
+import { displayNameFrom } from '@/lib/displayName'
 
 import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE } from '../vehicle'
 
@@ -28,7 +29,7 @@ function greetingFor(hour: number): string {
 }
 
 export default function VehicleHero({ className = '' }: { className?: string }) {
-  const session = useNavSession()
+  const session = useSession()
   const greeting = greetingFor(new Date().getHours())
 
   const image = session === null ? GUEST_IMAGE : VEHICLE_IMAGE

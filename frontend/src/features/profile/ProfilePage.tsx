@@ -1,6 +1,7 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 
-import { displayNameFrom, useNavSession } from '@/features/navigation/useNavSession'
+import { clearSession, useSession } from '@/features/auth/session'
+import { displayNameFrom } from '@/lib/displayName'
 import ThemeToggle from '@/features/theme/ThemeToggle'
 
 /**
@@ -11,10 +12,10 @@ import ThemeToggle from '@/features/theme/ThemeToggle'
  * llevaban a una ruta inexistente. Lo que hay acá es lo que se puede decir con lo que hay en
  * `main`: quién está.
  *
- * **La pantalla de verdad la trae ECO-36** —con los datos del perfil, el cambio de contraseña
- * y el cierre de sesión—, junto con `features/auth`. Cuando eso mergee, este archivo se
- * reemplaza entero: no hay nada acá que valga la pena conservar salvo la ruta y el interruptor
- * de tema.
+ * **Es también el único lugar desde donde se cierra la sesión.** El menú que traía la feature Auth
+ * vivía en la cabecera vieja, y esa cabecera se reemplazó por la franja flotante: si el botón no
+ * volviera a aparecer en algún lado, se podría entrar y no salir. Acá es donde cualquiera lo
+ * busca, y en el celular es la única pantalla a la que se llega desde la barra de abajo.
  *
  * **El interruptor de tema está acá además de en la franja de arriba, y no es una repetición
  * ociosa:** esa franja es solo de escritorio, así que en el celular esta pantalla es el ÚNICO
@@ -22,7 +23,14 @@ import ThemeToggle from '@/features/theme/ThemeToggle'
  * busca los ajustes.
  */
 export default function ProfilePage() {
-  const session = useNavSession()
+  const session = useSession()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    clearSession()
+    /* Al salir se vuelve a la portada: quedarse en una ruta privada dispararía el guard. */
+    void navigate('/', { replace: true })
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -58,6 +66,16 @@ export default function ProfilePage() {
               <dd className="text-text text-sm font-semibold">{session.role}</dd>
             </div>
           </dl>
+        )}
+
+        {session !== null && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="glass-panel text-text hover:border-danger/60 mt-4 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
+          >
+            Cerrar sesión
+          </button>
         )}
 
         <h2 className="text-text mt-10 text-sm font-semibold">Apariencia</h2>
