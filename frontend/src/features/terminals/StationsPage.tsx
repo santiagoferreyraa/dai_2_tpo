@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import BottomSheet from './components/BottomSheet'
+import NetworkSummary from './components/NetworkSummary'
 import StationCard from './components/StationCard'
 import StationFormSheet from './components/StationFormSheet'
 import StationInfoSheet from './components/StationInfoSheet'
@@ -212,6 +213,17 @@ export default function StationsPage() {
         la segunda columna.
       */}
       <div className="no-scrollbar mx-auto w-full max-w-md px-5 pt-5 pb-10 md:max-w-2xl lg:mx-0 lg:min-w-0 lg:max-w-none lg:flex-1 lg:overflow-y-auto lg:px-3 lg:pt-0">
+        {/*
+          El estado de la infraestructura, antes del listado: es lo primero que el operador quiere
+          saber al entrar. No pide nada al backend, cuenta las estaciones que ya están cargadas.
+          Ver `NetworkSummary`.
+        */}
+        {stations.length > 0 && (
+          <div className="mb-4">
+            <NetworkSummary stations={stations} />
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <label className="relative flex-1">
             <span className="sr-only">Buscar estación por nombre</span>

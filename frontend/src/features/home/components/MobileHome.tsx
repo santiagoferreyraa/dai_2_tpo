@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { BoltIcon, ClockIcon } from '@/features/navigation/icons'
 import SearchBox from '@/features/navigation/SearchBox'
 
+import NextChargeCard from './NextChargeCard'
+
 import { SAMPLE_STATIONS } from '../sampleStations'
 
 /**
@@ -72,6 +74,9 @@ export default function MobileHome() {
           Ver el mapa
         </Link>
       </section>
+
+      {/* Lo más accionable de la pantalla, apenas debajo del auto. Ver `NextChargeCard`. */}
+      <NextChargeCard />
 
       {/*
         Dos datos, y ninguno del auto. El diseño de referencia muestra batería, autonomía y tiempo

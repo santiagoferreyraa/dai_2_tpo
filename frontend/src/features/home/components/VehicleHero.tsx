@@ -27,7 +27,7 @@ function greetingFor(hour: number): string {
   return 'Buenas noches'
 }
 
-export default function VehicleHero() {
+export default function VehicleHero({ className = '' }: { className?: string }) {
   const session = useNavSession()
   const greeting = greetingFor(new Date().getHours())
 
@@ -35,7 +35,7 @@ export default function VehicleHero() {
 
   return (
     <section
-      className="glass-panel relative flex min-h-[22rem] flex-col justify-between overflow-hidden rounded-3xl p-6"
+      className={`glass-panel relative flex min-h-[22rem] flex-col justify-between overflow-hidden rounded-3xl p-6 ${className}`}
       style={{
         backgroundImage: `url("${image}")`,
         backgroundRepeat: 'no-repeat',
