@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 
 import App from '@/App'
+import { authRoutes } from '@/features/auth/routes'
 import { homeRoutes } from '@/features/home/routes'
 import { terminalRoutes } from '@/features/terminals/routes'
 
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
     element: <App />,
     children: [
       ...homeRoutes,
+      ...authRoutes,
       ...terminalRoutes,
       // ...bookingRoutes,
     ],

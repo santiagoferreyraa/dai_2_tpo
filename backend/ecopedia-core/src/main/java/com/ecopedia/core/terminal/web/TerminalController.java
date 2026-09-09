@@ -8,8 +8,26 @@ import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Capa de presentación del componente {@code ServicioDeTerminales}.
+ *
+ * <p><b>Dónde va la autorización y por qué acá.</b> Las anotaciones {@code @PreAuthorize} van
+ * sobre los métodos del controlador, no sobre los del servicio, y es deliberado: Reservas y
+ * SesionesDeCarga consumen {@code TerminalService} en proceso —{@code getConnector} y
+ * {@code changeOperationalStatus} están marcadas como operaciones internas en
+ * ARQUITECTURA_ECOPEDIA.md §2.3—, y esas llamadas no las origina un usuario sino el sistema.
+ * Con la regla en el servicio habría que inventarles un rol técnico para que pudieran pasar.
+ * Acá el alcance queda en la puerta HTTP, que es exactamente lo que hay que proteger.
+ *
+ * <p><b>Por qué {@code 'CPO'} y no {@code 'OPERATOR'}.</b> {@code hasRole('X')} busca la
+ * autoridad {@code ROLE_X}, y {@code JwtAuthenticationFilter} la arma como
+ * {@code "ROLE_" + role.name()} sobre el enum {@link com.ecopedia.core.user.domain.Role}, que
+ * dice {@code CPO}. El documento de arquitectura nombra el rol {@code OPERATOR}: la
+ * divergencia entre documento y código es una decisión tomada, no un descuido.
+ */
 @RestController
 @RequestMapping("/api")
 public class TerminalController {
@@ -22,6 +40,7 @@ public class TerminalController {
 
     /** RF04: Alta de una estación de carga. */
     @PostMapping("/stations")
+    @PreAuthorize("hasRole('CPO')")
     public ResponseEntity<StationResponse> createStation(@Valid @RequestBody StationRequest request) {
         Station created = terminalService.createStation(request.toDomainData());
         return ResponseEntity.status(HttpStatus.CREATED).body(StationResponse.fromDomain(created));
@@ -29,6 +48,7 @@ public class TerminalController {
 
     /** RF04: Edición de datos de una estación. */
     @PutMapping("/stations/{id}")
+    @PreAuthorize("hasRole('CPO')")
     public ResponseEntity<StationResponse> updateStation(
             @PathVariable Long id, @Valid @RequestBody StationRequest request) {
         Station updated = terminalService.updateStation(id, request.toDomainData());
@@ -37,6 +57,7 @@ public class TerminalController {
 
     /** RF04: Baja lógica de una estación. */
     @DeleteMapping("/stations/{id}")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<Void> deactivateStation(@PathVariable Long id) {
         terminalService.deactivateStation(id);
         return ResponseEntity.noContent().build();
@@ -44,6 +65,7 @@ public class TerminalController {
 
     /** RF05: Alta de un conector sobre una estación existente. */
     @PostMapping("/stations/{stationId}/connectors")
+    @PreAuthorize("hasRole('CPO')")
     public ResponseEntity<ConnectorResponse> addConnector(
             @PathVariable Long stationId, @Valid @RequestBody ConfigureConnectorRequest request) {
         Connector created = terminalService.addConnector(stationId, request.connectorType(), request.maxPowerKw());
@@ -52,6 +74,7 @@ public class TerminalController {
 
     /** RF05: Parametrizar tipo y potencia máxima de un conector que ya existe. */
     @PostMapping("/connectors/{id}/configure")
+    @PreAuthorize("hasRole('CPO')")
     public ResponseEntity<ConnectorResponse> configureConnector(
             @PathVariable Long id, @Valid @RequestBody ConfigureConnectorRequest request) {
         Connector configured = terminalService.configureConnector(id, request.connectorType(), request.maxPowerKw());
@@ -60,6 +83,7 @@ public class TerminalController {
 
     /** RF05: Cambiar el estado operativo de un conector. */
     @PatchMapping("/connectors/{id}/status")
+    @PreAuthorize("hasRole('CPO')")
     public ResponseEntity<Void> changeOperationalStatus(
             @PathVariable Long id, @Valid @RequestBody ChangeStatusRequest request) {
         terminalService.changeOperationalStatus(id, request.operationalStatus());
@@ -106,6 +130,7 @@ public class TerminalController {
 
     /** Eliminar un conector por ID. */
     @DeleteMapping("/connectors/{id}")
+    @PreAuthorize("hasRole('CPO')")
     public ResponseEntity<Void> removeConnector(@PathVariable Long id) {
         terminalService.removeConnector(id);
         return ResponseEntity.noContent().build();

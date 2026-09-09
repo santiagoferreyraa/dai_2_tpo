@@ -68,6 +68,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public User getProfileByEmail(String email) {
+        return userRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + email));
+    }
+
+    @Override
     public User updateProfile(Long userId, ProfileData data) {
         User user = getProfile(userId);
         if (data.fullName() != null && !data.fullName().isBlank()) {
