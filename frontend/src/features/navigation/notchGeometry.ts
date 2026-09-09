@@ -9,9 +9,9 @@
  * intersección de degradados —hace falta un arco de radio propio, con sus dos puntos de
  * tangencia—. Con arcos de verdad, la muesca pasa a ser un `path`.
  *
- * Es de la barra del celular y de nadie más. El riel de escritorio marca la sección activa con un
- * círculo entero adentro de la columna, sin muesca: es angosto y se mira de costado, así que un
- * círculo asomando por el borde se leería como un botón despegado. Ver `SideRail.tsx`.
+ * Es de la barra del celular y de nadie más. En escritorio la navegación es una fila de texto en
+ * la franja de arriba, sin muesca ni círculo que marcar: ahí la sección activa se señala con un
+ * punto debajo del rótulo. Ver `TopBar.tsx`.
  *
  * Todas las medidas viven acá y no repartidas entre el CSS y el componente: el CSS las recibe
  * como variables, así que hay un solo lugar donde cambiarlas.

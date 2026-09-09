@@ -98,13 +98,15 @@
 */
 .glass-panel {
   /*
-    El 32% de cuerpo y los 9px de desenfoque están medidos, no elegidos a ojo. Son lo más
+    El 32% de cuerpo y los 6px de desenfoque están medidos, no elegidos a ojo. Son lo más
     transparente y lo menos borroso que se puede pedir sin que el texto de las tarjetas baje del
     4.5 de contraste que exige WCAG **en el peor punto del fondo animado** —la zona más oscura en
     el tema claro, la más clara en el oscuro—. Con estos valores el claro queda en 6.0 y el
     oscuro en 4.7.
 
-    Bajar más el cuerpo o el desenfoque obliga a compensar en otro lado: subir el gris apagado,
+    El desenfoque no cambia el contraste —eso lo decide el cuerpo—, así que bajarlo es gratis
+    mientras haya algo de mancha que separe el texto del fondo. Bajar el CUERPO sí obliga a
+    compensar en otro lado: subir el gris apagado,
     bajar el brillo especular del fondo, o las dos cosas, que es lo que hubo que hacer en el tema
     oscuro para llegar hasta acá.
   */
@@ -114,8 +116,8 @@
     distingue dónde termina la tarjeta y empieza el fondo.
   */
   border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
-  -webkit-backdrop-filter: blur(9px) saturate(1.5);
-  backdrop-filter: blur(9px) saturate(1.5);
+  -webkit-backdrop-filter: blur(6px) saturate(1.5);
+  backdrop-filter: blur(6px) saturate(1.5);
   box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
   transition:
     background-color 300ms ease,

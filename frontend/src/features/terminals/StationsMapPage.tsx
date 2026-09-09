@@ -81,18 +81,31 @@ export default function StationsMapPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   /*
-   * La búsqueda arranca de la dirección, si viene.
+   * La búsqueda puede venir de la dirección (`?q=`) o escribirse acá.
    *
-   * Es lo que hace que el buscador de la portada del celular sirva para algo: allá no hay lista
-   * que filtrar, así que lo que hace es traer acá lo que se escribió, en `?q=`. Que viaje por la
-   * dirección y no por el estado del router es lo que deja el resultado compartible y recargable.
+   * Las dos cosas tienen que convivir. El buscador de la barra de arriba no filtra nada por su
+   * cuenta —no tiene la lista— así que lo que hace es traer el texto hasta acá por la dirección;
+   * el de adentro del mapa sí filtra en vivo. Que viaje por la dirección y no por el estado del
+   * router es lo que deja el resultado compartible y recargable.
    *
-   * Se lee UNA vez, como valor inicial, y después manda el estado: si se leyera en cada
-   * renderizado, borrar el texto a mano lo repondría desde la dirección y el campo no se dejaría
-   * vaciar.
+   * El estado se ajusta DURANTE el render y no en un efecto. Es el patrón que recomienda React
+   * para el estado que se deriva de algo de afuera, y el mismo que usa `BottomSheet`: hecho en un
+   * efecto, se alcanza a ver un cuadro con la lista filtrada por la búsqueda anterior.
+   *
+   * Se compara contra la última dirección vista y no contra `query` a secas: si se copiara
+   * siempre, borrar el texto a mano lo repondría desde la dirección en el render siguiente y el
+   * campo no se dejaría vaciar nunca.
    */
   const [searchParams] = useSearchParams()
-  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const urlQuery = searchParams.get('q') ?? ''
+
+  const [query, setQuery] = useState(urlQuery)
+  const [lastUrlQuery, setLastUrlQuery] = useState(urlQuery)
+
+  if (urlQuery !== lastUrlQuery) {
+    setLastUrlQuery(urlQuery)
+    setQuery(urlQuery)
+  }
 
   /*
    * Los filtros viven acá arriba y no adentro de StationFilters por el mismo motivo que el
@@ -213,37 +226,46 @@ export default function StationsMapPage() {
   )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
-      <header className="border-border bg-surface flex items-baseline gap-3 border-b px-6 py-4">
-        <h1 className="text-primary text-2xl font-semibold">Mapa</h1>
-        <p className={loadError !== null ? 'text-st-offline text-sm' : 'text-text-muted text-sm'}>
-          {summary}
-        </p>
-      </header>
+    /*
+      De tablet para arriba el mapa vive adentro de una tarjeta redondeada, separada de los
+      bordes: es la disposición que pidió el diseño y hace juego con los recuadros de la portada.
 
-      {/*
+      En el celular NO: ahí sigue a sangre. El aire de los costados le come ancho a la única
+      pantalla que es puro mapa, y la barra de navegación de abajo está pensada para flotar sobre
+      los mosaicos, no sobre un margen.
+    */
+    <section className="flex min-h-0 flex-1 flex-col md:px-6 md:pb-6">
+      <div className="border-border/60 relative flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-3xl md:border md:shadow-xl">
+        <header className="border-border bg-surface flex items-baseline gap-3 border-b px-6 py-4">
+          <h1 className="text-primary text-2xl font-semibold">Mapa</h1>
+          <p className={loadError !== null ? 'text-st-offline text-sm' : 'text-text-muted text-sm'}>
+            {summary}
+          </p>
+        </header>
+
+        {/*
         relative + min-h-0. El mapa, el buscador, los degradados y el panel se posicionan
         absolutos contra este div, así que necesita ser el contenedor de referencia; y min-h-0
         porque un ítem flex se niega por omisión a achicarse por debajo de su contenido, con lo
         que empujaría la página hacia abajo en vez de ocupar el hueco que queda.
       */}
-      <div className="relative min-h-0 flex-1">
-        <StationMap
-          stations={stations}
-          selectedStationId={selectedStation?.stationId ?? null}
-          onSelect={selectStation}
-          bottomInsetPx={!wide && selectedStation !== null ? SHEET_INSET_PX : 0}
-          dimUnselected={selectedStation !== null}
-        />
+        <div className="relative min-h-0 flex-1">
+          <StationMap
+            stations={stations}
+            selectedStationId={selectedStation?.stationId ?? null}
+            onSelect={selectStation}
+            bottomInsetPx={!wide && selectedStation !== null ? SHEET_INSET_PX : 0}
+            dimUnselected={selectedStation !== null}
+          />
 
-        {/*
+          {/*
           El degradado de abajo se agranda solo en celular. Ahí el panel ocupa el ancho entero
           y necesita apoyarse sobre algo oscuro; acá el panel es una tarjeta en la esquina, y
           un degradado de dos tercios a todo el ancho oscurece medio mapa para enmarcarla.
         */}
-        <MapScrim expanded={!wide && selectedStation !== null} />
+          <MapScrim expanded={!wide && selectedStation !== null} />
 
-        {/*
+          {/*
           Centrado en celular y pegado a la izquierda de ahí para arriba.
 
           En celular el ancho se acota a lo disponible menos 6rem, que deja 3rem de cada lado:
@@ -253,8 +275,8 @@ export default function StationsMapPage() {
           z-index por encima de los 1000 que usa Leaflet para sus controles; el porqué está
           explicado en StationCarousel.
         */}
-        <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] items-start gap-2 lg:w-[calc(100%-23rem)]">
-          {/*
+          <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] items-start gap-2 lg:w-[calc(100%-23rem)]">
+            {/*
             En celular el buscador toma el ancho entero de la fila, que ya viene con 1rem de
             aire de cada lado: desplegado queda centrado por simetría, sin cálculos. El `mx-auto`
             cubre el caso de la tablet angosta, donde el tope de 30rem deja espacio libre y sin
@@ -266,11 +288,11 @@ export default function StationsMapPage() {
             aire). No es estético: esta capa va por ENCIMA del carrusel, así que una burbuja que
             llegue hasta allá le queda dibujada arriba de las fichas.
           */}
-          <div className="mx-auto w-[min(30rem,100%)] shrink-0 md:mx-0 md:w-96">
-            <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
-          </div>
+            <div className="mx-auto w-[min(30rem,100%)] shrink-0 md:mx-0 md:w-96">
+              <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
+            </div>
 
-          {/*
+            {/*
             Los filtros no van en celular: ver el comentario de StationFilters.
 
             Envuelven en vez de scrollear de costado, al revés que en el ABM. Ahí la fila de
@@ -278,25 +300,25 @@ export default function StationsMapPage() {
             el mapa, sin barra ni borde que insinúe que hay más a la derecha, y lo que no entra
             simplemente no se encontraría. Envolviendo se ven todos, que son seis.
           */}
-          <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
-            <StationFilters value={filters} onChange={setFilters} />
+            <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+              <StationFilters value={filters} onChange={setFilters} />
+            </div>
           </div>
-        </div>
 
-        {/*
+          {/*
           El carrusel es de pantalla ancha nada más. En celular la lista de estaciones son los
           pines, y quien quiere ver una la toca: una segunda lista encima del mapa competiría
           por el mismo espacio con el panel que se abre justo abajo.
         */}
-        {wide && (
-          <StationCarousel
-            stations={stations}
-            selectedStationId={selectedStation?.stationId ?? null}
-            onSelect={selectStation}
-          />
-        )}
+          {wide && (
+            <StationCarousel
+              stations={stations}
+              selectedStationId={selectedStation?.stationId ?? null}
+              onSelect={selectStation}
+            />
+          )}
 
-        {/*
+          {/*
           Pantalla ancha: el detalle sube desde el borde de abajo, pegado a él y sin esquinas
           redondeadas. Apoya contra el borde en vez de flotar sobre el mapa, que es lo que lo
           hace leer como una parte de la pantalla y no como una tarjeta suelta. Queda a la
@@ -306,53 +328,53 @@ export default function StationsMapPage() {
           se lee como un pedazo de la ventana, y separado se lee como algo apoyado sobre el
           mapa, que es lo que es.
         */}
-        {wide && detail && (
-          <aside className="station-panel border-border bg-surface/95 absolute bottom-0 left-12 z-[1120] flex w-[26rem] flex-col border border-b-0 shadow-lg shadow-black/40 backdrop-blur">
-            {/*
+          {wide && detail && (
+            <aside className="station-panel border-border bg-surface/95 absolute bottom-0 left-12 z-[1120] flex w-[26rem] flex-col border border-b-0 shadow-lg shadow-black/40 backdrop-blur">
+              {/*
               La flecha ocupa el ancho entero y no es un ícono en una esquina: apunta hacia
               abajo, que es a donde se va el panel, y esa franja es el blanco más grande que
               se puede dar para cerrarlo.
             */}
-            <button
-              type="button"
-              onClick={closePanel}
-              aria-label="Cerrar detalle"
-              className="border-border text-text-muted hover:text-text hover:bg-surface focus-visible:outline-primary flex w-full shrink-0 justify-center border-b py-2 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-                aria-hidden="true"
+              <button
+                type="button"
+                onClick={closePanel}
+                aria-label="Cerrar detalle"
+                className="border-border text-text-muted hover:text-text hover:bg-surface focus-visible:outline-primary flex w-full shrink-0 justify-center border-b py-2 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2"
               >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
 
-            {/*
+              {/*
               El contenido scrollea por su cuenta y el panel se topa contra el alto del mapa:
               una estación con muchos conectores no puede empujar el botón de reservar fuera
               de la pantalla.
             */}
-            <div className="no-scrollbar max-h-[60vh] overflow-y-auto p-5">{detail}</div>
-          </aside>
-        )}
-      </div>
+              <div className="no-scrollbar max-h-[60vh] overflow-y-auto p-5">{detail}</div>
+            </aside>
+          )}
+        </div>
 
-      {/* Celular: lo mismo, como panel que sube desde abajo. */}
-      {!wide && (
-        <BottomSheet
-          open={selectedStation !== null}
-          onClose={closePanel}
-          label="Detalle de la estación"
-          /* Ver el comentario de la prop: acá atrás está el mapa, y taparlo sería esconder
+        {/* Celular: lo mismo, como panel que sube desde abajo. */}
+        {!wide && (
+          <BottomSheet
+            open={selectedStation !== null}
+            onClose={closePanel}
+            label="Detalle de la estación"
+            /* Ver el comentario de la prop: acá atrás está el mapa, y taparlo sería esconder
              el pin que se acaba de elegir. */
-          dimBackground={false}
-          /*
+            dimBackground={false}
+            /*
             El mismo gris que la tarjeta de escritorio: es el mismo panel en dos formas, y con
             el fondo por omisión del ABM se veía casi negro solo en el celular.
 
@@ -360,11 +382,12 @@ export default function StationsMapPage() {
             del MISMO color al 100% quedarían exactamente del tono del panel y se borrarían.
             Con el panel apenas translúcido conservan el escalón que se ve en el diseño.
           */
-          backgroundClass="bg-surface/95 backdrop-blur"
-        >
-          {detail}
-        </BottomSheet>
-      )}
+            backgroundClass="bg-surface/95 backdrop-blur"
+          >
+            {detail}
+          </BottomSheet>
+        )}
+      </div>
     </section>
   )
 }

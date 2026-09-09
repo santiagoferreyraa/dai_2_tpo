@@ -40,7 +40,7 @@ export default function App() {
       */}
       <IridescentBackdrop />
       {/*
-        Las tres piezas de la navegación están FUERA del flujo: las de escritorio ancladas a la
+        Las dos piezas de la navegación están FUERA del flujo: la de escritorio anclada a la
         ventana y la del celular fija abajo. Ninguna ocupa lugar acá, así que el <main> mide la
         ventana entera y es él quien reserva el espacio con su propio `padding`.
 
@@ -56,11 +56,10 @@ export default function App() {
         —el mapa de estaciones— crece como ítem del flex en vez de medir su contenido. El
         ABM no lo necesita, pero tampoco le molesta: sigue scrolleando adentro.
 
-        El `padding` de escritorio es el lugar de las dos piezas flotantes: arriba la franja,
-        a la izquierda el riel. En el celular no hay ninguno de los dos, y la barra de abajo
-        flota sobre el contenido a propósito.
+        El `padding` de arriba es el lugar de la franja superpuesta. En el celular no hay franja,
+        y la barra de abajo flota sobre el contenido a propósito.
       */}
-      <main className="relative flex min-h-0 flex-1 flex-col md:pt-20 md:pl-24">
+      <main className="relative flex min-h-0 flex-1 flex-col md:pt-20">
         <Outlet />
       </main>
     </div>

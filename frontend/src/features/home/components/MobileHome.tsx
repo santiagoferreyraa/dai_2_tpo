@@ -1,8 +1,7 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 
 import { BoltIcon, ClockIcon } from '@/features/navigation/icons'
-import StationSearch from '@/features/terminals/components/StationSearch'
+import SearchBox from '@/features/navigation/SearchBox'
 
 import { SAMPLE_STATIONS } from '../sampleStations'
 
@@ -14,10 +13,8 @@ import { SAMPLE_STATIONS } from '../sampleStations'
  * cargar—, y el argumento largo del producto queda para la pantalla grande, donde hay lugar para
  * leerlo.
  *
- * **El buscador es el mismo componente del mapa, no una copia.** Se envuelve en un `<form>`, que
- * es lo que hace que la tecla Enter dispare algo: el componente por sí solo filtra una lista, y
- * acá no hay lista que filtrar, así que lo que hace es llevar la búsqueda al mapa. Ver
- * `StationsMapPage`, que la levanta de la dirección.
+ * El buscador es el mismo que el de la barra de escritorio, y lleva lo que se escribe al mapa.
+ * Ver `SearchBox`.
  */
 
 /** Fondo del recuadro grande. Si el archivo no está, el recuadro se ve igual, solo que sin auto. */
@@ -31,20 +28,6 @@ function greetingFor(hour: number): string {
 }
 
 export default function MobileHome() {
-  const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    /*
-      La búsqueda viaja en la dirección y no en el estado del router: así el resultado se puede
-      compartir, guardar y recargar. Vacía, lleva al mapa sin filtro, que es lo que corresponde.
-    */
-    const target =
-      query.trim() === '' ? '/stations/map' : `/stations/map?q=${encodeURIComponent(query.trim())}`
-    void navigate(target)
-  }
-
   return (
     <div className="flex flex-col gap-6 px-5 pt-8 pb-36">
       <header>
@@ -54,14 +37,7 @@ export default function MobileHome() {
         </h1>
       </header>
 
-      {/*
-        El buscador trae su propio borde y su propio fondo del mapa, sin esquinas redondeadas
-        porque allá va pegado al borde de la pantalla. Acá se las pone el envoltorio, con
-        `overflow-hidden` para que el recorte alcance también al fondo del componente.
-      */}
-      <form onSubmit={handleSearch} className="overflow-hidden rounded-2xl">
-        <StationSearch value={query} onChange={setQuery} />
-      </form>
+      <SearchBox />
 
       {/*
         El recuadro del auto. El auto va como fondo y no como <img>, y eso es lo que lo vuelve

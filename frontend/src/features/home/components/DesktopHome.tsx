@@ -2,184 +2,200 @@ import { Link } from 'react-router'
 
 import { BoltIcon, ClockIcon, LeafIcon, MapIcon } from '@/features/navigation/icons'
 
-import BarSpark from './BarSpark'
+import BarChart from './BarChart'
+import DonutChart from './DonutChart'
 import HomeCard from './HomeCard'
-import RingGauge from './RingGauge'
+import VehicleHero from './VehicleHero'
+import { useNetworkStats } from '../useNetworkStats'
 
 /**
  * La portada de escritorio y tablet.
  *
- * Es lo que era la home entera hasta que el celular tuvo la suya. La diferencia entre las dos no
- * es de tamaño sino de intención: acá hay lugar para el argumento largo —el título grande, las
- * tarjetas al costado, el cierre— y en el celular lo primero tiene que ser el buscador. Ver
- * `MobileHome`.
+ * Es una grilla de recuadros: arriba a la izquierda el vehículo, a la derecha una columna con los
+ * números de la red, debajo tres tarjetas y al pie una franja ancha. La disposición sale del
+ * boceto; el reparto de qué va en cada una, de qué se puede sostener.
  *
- * **Lo que dicen las tarjetas es verificable o es una regla del sistema.** Un auto eléctrico no
- * tiene caño de escape, y eso no es una estimación; el porcentaje objetivo con corte automático
- * es RF12; los quince minutos de tolerancia y el cobro del consumo real son RF09 y RF14; los tres
- * tipos de conector son los de RF05. No hay ni un número inventado, y es a propósito: una
- * pantalla de inicio que promete cifras que el sistema no mide es lo primero que se cae cuando
- * alguien pregunta de dónde salen.
+ * **Cuatro de las seis tarjetas muestran datos calculados de verdad**, contando las estaciones que
+ * devuelve el backend (ver `data/networkStats.ts`). Las otras dos dicen reglas del sistema —los
+ * quince minutos de RF09, el cobro del consumo de RF14, el cero de emisiones de un auto sin caño
+ * de escape—. No hay ningún número escrito a mano, salvo la ficha del vehículo, que es de catálogo
+ * y está marcada como provisoria en su propio archivo.
  *
- * **El hueco del centro en pantalla grande está dejado a propósito.** Ahí va la ilustración de la
- * estación de carga cuando exista; hasta entonces la composición se sostiene con aire, que es
- * preferible a estirar las tarjetas para tapar el lugar y tener que volver a acomodarlas después.
+ * **Lo que NO hay es telemetría del auto**, aunque la referencia de diseño esté llena: batería
+ * actual, autonomía restante, presión de neumáticos y temperaturas son lecturas del vehículo, y
+ * esta aplicación no habla con ningún vehículo. Ver `vehicle.ts`.
  */
 
-/** Los tres conectores de RF05. Son un enum del dominio, no una lista de ejemplo. */
-const CONNECTORS = ['CCS2', 'CHAdeMO', 'Tipo 2']
+/**
+ * Un color por tipo de conector.
+ *
+ * El primero sale del tema, así que acompaña el cambio de claro a oscuro. Los otros dos son fijos
+ * y están elegidos para leerse sobre las dos superficies: son de la misma familia que los
+ * resplandores del fondo, así que el gráfico no aparece como una isla de color ajeno.
+ */
+const SEGMENT_COLORS = ['var(--color-primary)', '#8b7bf0', '#3fb8c9']
+
+/** Lo que se muestra donde iría un número que todavía no llegó. */
+const NO_DATA = '—'
 
 export default function DesktopHome() {
+  const stats = useNetworkStats()
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 pt-8 pb-36 md:px-8 md:pt-10 md:pb-10">
-      {/*
-        La grilla de doce columnas es solo de `lg` para arriba, que es donde hay ancho para
-        que las tarjetas floten a los costados del hueco central. Abajo de eso todo se apila
-        en una columna: intentar sostener la composición en un ancho que no da termina en
-        tarjetas de dos palabras por renglón.
-      */}
-      <div className="grid gap-5 lg:grid-cols-12">
-        <section className="lg:col-span-6 lg:row-start-1">
-          <span className="glass-panel text-text-muted inline-flex rounded-full px-3 py-1 text-xs font-medium">
-            Buscá · Reservá · Cargá
-          </span>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 pt-6 pb-10 lg:px-8">
+      <div className="grid gap-5 xl:grid-cols-3">
+        {/* La columna ancha: el vehículo y, debajo, las tres tarjetas del boceto. */}
+        <div className="flex flex-col gap-5 xl:col-span-2">
+          <VehicleHero />
 
-          <h1 className="text-text mt-6 text-5xl leading-[0.95] font-extrabold tracking-tight text-balance md:text-6xl lg:text-7xl">
-            Cargá tu auto
-            <br />
-            <span className="text-primary">sin dar vueltas.</span>
-          </h1>
+          <div className="grid gap-5 sm:grid-cols-3">
+            <HomeCard Icon={BoltIcon} label="Potencia disponible">
+              {stats === null ? (
+                <p className="text-text-muted text-sm">{NO_DATA}</p>
+              ) : (
+                <>
+                  <p className="text-text text-3xl font-extrabold tracking-tight">
+                    {stats.maxPowerKw} kW
+                  </p>
+                  <p className="text-text-muted mt-1 text-xs">la más alta de la red</p>
+                  {/*
+                    Las barras cuentan conectores por tramo de potencia, no estaciones: una
+                    estación con un cargador lento y uno rápido pesa en los dos tramos, que es lo
+                    que le importa a alguien buscando dónde cargar.
+                  */}
+                  <BarChart
+                    bars={stats.powerBuckets.map((bucket) => ({
+                      label: bucket.label,
+                      value: bucket.count,
+                    }))}
+                    className="mt-5"
+                  />
+                </>
+              )}
+            </HomeCard>
 
-          <p className="text-text-muted mt-6 max-w-md text-sm leading-relaxed text-pretty md:text-base">
-            Ecopedia reúne las estaciones de carga rápida en un solo mapa. Mirás cuáles están
-            libres, reservás el conector y pagás solo lo que cargaste.
-          </p>
-
-          {/*
-            Dos acciones y una sola destacada. El mapa es por donde conviene entrar; el ABM de
-            estaciones es para el operador, así que va en segundo plano. En el celular ocupan
-            todo el ancho y se apilan: son el objetivo del pulgar.
-          */}
-          <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Link
-              to="/stations/map"
-              className="bg-primary text-background hover:bg-primary-strong rounded-xl px-6 py-3 text-center text-sm font-semibold transition-colors"
+            <HomeCard
+              Icon={ClockIcon}
+              label="Reservá tu turno"
+              footer={[
+                { label: 'Tolerancia', value: '15 minutos' },
+                { label: 'Se cobra', value: 'Lo consumido' },
+              ]}
             >
-              Ver el mapa
-            </Link>
-            <Link
-              to="/stations"
-              className="glass-panel text-text hover:border-primary/60 rounded-xl px-6 py-3 text-center text-sm font-medium"
+              <p className="text-text-muted text-sm leading-relaxed">
+                Bloqueás el conector por la ventana que necesitás. La seña se descuenta de lo que
+                termines cargando.
+              </p>
+            </HomeCard>
+
+            <HomeCard
+              Icon={LeafIcon}
+              label="Impacto ambiental"
+              footer={[
+                { label: 'Sin caño de escape', value: 'CO₂, NOx y hollín' },
+                { label: 'Motor eléctrico', value: 'Mucho menos ruido' },
+              ]}
             >
-              Explorar estaciones
-            </Link>
+              <p className="text-text flex items-baseline gap-1 text-4xl font-extrabold tracking-tight">
+                0<span className="text-xl font-bold">g</span>
+              </p>
+              <p className="text-text-muted mt-1 text-xs">de CO₂ por kilómetro recorrido</p>
+            </HomeCard>
           </div>
-        </section>
+        </div>
 
-        {/* Emisiones: el argumento ambiental, que es el que explica el nombre del proyecto. */}
-        <HomeCard
-          Icon={LeafIcon}
-          label="Impacto ambiental"
-          className="lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:self-start"
-          footer={[
-            { label: 'Sin caño de escape', value: 'CO₂, NOx y hollín' },
-            { label: 'Motor eléctrico', value: 'Mucho menos ruido' },
-          ]}
-        >
-          <p className="text-text flex items-baseline gap-1 text-5xl font-extrabold tracking-tight">
-            0<span className="text-2xl font-bold">g</span>
-          </p>
-          <p className="text-text-muted mt-1 text-xs">de CO₂ por kilómetro recorrido</p>
+        {/* La columna angosta: los dos recuadros de la derecha del boceto. */}
+        <div className="flex flex-col gap-5">
+          <HomeCard Icon={MapIcon} label="Conectores de la red" className="flex-1">
+            {stats === null ? (
+              <p className="text-text-muted text-sm">{NO_DATA}</p>
+            ) : (
+              <div className="flex flex-1 flex-col justify-center gap-5">
+                <div className="text-text-muted relative mx-auto h-36 w-36">
+                  <DonutChart
+                    className="h-full w-full"
+                    segments={stats.connectorShare.map((share, index) => ({
+                      label: share.label,
+                      value: share.count,
+                      color: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+                    }))}
+                  />
+                  <span className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-text text-2xl font-extrabold tracking-tight">
+                      {stats.connectorCount}
+                    </span>
+                    <span className="text-text-muted text-[11px]">conectores</span>
+                  </span>
+                </div>
 
-          <BarSpark className="text-primary mt-5 h-16 w-full" />
-        </HomeCard>
+                {/*
+                  La lista no es una leyenda decorativa: es la versión leíble del gráfico. Un
+                  lector de pantalla salta el dibujo —está `aria-hidden`— y lee esto.
+                */}
+                <ul className="flex flex-col gap-2">
+                  {stats.connectorShare.map((share, index) => (
+                    <li key={share.type} className="flex items-center gap-2 text-xs">
+                      <span
+                        aria-hidden="true"
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: SEGMENT_COLORS[index % SEGMENT_COLORS.length] }}
+                      />
+                      <span className="text-text-muted flex-1">{share.label}</span>
+                      <span className="text-text font-bold">{share.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </HomeCard>
 
-        {/* Búsqueda: RF07, que es la pantalla a la que empuja toda la home. */}
-        <HomeCard
-          Icon={MapIcon}
-          label="Encontrá el conector que te sirve"
-          className="lg:col-span-4 lg:col-start-1 lg:row-start-2"
-          footer={[
-            { label: 'Filtrás por', value: 'Conector y potencia' },
-            { label: 'Disponibilidad', value: 'En tiempo real' },
-          ]}
-        >
-          <p className="text-text-muted text-sm leading-relaxed">
-            No todos los autos cargan con la misma ficha. Elegís la tuya y el mapa te muestra solo
-            las estaciones que te sirven.
-          </p>
+          <HomeCard Icon={BoltIcon} label="Ahora mismo">
+            {stats === null ? (
+              <p className="text-text-muted text-sm">{NO_DATA}</p>
+            ) : (
+              <>
+                <p className="text-text text-4xl font-extrabold tracking-tight">
+                  {stats.availableCount}
+                  <span className="text-text-muted text-xl font-bold">/{stats.connectorCount}</span>
+                </p>
+                <p className="text-text-muted mt-1 text-xs">conectores libres en este momento</p>
 
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {CONNECTORS.map((connector) => (
-              <li
-                key={connector}
-                className="border-border/70 text-text rounded-lg border px-2.5 py-1 text-xs font-semibold"
-              >
-                {connector}
-              </li>
-            ))}
-          </ul>
-        </HomeCard>
+                <p className="text-text-muted mt-4 text-xs">
+                  Repartidos en{' '}
+                  <span className="text-text font-bold">{stats.stationCount} estaciones</span>.
+                </p>
+              </>
+            )}
+          </HomeCard>
+        </div>
+      </div>
 
-        {/* Carga: RF12 y su corte automático, más las dos reglas que más preguntan. */}
-        <HomeCard
-          Icon={BoltIcon}
-          label="Cargá hasta donde quieras"
-          className="lg:col-span-4 lg:col-start-9 lg:row-start-2"
-          footer={[
-            { label: 'Tolerancia', value: '15 minutos' },
-            { label: 'Se cobra', value: 'Lo consumido' },
-          ]}
-        >
-          <div className="flex items-center gap-5">
-            {/*
-              El anillo es un ejemplo de la interfaz y no una medición: muestra cómo se ve un
-              objetivo fijado en 80%, que es el valor que recomienda cualquier fabricante para
-              el uso diario.
-            */}
-            <div className="text-primary relative h-24 w-24 shrink-0">
-              <RingGauge value={80} className="h-full w-full" />
-              <span className="text-text absolute inset-0 flex items-center justify-center text-xl font-extrabold">
-                80%
-              </span>
-            </div>
-
-            <p className="text-text-muted text-sm leading-relaxed">
-              Fijás el porcentaje al que querés llegar y la sesión se corta sola cuando lo alcanza.
+      {/* La franja de cierre: la última oportunidad de mandar al mapa. */}
+      <section className="glass-panel flex flex-col gap-5 rounded-3xl p-6 md:flex-row md:items-center md:gap-8">
+        <div className="flex items-center gap-4">
+          <span className="bg-primary/15 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+            <MapIcon className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-text-muted text-xs font-medium">Una sola cuenta</p>
+            <p className="text-text mt-1 text-sm font-semibold text-pretty">
+              Sin una aplicación distinta por cada operador de carga.
             </p>
           </div>
-        </HomeCard>
+        </div>
 
-        {/*
-          La franja de cierre: la última oportunidad de mandar al mapa, para quien scrolleó
-          hasta abajo sin haber tocado el botón de arriba.
-        */}
-        <section className="glass-panel flex flex-col gap-5 rounded-3xl p-5 md:flex-row md:items-center md:gap-8 lg:col-span-12 lg:row-start-3">
-          <div className="flex items-center gap-4">
-            <span className="bg-primary/15 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
-              <ClockIcon className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-text-muted text-xs font-medium">Una sola cuenta</p>
-              <p className="text-text mt-1 text-sm font-semibold text-pretty">
-                Sin una aplicación distinta por cada operador de carga.
-              </p>
-            </div>
-          </div>
+        <p className="text-text-muted border-border/60 text-sm leading-relaxed text-pretty md:flex-1 md:border-l md:pl-8">
+          Buscás en el mapa, reservás el conector por la ventana que necesitás y cargás. Se cobra lo
+          que consumiste, con la seña ya descontada.
+        </p>
 
-          <p className="text-text-muted border-border/60 text-sm leading-relaxed text-pretty md:flex-1 md:border-l md:pl-8">
-            Buscás en el mapa, reservás el conector por la ventana que necesitás y cargás. La seña
-            de la reserva se descuenta de lo que termines consumiendo.
-          </p>
-
-          <Link
-            to="/stations/map"
-            className="bg-primary text-background hover:bg-primary-strong shrink-0 rounded-xl px-5 py-2.5 text-center text-sm font-semibold transition-colors"
-          >
-            Ver el mapa
-          </Link>
-        </section>
-      </div>
+        <Link
+          to="/stations/map"
+          className="bg-primary text-background hover:bg-primary-strong shrink-0 rounded-xl px-5 py-2.5 text-center text-sm font-semibold transition-colors"
+        >
+          Ver el mapa
+        </Link>
+      </section>
     </div>
   )
 }
