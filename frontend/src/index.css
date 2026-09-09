@@ -396,3 +396,61 @@ body {
   -webkit-mask-size: contain;
   mask-size: contain;
 }
+
+/* ─────────────────────────── Recuadro de contacto ───────────────────────────
+  La tarjeta de contacto no es un rectángulo: los costados tienen mordidas cóncavas anchas que le
+  dan una silueta orgánica.
+
+  **Cada mordida es un degradado radial transparente en el medio y opaco alrededor**, y las capas
+  se combinan con `intersect`. Esa elección importa: la intersección de "todo menos el círculo A",
+  "todo menos el B" y así, deja todo menos la unión de los círculos, que es exactamente lo que se
+  busca. Con `subtract` la cuenta se enreda apenas hay más de dos capas, porque cada una se resta
+  del resultado acumulado de las de abajo y no del rectángulo original.
+
+  **El centro de cada círculo cae POR FUERA del borde**, no encima. Un círculo centrado en el
+  borde muerde tan hondo como su radio, y para que la mordida fuera ancha habría que agrandarlo,
+  con lo que se comería el contenido. Corriendo el centro hacia afuera, el radio grande da la
+  curva suave y lo que entra es solo la diferencia: mordidas anchas y poco profundas.
+
+  Las cuatro son de tamaños y alturas distintos, y las de un lado no responden a las del otro. Es
+  a propósito: cuatro mordidas iguales y enfrentadas de a pares no se leen como una forma
+  orgánica, se leen como un ticket troquelado.
+
+  Ninguna pasa de 55px de profundidad, contra los 64px de aire que tiene la tarjeta. Ese margen
+  es la razón de que el recorte no le coma una letra al formulario.
+*/
+.contact-panel {
+  border-radius: 2rem;
+}
+
+/*
+  Solo de tablet para arriba. En el celular la tarjeta mide poco más de 300px de ancho: dos
+  mordidas de 50px por lado se llevarían un tercio del renglón, y el texto no tiene a dónde
+  correrse. Ahí queda el rectángulo redondeado de siempre, con su borde.
+*/
+@media (min-width: 768px) {
+  .contact-panel {
+    /*
+      El borde se apaga junto con la forma. `mask` recorta por donde pasa la figura, pero el borde
+      se dibuja sobre el contorno del RECTÁNGULO: quedaría dibujado en los tramos rectos y ausente
+      en las mordidas, que es peor que no tenerlo. La sombra corre la misma suerte y por eso la
+      tarjeta se sostiene sola, con el vidrio y el fondo detrás.
+    */
+    border: 0;
+
+    -webkit-mask-image:
+      radial-gradient(circle 215px at -170px 19%, transparent 99%, #000 100%),
+      radial-gradient(circle 95px at -58px 63%, transparent 99%, #000 100%),
+      radial-gradient(circle 145px at calc(100% + 92px) 31%, transparent 99%, #000 100%),
+      radial-gradient(circle 205px at calc(100% + 160px) 84%, transparent 99%, #000 100%);
+    mask-image:
+      radial-gradient(circle 215px at -170px 19%, transparent 99%, #000 100%),
+      radial-gradient(circle 95px at -58px 63%, transparent 99%, #000 100%),
+      radial-gradient(circle 145px at calc(100% + 92px) 31%, transparent 99%, #000 100%),
+      radial-gradient(circle 205px at calc(100% + 160px) 84%, transparent 99%, #000 100%);
+
+    /* `source-in` es el nombre viejo de `intersect` en WebKit. Va antes para que gane el estándar. */
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+}
