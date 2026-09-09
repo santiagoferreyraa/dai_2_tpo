@@ -42,7 +42,12 @@ export default function DesktopHome() {
   const stats = useNetworkStats()
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 pt-6 pb-10 lg:px-8">
+    /*
+      Sin ancho máximo y con el MISMO `px-6` que la franja de arriba: así los recuadros arrancan y
+      terminan exactamente donde el buscador y la ficha del perfil, y la pantalla se lee como una
+      sola pieza en vez de una barra ancha con una columna angosta debajo.
+    */
+    <div className="flex w-full flex-col gap-5 px-6 pt-6 pb-10">
       <div className="grid gap-5 xl:grid-cols-3">
         {/* La columna ancha: el vehículo y, debajo, las tres tarjetas del boceto. */}
         <div className="flex flex-col gap-5 xl:col-span-2">

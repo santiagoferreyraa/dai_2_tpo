@@ -43,8 +43,14 @@ export default function VehicleHero() {
           El auto se apoya arriba a la derecha y sobresale por el borde: encuadrado entero y
           centrado se ve como una foto de catálogo, y asomando se ve como parte de la pantalla.
         */
-        backgroundPosition: 'right -3rem top 2.5rem',
-        backgroundSize: '58% auto',
+        backgroundPosition: 'right -1.5rem top 12%',
+        /*
+          El tamaño se mide contra el ALTO de la tarjeta, no contra su ancho. Es lo que lo vuelve
+          estable: la tarjeta ocupa todo el ancho de la pantalla, así que atado al ancho el auto
+          crecía sin freno en un monitor grande hasta taparle el texto al saludo, mientras que el
+          alto lo fija el contenido y casi no cambia.
+        */
+        backgroundSize: 'auto 62%',
       }}
     >
       <header>
