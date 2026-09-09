@@ -46,8 +46,19 @@ export default function HomePage() {
       `overflow-y-auto` acá adentro y no en el <body>: el layout raíz fija la altura en la
       ventana para que el mapa pueda medirla, así que la pantalla que sí tiene contenido largo
       scrollea por su cuenta. `pb-36` en el celular es el lugar de la barra flotante.
+
+      El par `-mt-16 pt-16` de escritorio parece que se cancela y no es así. El <main> reserva
+      el alto de la barra superpuesta con un `padding`; el margen negativo estira ESTA pantalla
+      hacia arriba hasta debajo de la barra, y el `padding` de acá le devuelve al contenido el
+      lugar que perdió. El resultado es que el área que scrollea empieza arriba de todo: al
+      bajar, el contenido pasa POR DEBAJO de la barra y el vidrio tiene algo que difuminar.
+      Sin esto la barra translúcida solo difumina el fondo liso, que es lo mismo que pintarla
+      de un color.
+
+      Se hace acá y no en el <main> a propósito: en el <main> afectaría también al mapa y al
+      ABM de estaciones, que son pantallas de otra rama y no tienen por qué enterarse.
     */
-    <div className="relative flex-1 overflow-y-auto">
+    <div className="relative flex-1 overflow-y-auto md:-mt-16 md:pt-16">
       {/*
         Un resplandor verde detrás del título, tenue y muy grande. Es lo único que rompe el
         gris plano del tema oscuro en toda la pantalla.

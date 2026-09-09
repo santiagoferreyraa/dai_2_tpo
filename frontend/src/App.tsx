@@ -25,12 +25,18 @@ export default function App() {
       en lugar de recortarse, porque la altura mínima por defecto de un ítem flex es su
       contenido.
     */
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       {/*
-        En escritorio la barra es un ítem más de esta columna y le come alto al <main>. En el
-        celular NO: va fija sobre el contenido, así que acá abajo el <main> sigue midiendo la
-        ventana entera. Es lo que deja al mapa llegar hasta el borde de abajo y verse por el
-        hueco de la barra, en vez de terminar cortado contra ella.
+        Las dos barras están FUERA del flujo, y por eso este contenedor es `relative`.
+
+        La del celular va fija abajo: el <main> sigue midiendo la ventana entera, que es lo que
+        deja al mapa llegar hasta el borde de abajo y verse por el hueco de la barra en vez de
+        terminar cortado contra ella.
+
+        La de escritorio va superpuesta arriba, y el `pt` del <main> le devuelve el alto que le
+        sacó. Parece dar lo mismo que dejarla en el flujo, pero no: superpuesta, el contenido
+        que scrollea le pasa por debajo, y eso es lo que hace que el vidrio tenga algo que
+        difuminar. En el flujo, `backdrop-blur` solo difumina el fondo liso de la página.
       */}
       <Navbar />
 
@@ -39,7 +45,7 @@ export default function App() {
         —el mapa de estaciones— crece como ítem del flex en vez de medir su contenido. El
         ABM no lo necesita, pero tampoco le molesta: sigue scrolleando adentro.
       */}
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col md:pt-16">
         <Outlet />
       </main>
     </div>

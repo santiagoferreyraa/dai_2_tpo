@@ -1,16 +1,22 @@
 import { Link } from 'react-router'
 
 import { BoltIcon } from './icons'
-import { displayNameFrom, useNavSession } from './useNavSession'
 import { PROFILE_SECTION } from './navSections'
+import { displayNameFrom, useNavSession } from './useNavSession'
 
 /**
  * La ficha del usuario, a la derecha de la barra de escritorio.
  *
- * Son dos fichas del mismo tamaño y la misma forma, una por estado de sesión. Que midan igual
- * no es un detalle estético: la barra es una grilla de tres columnas y la del medio está
- * centrada contra las otras dos, así que una ficha que cambia de ancho al iniciar sesión
+ * Son dos fichas de la misma forma y el mismo alto, una por estado de sesión. Que midan igual
+ * de alto no es un detalle estético: la barra es una grilla de tres columnas y la del medio
+ * está centrada contra las otras dos, así que una ficha que cambia de tamaño al iniciar sesión
  * correría las cuatro secciones del centro.
+ *
+ * **El cuadrado del rayo cambia de color con la sesión, y al revés de lo que parece.** Sin
+ * sesión va en verde y con sesión en blanco: el verde es el color con el que la aplicación
+ * pide acción, y la acción pendiente es justamente entrar. Una vez adentro no hay nada que
+ * reclamar, así que el cuadrado se vuelve neutro y el verde queda libre para señalar en qué
+ * sección estamos, que es lo único que sigue cambiando.
  */
 
 /** Cómo se lee cada rol en pantalla. El enum viaja en inglés técnico; el usuario no. */
@@ -20,25 +26,30 @@ const ROLE_LABEL = {
   ADMIN: 'Administrador',
 } as const
 
-/** La forma que comparten los dos estados: el rectángulo con borde y el cuadrado adentro. */
+/**
+ * La forma que comparten los dos estados.
+ *
+ * Sin esquinas redondeadas, a propósito: es el único elemento anguloso de la barra y por eso
+ * se lee como una ficha —algo con identidad— y no como un botón más.
+ */
 const SHELL =
-  'border-border hover:border-primary/60 hover:bg-surface group flex items-center gap-2.5 rounded-xl border py-1.5 pr-4 pl-1.5 transition-colors'
+  'border-border hover:border-primary/60 hover:bg-surface/60 flex items-center gap-3 border py-1.5 pr-4 pl-1.5 transition-colors'
+
+/** El cuadrado del rayo. También recto: sigue la forma de la ficha que lo contiene. */
+const BOLT_SQUARE = 'text-background flex h-9 w-9 shrink-0 items-center justify-center'
 
 export default function ProfilePill() {
   const session = useNavSession()
 
   if (session === null) {
     /*
-      Sin sesión la ficha invita a entrar, y el cuadrado del rayo se apaga: en gris dice que
-      todavía no hay nadie, sin cambiar de forma ni de tamaño.
-
       El destino es `/login`, que es una pantalla de la feature Auth (ECO-36) y **todavía no
       está en `main`**. El enlace se deja apuntando ahí igual: es la ruta correcta, y el día
       que auth mergee esto funciona sin tocar nada. Ver `useNavSession.ts`.
     */
     return (
       <Link to="/login" className={SHELL} aria-label="Iniciar sesión">
-        <span className="bg-surface text-text-muted group-hover:text-primary flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
+        <span className={`${BOLT_SQUARE} bg-primary`}>
           <BoltIcon className="h-4 w-4" />
         </span>
         <span className="text-text text-sm font-medium">Iniciar sesión</span>
@@ -48,8 +59,7 @@ export default function ProfilePill() {
 
   return (
     <Link to={PROFILE_SECTION.to} className={SHELL} aria-label={`Perfil de ${session.email}`}>
-      {/* El cuadrado del rayo: el único bloque de verde macizo de toda la barra. */}
-      <span className="bg-primary text-background flex h-8 w-8 items-center justify-center rounded-lg">
+      <span className={`${BOLT_SQUARE} bg-white`}>
         <BoltIcon className="h-4 w-4" />
       </span>
 

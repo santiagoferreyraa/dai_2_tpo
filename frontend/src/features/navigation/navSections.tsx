@@ -48,3 +48,16 @@ export const PROFILE_SECTION: NavSection = { to: '/profile', label: 'Perfil', Ic
 
 /** Las cinco, en el orden en que aparecen en la barra del celular. */
 export const MOBILE_SECTIONS: NavSection[] = [...MAIN_SECTIONS, PROFILE_SECTION]
+
+/**
+ * Si la sección está activa, con la misma regla que aplica `NavLink`.
+ *
+ * Existe porque las dos barras necesitan saberlo **afuera** de cada enlace: el estado activo
+ * que `NavLink` calcula vive adentro del enlace, y tanto el círculo del celular como el
+ * subrayado de escritorio tienen que conocer cuál es la sección activa antes de dibujar la
+ * lista, no durante.
+ */
+export function isSectionActive(section: NavSection, pathname: string): boolean {
+  if (section.end === true) return pathname === section.to
+  return pathname === section.to || pathname.startsWith(`${section.to}/`)
+}
