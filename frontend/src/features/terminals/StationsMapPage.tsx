@@ -26,6 +26,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import type { LatLngTuple } from 'leaflet'
 
 import BottomSheet from './components/BottomSheet'
@@ -79,7 +80,19 @@ export default function StationsMapPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [query, setQuery] = useState('')
+  /*
+   * La búsqueda arranca de la dirección, si viene.
+   *
+   * Es lo que hace que el buscador de la portada del celular sirva para algo: allá no hay lista
+   * que filtrar, así que lo que hace es traer acá lo que se escribió, en `?q=`. Que viaje por la
+   * dirección y no por el estado del router es lo que deja el resultado compartible y recargable.
+   *
+   * Se lee UNA vez, como valor inicial, y después manda el estado: si se leyera en cada
+   * renderizado, borrar el texto a mano lo repondría desde la dirección y el campo no se dejaría
+   * vaciar.
+   */
+  const [searchParams] = useSearchParams()
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
 
   /*
    * Los filtros viven acá arriba y no adentro de StationFilters por el mismo motivo que el
