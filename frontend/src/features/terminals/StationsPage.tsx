@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 
 import BottomSheet from './components/BottomSheet'
 import StationCard from './components/StationCard'
@@ -10,7 +11,7 @@ import {
   listStations,
   updateStation,
 } from './data/stationsRepository'
-import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL } from './format'
+import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL, POWER_STEPS, matchesFilters } from './format'
 import type { ConnectorType, StationDetail, StationInput } from './types'
 import { useMediaQuery } from './useMediaQuery'
 import { useWheelToHorizontal } from './useWheelToHorizontal'
@@ -40,16 +41,18 @@ type Sheet =
   | { kind: 'edit'; stationId: number }
   | { kind: 'add' }
 
-/**
- * Escalones de potencia del filtro.
- *
- * No son redondos por gusto: 50 kW es el piso de la carga rápida y 150 kW el de la ultra
- * rápida. Filtrar de a 10 kW no le cambia la decisión a nadie.
- */
-const POWER_STEPS = [50, 150]
-
 /** A partir de acá entran las dos columnas. Es el `lg` de Tailwind. */
 const WIDE_QUERY = '(min-width: 1024px)'
+
+/**
+ * Parámetro de URL que abre una estación directamente: `/stations?station=3`.
+ *
+ * Existe para el enlace del nombre en el panel del mapa: el conductor toca el nombre y llega
+ * acá con el detalle ya abierto, en vez de aterrizar en la lista y tener que buscarla otra vez.
+ * Va en la query y no en el path para no partir la ruta en dos (`/stations` y `/stations/:id`)
+ * por un estado que la pantalla ya sabía manejar por su cuenta.
+ */
+const STATION_PARAM = 'station'
 
 export default function StationsPage() {
   const [stations, setStations] = useState<StationDetail[]>([])
@@ -57,17 +60,37 @@ export default function StationsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
-  const [sheet, setSheet] = useState<Sheet>({ kind: 'none' })
+
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  /*
+   * El parámetro se lee UNA vez, como valor inicial, y no en cada render. Si el panel siguiera
+   * atado a la URL, cerrarlo volvería a abrirlo: se limpia el parámetro, el efecto lo relee y
+   * el estado se reconstruye. El parámetro es de dónde se arranca, no lo que se está mirando.
+   */
+  const [sheet, setSheet] = useState<Sheet>(() => {
+    const requested = Number(searchParams.get(STATION_PARAM))
+    return Number.isInteger(requested) && requested > 0
+      ? { kind: 'info', stationId: requested }
+      : { kind: 'none' }
+  })
+
+  /*
+   * Y se saca de la URL apenas se usó. Deja la dirección limpia para compartir o recargar, y
+   * evita que el botón de atrás del navegador reabra un panel que el usuario ya cerró.
+   */
+  useEffect(() => {
+    if (!searchParams.has(STATION_PARAM)) return
+
+    const next = new URLSearchParams(searchParams)
+    next.delete(STATION_PARAM)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const wide = useMediaQuery(WIDE_QUERY)
   const filtersRef = useWheelToHorizontal<HTMLDivElement>()
 
-  /*
-   * Los dos filtros son independientes y se combinan, pero se aplican sobre el MISMO
-   * conector: "CCS2 + 150 kW" son las estaciones con un conector CCS2 que además da 150 kW,
-   * no las que tienen un CCS2 lento y otro rápido de otro tipo. Es el mismo criterio que
-   * usa `matchingConnectors` en la búsqueda del backend.
-   */
+  /* Los dos filtros son independientes y se combinan; la regla la aplica `matchesFilters`. */
   const [connectorType, setConnectorType] = useState<ConnectorType | null>(null)
   const [minPowerKw, setMinPowerKw] = useState<number | null>(null)
 
@@ -101,15 +124,10 @@ export default function StationsPage() {
 
     return stations.filter((station) => {
       if (needle !== '' && !station.name.toLowerCase().includes(needle)) return false
-      if (!filtering) return true
 
-      return station.connectors.some(
-        (connector) =>
-          (connectorType === null || connector.connectorType === connectorType) &&
-          (minPowerKw === null || connector.maxPowerKw >= minPowerKw),
-      )
+      return matchesFilters(station.connectors, { connectorType, minPowerKw })
     })
-  }, [stations, query, connectorType, minPowerKw, filtering])
+  }, [stations, query, connectorType, minPowerKw])
 
   /*
    * El panel se referencia por id y no por objeto: si no, después de guardar seguiría
