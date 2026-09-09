@@ -174,3 +174,112 @@ body {
   background-color: var(--color-background);
   color: var(--color-text);
 }
+
+/* ─────────────────────────── Navegación del celular ───────────────────────────
+  La barra de abajo con el círculo verde sobre la sección activa (ver MobileNav.tsx).
+
+  Toda la animación cuelga de UN número. `--active-index` dice qué sección está activa —lo
+  escribe React como estilo en línea— y de él sale `--notch-x`, el centro de esa sección. De
+  ahí salen dos cosas a la vez: dónde se para el círculo y dónde se abre el hueco. Lo que se
+  anima es el índice, no cada uno por su lado, y eso es lo que garantiza que viajen pegados:
+  no hay dos transiciones que puedan desfasarse porque hay una sola.
+
+  Eso es exactamente para lo que sirve `@property`: una variable sin registrar es texto para el
+  navegador y salta de un valor al otro; declarada como `<number>`, se interpola. En un
+  navegador que no lo soporte la barra sigue funcionando —el círculo y la muesca aparecen ya
+  puestos en su lugar, sin el viaje—, que es una degradación y no una rotura.
+*/
+@property --active-index {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.mobile-nav {
+  /* Radio del hueco. Es mayor que el del círculo: la diferencia es el aire que los separa. */
+  --notch-radius: 32px;
+  /* Cuánto sube el centro del hueco por encima del borde de arriba de la barra. Es lo que
+     vuelve la muesca ancha y poco profunda en vez de un agujero redondo. */
+  --notch-lift: 14px;
+  --puck-size: 52px;
+  /*
+    Margen del carril por el que viaja el círculo. Tiene que ser EL MISMO que el padding
+    horizontal de la barra (`px-3` en MobileNav.tsx), porque de ahí sale el centro de cada
+    sección: sin él, el centro de la primera cae tan cerca del borde que el círculo termina
+    colgando por fuera de la barra en vez de apoyado sobre ella.
+  */
+  --track-inset: 12px;
+
+  /*
+    El centro de la sección activa. Las cinco reparten el carril en partes iguales, así que la
+    enésima está en `(2i + 1)/10` de lo que queda entre los dos márgenes. Nada de esto se
+    calcula en JavaScript: React solo dice qué sección está activa y el ancho lo resuelve el
+    navegador, sea el que sea.
+  */
+  --notch-x: calc(
+    var(--track-inset) + (var(--active-index) * 2 + 1) * (100% - 2 * var(--track-inset)) / 10
+  );
+
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transition: --active-index 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.mobile-nav__bar {
+  /*
+    El hueco es una máscara —material que se saca— y no un círculo pintado del color del fondo.
+    Tiene que ser un agujero de verdad porque la barra flota sobre el contenido: en la pantalla
+    del mapa, lo que se ve por el hueco son los mosaicos, y un parche de color liso ahí se
+    notaría al instante.
+
+    Dos capas: un rectángulo lleno que cubre la barra entera, y el círculo que se le resta.
+  */
+  -webkit-mask-image:
+    linear-gradient(#000, #000),
+    radial-gradient(
+      circle var(--notch-radius) at var(--notch-x) calc(-1 * var(--notch-lift)),
+      #000 98%,
+      transparent 100%
+    );
+  mask-image:
+    linear-gradient(#000, #000),
+    radial-gradient(
+      circle var(--notch-radius) at var(--notch-x) calc(-1 * var(--notch-lift)),
+      #000 98%,
+      transparent 100%
+    );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  /* `source-out` es el nombre viejo de `subtract` en WebKit. Va antes para que gane el estándar. */
+  -webkit-mask-composite: source-out;
+  mask-composite: subtract;
+}
+
+/*
+  Una ruta que no es ninguna de las cinco no tiene sección activa: la barra se cierra y el
+  círculo no se dibuja. Sin esto quedaría un hueco abierto sin nada que lo justifique.
+*/
+.mobile-nav[data-active="false"] .mobile-nav__bar {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.mobile-nav__puck {
+  width: var(--puck-size);
+  height: var(--puck-size);
+  /*
+    El círculo se posiciona con la MISMA variable que abre el hueco, y por eso no lleva
+    transición propia: cuando `--notch-x` se está animando, este `left` ya viene animado.
+  */
+  left: var(--notch-x);
+  /* El centro queda `--notch-lift` por encima del borde de la barra, igual que el del hueco. */
+  top: calc(-1 * (var(--notch-lift) + var(--puck-size) / 2));
+  transform: translateX(-50%);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+/* Para quien pidió menos movimiento, el círculo aparece en su lugar en vez de viajar. */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav {
+    transition: none;
+  }
+}
