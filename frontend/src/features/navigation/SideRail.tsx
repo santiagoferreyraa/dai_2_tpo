@@ -1,79 +1,43 @@
-import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router'
 
 import { isSectionActive, MAIN_SECTIONS } from './navSections'
-import {
-  RAIL_GEOMETRY,
-  RAIL_NOTCH_LIFT,
-  RAIL_PUCK_SIZE,
-  RAIL_STEP,
-  RAIL_WIDTH,
-  railClipPath,
-  railHeight,
-  railItemCenter,
-} from './notchGeometry'
 
 /**
- * El riel de navegación de escritorio y tablet: una columna flotante de íconos, a la izquierda,
- * con el círculo verde asomando por su borde derecho.
+ * El riel de navegación de escritorio y tablet: una columna flotante de íconos, a la izquierda.
  *
- * **Es la barra del celular girada un cuarto de vuelta**, y eso es literal: la muesca sale de la
- * misma función que la de abajo (ver `notchGeometry.ts`), así que las dos tienen el mismo radio,
- * el mismo aire alrededor del círculo y los mismos labios redondeados. El ancho del riel es el
- * alto de la otra barra por el mismo motivo. Lo único que cambia es contra qué borde se apoya.
+ * **La marca de la sección activa es un círculo que se desliza**, entero y adentro del riel. Es
+ * el mismo lenguaje que el círculo de la barra del celular —una cosa que viaja dice de dónde
+ * venís y a dónde fuiste; cuatro que se prenden y se apagan, no—, pero acá no asoma por el borde
+ * ni abre una muesca: el riel es angosto y se mira de costado, y un círculo colgando afuera se
+ * lee como un botón despegado en vez de como parte de la barra.
  *
- * El círculo y el hueco salen del MISMO número animado. `--active-index` lo anima el CSS —con la
- * curva de siempre— y de ahí salen los dos: el círculo lo lee en su `top` y el recorte se
- * redibuja leyendo ese mismo valor interpolado en cada cuadro. No hay dos animaciones que
- * sincronizar: hay una, y la otra es un espejo.
+ * Sin muesca no hay nada que recortar, así que el riel es un `div` con vidrio y el círculo se
+ * posiciona con una cuenta de una línea: los ítems son cuadrados iguales y apilados, de modo que
+ * la posición es el índice por el paso.
  *
  * **Es solo de íconos, y eso obliga a dos cosas.** Cada enlace lleva su `aria-label`, porque sin
  * texto un lector de pantalla anunciaría un enlace sin nombre; y cada uno muestra su rótulo al
  * pasar el mouse, porque un ícono solo no siempre se adivina. Lo segundo no reemplaza a lo
  * primero: el rótulo visible no existe para el teclado ni para el lector.
  */
+
+/**
+ * Las medidas del riel, en píxeles. Tienen que coincidir con las clases de abajo: de ellas sale
+ * dónde se para el círculo.
+ *
+ * El círculo mide lo mismo que un ítem, así que ocupa exactamente el cuadro del ícono que marca.
+ */
+const ITEM = 44
+const GAP = 8
+const PADDING = 10
+
+/** De un ítem al siguiente, de centro a centro. */
+const STEP = ITEM + GAP
+
 export default function SideRail() {
   const { pathname } = useLocation()
   const activeIndex = MAIN_SECTIONS.findIndex((section) => isSectionActive(section, pathname))
   const hasActive = activeIndex >= 0
-  const ActiveIcon = hasActive ? MAIN_SECTIONS[activeIndex].Icon : null
-
-  const railRef = useRef<HTMLDivElement>(null)
-  const shapeRef = useRef<HTMLDivElement>(null)
-
-  /*
-   * El espejo: sigue el valor que el CSS está interpolando y redibuja el recorte con él.
-   *
-   * Corre por `requestAnimationFrame` y **solo mientras dura el viaje**: la condición de corte es
-   * que el valor leído haya llegado al destino. Si el navegador no soporta `@property`, la
-   * variable no se interpola, el primer cuadro ya lee el destino y el bucle termina ahí mismo
-   * —el hueco aparece puesto en su lugar, igual que el círculo, sin quedar girando de fondo—.
-   */
-  useEffect(() => {
-    const rail = railRef.current
-    const shape = shapeRef.current
-    if (rail === null || shape === null) return
-
-    /* Sin sección activa no hay muesca: el riel se dibuja entero. */
-    if (!hasActive) {
-      shape.style.clipPath = ''
-      return
-    }
-
-    let frame = 0
-    const draw = () => {
-      const sampled = Number.parseFloat(getComputedStyle(rail).getPropertyValue('--active-index'))
-      const index = Number.isNaN(sampled) ? activeIndex : sampled
-
-      shape.style.clipPath = railClipPath(railItemCenter(index), MAIN_SECTIONS.length)
-
-      /* Medio milésimo de sección: por debajo de eso no hay píxel que cambie. */
-      if (Math.abs(index - activeIndex) > 0.0005) frame = requestAnimationFrame(draw)
-    }
-
-    draw()
-    return () => cancelAnimationFrame(frame)
-  }, [activeIndex, hasActive])
 
   return (
     /*
@@ -82,43 +46,39 @@ export default function SideRail() {
       tiene que quedarse quieto aunque abajo cambie todo.
     */
     <nav
-      ref={railRef}
       aria-label="Navegación principal"
-      className="side-rail fixed top-1/2 left-5 z-[1050] hidden -translate-y-1/2 md:block"
-      style={
-        {
-          width: RAIL_WIDTH,
-          height: railHeight(MAIN_SECTIONS.length),
-          /*
-            Las medidas salen de `notchGeometry.ts` y se le pasan al CSS como variables, en vez de
-            estar escritas en los dos lados. El recorte y el círculo caen en el mismo lugar
-            porque leen lo mismo.
-          */
-          '--active-index': activeIndex,
-          '--puck-size': `${RAIL_PUCK_SIZE}px`,
-          '--notch-lift': `${RAIL_NOTCH_LIFT}px`,
-          '--rail-width': `${RAIL_WIDTH}px`,
-          '--rail-pad-y': `${RAIL_GEOMETRY.paddingY}px`,
-          '--rail-item': `${RAIL_GEOMETRY.itemSize}px`,
-          '--rail-step': `${RAIL_STEP}px`,
-        } as React.CSSProperties
-      }
+      className="fixed top-1/2 left-5 z-[1050] hidden -translate-y-1/2 md:block"
     >
-      {/*
-        El vidrio va en su propio elemento, debajo de los enlaces y no envolviéndolos: el
-        `clip-path` que abre la muesca recorta TODO lo que hay dentro del elemento al que se le
-        aplica, y si los íconos estuvieran adentro, al que está al lado del hueco le faltaría un
-        pedazo.
-      */}
-      <div ref={shapeRef} className="side-rail__shape absolute inset-0" />
-
       <div
-        className="relative flex flex-col"
-        style={{
-          gap: RAIL_GEOMETRY.gap,
-          padding: `${RAIL_GEOMETRY.paddingY}px ${RAIL_GEOMETRY.paddingX}px`,
-        }}
+        className="glass-panel relative flex flex-col rounded-full"
+        style={{ gap: GAP, padding: PADDING }}
       >
+        {/*
+          El círculo. Se dibuja siempre y se apaga con la opacidad: montarlo y desmontarlo lo
+          haría aparecer de la nada en la sección nueva en vez de viajar desde la anterior.
+
+          Viaja con `transform` y no con `top` porque el navegador puede moverlo sin rehacer el
+          layout de la columna en cada cuadro. La curva y la duración son las mismas que las del
+          círculo del celular: son el mismo gesto y tienen que sentirse igual.
+        */}
+        <span
+          aria-hidden="true"
+          className="bg-primary absolute rounded-full transition-[transform,opacity] duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]"
+          style={{
+            width: ITEM,
+            height: ITEM,
+            top: PADDING,
+            left: PADDING,
+            transform: `translateY(${Math.max(activeIndex, 0) * STEP}px)`,
+            /*
+              Una ruta que no es ninguna de las secciones —el perfil, o el detalle de una
+              estación mañana— no tiene dónde parar el círculo. Se desvanece en su último lugar:
+              no decir nada es mejor que marcar la sección equivocada.
+            */
+            opacity: hasActive ? 1 : 0,
+          }}
+        />
+
         {MAIN_SECTIONS.map((section) => {
           const active = isSectionActive(section, pathname)
           return (
@@ -128,16 +88,17 @@ export default function SideRail() {
               end={section.end}
               aria-label={section.label}
               className="group relative flex items-center justify-center"
-              style={{ height: RAIL_GEOMETRY.itemSize, width: RAIL_GEOMETRY.itemSize }}
+              style={{ height: ITEM, width: ITEM }}
             >
               {/*
-                El ícono de la sección activa no se esconde con `display`: se apaga. El que se ve
-                es el mismo dibujo dentro del círculo, y dejar que este ocupe su lugar mantiene
-                la fila quieta mientras el círculo viaja.
+                El ícono se queda en su lugar y cambia de color cuando el círculo llega. No hace
+                falta duplicarlo adentro del círculo —como sí pasa en el celular, donde el
+                círculo se sale de la barra— porque acá los dos ocupan exactamente el mismo
+                cuadro.
               */}
               <section.Icon
-                className={`h-5 w-5 transition-opacity duration-200 ${
-                  active ? 'opacity-0' : 'text-text-muted group-hover:text-text opacity-100'
+                className={`relative h-5 w-5 transition-colors duration-300 ${
+                  active ? 'text-background' : 'text-text-muted group-hover:text-text'
                 }`}
               />
 
@@ -145,13 +106,12 @@ export default function SideRail() {
                 El rótulo al pasar el mouse. `aria-hidden` porque el nombre accesible ya lo da el
                 `aria-label` del enlace: sin esto, el lector lo diría dos veces.
 
-                Se corre lo suficiente como para no quedar debajo del círculo, que sobresale del
-                riel. `pointer-events-none` para que el globo no se meta entre el mouse y el
-                enlace —tocarlo cancelaría el hover y lo haría parpadear—.
+                `pointer-events-none` para que el globo no se meta entre el mouse y el enlace
+                —tocarlo cancelaría el hover y lo haría parpadear—.
               */}
               <span
                 aria-hidden="true"
-                className="glass-panel text-text pointer-events-none absolute left-full ml-14 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                className="glass-panel text-text pointer-events-none absolute left-full ml-4 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               >
                 {section.label}
               </span>
@@ -159,19 +119,6 @@ export default function SideRail() {
           )
         })}
       </div>
-
-      {/*
-        El círculo. Va afuera del elemento recortado: adentro lo cortaría el mismo `clip-path`
-        que abre el hueco para él.
-
-        `pointer-events-none` porque no es un botón: el que recibe el clic es el enlace que tiene
-        debajo. Si el círculo lo capturara, tocar la sección activa no haría nada.
-      */}
-      {ActiveIcon !== null && (
-        <div className="side-rail__puck bg-primary text-background pointer-events-none absolute flex items-center justify-center rounded-full">
-          <ActiveIcon className="h-6 w-6" />
-        </div>
-      )}
     </nav>
   )
 }
