@@ -52,6 +52,10 @@ const LIGHT: BackdropPalette = {
 
   El techo es el que manda acá, al revés que en el claro: ningún canal pasa de 0.34, porque es la
   zona MÁS clara del fondo la que le pelea el contraste al texto secundario, que es casi blanco.
+
+  Por eso también el brillo especular es más bajo de lo que pide el ojo. Un reflejo fuerte sobre
+  la zona ya clara del fondo es el punto exacto donde el texto de una tarjeta translúcida deja de
+  leerse, y desde que el vidrio adelgazó, ese punto llega antes.
 */
 const DARK: BackdropPalette = {
   a: [0.14, 0.15, 0.25],
@@ -59,7 +63,7 @@ const DARK: BackdropPalette = {
   c: [1.0, 1.0, 1.0],
   d: [0.92, 0.03, 0.18],
   specularColor: [0.62, 0.55, 1.0],
-  specularStrength: 0.28,
+  specularStrength: 0.18,
   relief: 0.35,
 }
 
