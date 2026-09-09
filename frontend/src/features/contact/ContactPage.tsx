@@ -5,16 +5,16 @@ import ContactForm from './components/ContactForm'
  * Pantalla de contacto.
  *
  * Una sola tarjeta centrada en la ventana, con dos columnas adentro: a la izquierda la
- * invitación y el formulario, a la derecha las formas de llegar a nosotros. En el celular se
- * apila.
+ * invitación y las formas de llegar a nosotros, a la derecha el formulario.
  *
- * La silueta de la tarjeta no es un rectángulo —tiene mordidas cóncavas en los costados— y eso
- * lo resuelve `.contact-panel` en `index.css`, no este archivo. Acá solo se pone la clase.
+ * **El reparto no es caprichoso: es lo que evita el hueco.** Con el formulario suelto de un lado
+ * y solo un título del otro, la columna del título quedaba con media tarjeta vacía abajo. Los
+ * datos de contacto ocupan justamente ese lugar, así que las dos columnas terminan midiendo
+ * parecido y no queda aire de sobra en ninguna.
  *
- * **Los datos de contacto se muestran además del formulario, no en vez de.** Son el camino que no
- * depende de nada: quien no tenga un cliente de correo configurado —o simplemente prefiera
- * escribir por su cuenta— tiene la dirección a la vista. El formulario es la comodidad, no la
- * única puerta.
+ * **Los datos se muestran además del formulario, no en vez de.** Son el camino que no depende de
+ * nada: quien no tenga un cliente de correo configurado —o simplemente prefiera escribir por su
+ * cuenta— tiene la dirección a la vista. El formulario es la comodidad, no la única puerta.
  */
 export default function ContactPage() {
   return (
@@ -23,45 +23,38 @@ export default function ContactPage() {
         `min-h-full` junto con `items-center` es lo que centra la tarjeta en la ventana SIN
         romperse cuando no entra. Centrando contra una altura fija, un contenido más alto que la
         pantalla se desborda por arriba y esa parte queda inalcanzable, porque el scroll no llega
-        a valores negativos. Con la altura mínima, el contenedor crece y el centrado se
-        desactiva solo.
+        a valores negativos. Con la altura mínima, el contenedor crece y el centrado se desactiva
+        solo.
 
         `pb-36` en el celular es el lugar de la barra flotante de navegación.
       */}
       <div className="flex min-h-full items-center justify-center px-4 py-8 pb-36 md:px-8 md:pb-8">
-        <div className="contact-panel glass-panel w-full max-w-5xl p-7 md:p-16">
-          <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:gap-20">
-            <section>
-              <h1 className="text-text text-4xl leading-[0.95] font-extrabold tracking-tight text-balance md:text-5xl">
+        <div className="glass-panel w-full max-w-4xl rounded-3xl p-7 md:p-12">
+          <div className="grid gap-10 md:grid-cols-2 md:gap-14">
+            <section className="flex flex-col">
+              {/*
+                `leading-[1.1]` y no el `0.95` del título de la home. Allá las dos líneas no se
+                estorban; acá la primera termina en "contarnos?" —con la cola de la p y la g
+                bajando— y la segunda empieza con la T y la l de "Te leemos", que suben. Con el
+                interlineado apretado las dos filas se tocan.
+              */}
+              <h1 className="text-text text-4xl leading-[1.1] font-extrabold tracking-tight text-balance md:text-5xl">
                 ¿Algo para contarnos?
                 <br />
                 <span className="text-primary">Te leemos.</span>
               </h1>
 
-              <p className="text-text-muted mt-5 max-w-md text-sm leading-relaxed text-pretty">
+              <p className="text-text-muted mt-5 text-sm leading-relaxed text-pretty">
                 Un cargador que no responde, un cobro que no cierra, una estación que falta en el
                 mapa. Escribinos y lo miramos.
               </p>
 
-              <div className="mt-8">
-                <ContactForm />
-              </div>
-            </section>
-
-            <section className="flex flex-col lg:w-64">
               {/*
-                La marca en grande y muy apagada ocupa el lugar que en el diseño de referencia
-                tiene una ilustración. Es lo que hay: dibujar una ilustración propia es un trabajo
-                aparte, y poner una prestada traería un problema de licencia por un adorno.
-
-                `aria-hidden` porque no aporta nada que no diga el resto de la pantalla.
+                `md:mt-auto` empuja los datos al pie de la columna, a la altura del botón de
+                enviar. Es lo que empareja las dos columnas: sin eso quedan pegados al párrafo y
+                la mitad de abajo de la tarjeta se vacía.
               */}
-              <span
-                aria-hidden="true"
-                className="brand-mark bg-primary/15 hidden h-40 w-40 self-center lg:block"
-              />
-
-              <dl className="flex flex-col gap-4 lg:mt-auto">
+              <dl className="mt-8 flex flex-col gap-4 md:mt-auto md:pt-10">
                 {CONTACT_CHANNELS.map((channel) => (
                   <div key={channel.label} className="flex flex-col gap-0.5">
                     <dt className="text-text-muted text-xs font-medium">{channel.label}</dt>
@@ -77,6 +70,8 @@ export default function ContactPage() {
                 ))}
               </dl>
             </section>
+
+            <ContactForm />
           </div>
         </div>
       </div>
