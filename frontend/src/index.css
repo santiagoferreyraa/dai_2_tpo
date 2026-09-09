@@ -352,3 +352,41 @@ body {
     transition: none;
   }
 }
+
+/*
+  El texto seleccionado, en el verde de la marca.
+
+  El verde va escrito literal y no como `var(--color-primary)`, que es lo que uno esperaría. El
+  motivo es que ese token NO vale lo mismo en los dos temas: en el claro es un verde oscuro,
+  elegido para poder usarse como TEXTO sobre fondo claro. Acá el verde es el FONDO de la
+  selección, así que el que sirve es el claro de la marca, en los dos temas.
+
+  El texto de la selección va oscuro y fijo por lo mismo: sobre este verde, cualquier color claro
+  se pierde. No puede ser `var(--color-background)` porque en el tema claro es casi blanco.
+*/
+::selection {
+  background-color: #b9fe70;
+  color: #0d111c;
+}
+
+/*
+  La marca de la barra de arriba.
+
+  El logo se dibuja como MÁSCARA y no como una imagen normal, y eso es lo que le permite cambiar
+  de color con el tema: de un `mask-image` el navegador usa solo la silueta, y el color lo pone el
+  fondo del elemento. Con un `<img>` el logo quedaría siempre del verde claro con el que está
+  guardado, que sobre el tema claro casi no se ve.
+
+  Es el mismo archivo que el ícono de la pestaña. Ahí sí hace falta que tenga color propio —el
+  navegador lo dibuja tal cual—, así que el PNG está guardado en verde y acá se le ignora.
+*/
+.brand-mark {
+  -webkit-mask-image: url("/logo.png");
+  mask-image: url("/logo.png");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}

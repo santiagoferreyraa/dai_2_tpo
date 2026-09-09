@@ -32,14 +32,23 @@ const ROLE_LABEL = {
 /**
  * La forma que comparten los dos estados.
  *
- * Sin esquinas redondeadas, a propósito: es el único elemento anguloso de la barra y por eso
- * se lee como una ficha —algo con identidad— y no como un botón más.
+ * El radio es el mismo que el de las tarjetas de la home (`rounded-3xl`), para que la ficha se
+ * lea como parte de la misma familia y no como un recuadro aparte. A esta altura ese radio da
+ * justo una punta redonda entera, que es lo que la emparenta con el interruptor de tema que
+ * tiene al lado.
+ *
+ * El `pl-2.5` no es simetría rota por gusto: con la punta redondeada, el borde izquierdo se
+ * curva hacia adentro, y con el padding chico que tenía antes la esquina del cuadrado del rayo
+ * quedaba cortada por esa curva.
  */
 const SHELL =
-  'glass-panel hover:border-primary/60 flex items-center gap-3 rounded-none py-1.5 pr-4 pl-1.5 transition-colors'
+  'glass-panel hover:border-primary/60 flex items-center gap-3 rounded-3xl py-1.5 pr-4 pl-2.5 transition-colors'
 
-/** El cuadrado del rayo. También recto: sigue la forma de la ficha que lo contiene. */
-const BOLT_SQUARE = 'text-background flex h-9 w-9 shrink-0 items-center justify-center'
+/**
+ * El cuadrado del rayo. Lleva un radio chico, muy por debajo del de la ficha: adentro de una
+ * forma redondeada, un cuadrado perfectamente recto se lee como un error de alineación.
+ */
+const BOLT_SQUARE = 'text-background flex h-9 w-9 shrink-0 items-center justify-center rounded-lg'
 
 export default function ProfilePill() {
   const session = useNavSession()
