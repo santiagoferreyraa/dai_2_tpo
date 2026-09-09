@@ -47,9 +47,6 @@ export const NAV_GEOMETRY = {
   trackInset: 12,
 } as const
 
-/** Radio del hueco. Sale del círculo más el aire: no es un número suelto que se pueda desfasar. */
-export const NOTCH_RADIUS = NAV_GEOMETRY.puckSize / 2 + NAV_GEOMETRY.notchGap
-
 /**
  * El centro de una sección en la barra del celular, en píxeles desde su borde izquierdo.
  *
@@ -92,6 +89,29 @@ export const RAIL_WIDTH = RAIL_GEOMETRY.itemSize + RAIL_GEOMETRY.paddingX * 2
 /** De un ítem al siguiente, de centro a centro. */
 export const RAIL_STEP = RAIL_GEOMETRY.itemSize + RAIL_GEOMETRY.gap
 
+/**
+ * El círculo del riel, y cuánto sobresale.
+ *
+ * Son los dos únicos números de la muesca que el riel no comparte con el celular, y van juntos
+ * porque resuelven el mismo pedido: que el círculo asome apenas por el costado en vez de quedar
+ * colgando afuera.
+ *
+ * **Sobresalir menos obliga a una muesca más profunda, y esa parte no se puede esquivar:** el
+ * hueco tiene que contener al círculo, así que correr el centro hacia adentro mete con él todo
+ * el arco. La cuenta es fija —lo que sobresale más lo que entra suman el diámetro más el aire—,
+ * y con un círculo de 52 no hay reparto que deje al riel entero: para que asomara poco, la
+ * muesca se lo comía casi todo.
+ *
+ * Por eso el círculo del riel es más chico. 44 no es un número elegido a ojo: es el alto de sus
+ * ítems, así que el círculo mide exactamente lo mismo que el cuadro que ocupa cada ícono.
+ *
+ * Con `lift` en 0 el centro cae justo sobre el borde, y entonces sobresale exactamente la mitad
+ * —22 de 44—. Es una posición que se explica sola, y deja los otros 28 de muesca sobre los 64
+ * de ancho del riel.
+ */
+export const RAIL_PUCK_SIZE = RAIL_GEOMETRY.itemSize
+export const RAIL_NOTCH_LIFT = 0
+
 export function railHeight(sectionCount: number): number {
   const { paddingY, itemSize, gap } = RAIL_GEOMETRY
   return paddingY * 2 + sectionCount * itemSize + (sectionCount - 1) * gap
@@ -109,13 +129,18 @@ export function railItemCenter(index: number): number {
 /**
  * Las medidas de la muesca, resueltas una sola vez para las dos orientaciones.
  *
+ * `lift` y `puckSize` son lo único que las dos barras no comparten. El aire alrededor del círculo
+ * y el radio de los labios salen de las mismas constantes, que es lo que hace que las dos muescas
+ * sean la misma figura a dos tamaños y no dos figuras parecidas.
+ *
  * `along` corre a lo largo del borde y `into` hacia adentro del material. Los nombres son
  * genéricos —y no `x` e `y`— justamente porque la misma figura se apoya sobre un borde de arriba
  * en un caso y sobre uno de la derecha en el otro.
  */
-function notchShape() {
-  const { notchLift: lift, filletRadius: r, puckSize } = NAV_GEOMETRY
-  const R = NOTCH_RADIUS
+function notchShape(lift: number, puckSize: number) {
+  const { filletRadius: r } = NAV_GEOMETRY
+  /* El radio del hueco sale del círculo más el aire: no es un número suelto que se desfase. */
+  const R = puckSize / 2 + NAV_GEOMETRY.notchGap
 
   /*
     El centro del labio está a `r` del borde recto (lo toca) y a `R + r` del centro del hueco (lo
@@ -152,7 +177,10 @@ const round = (value: number) => Math.round(value * 100) / 100
  * por fuera de la barra, donde no hay material que sacar.
  */
 export function notchCutPath(centerX: number): string {
-  const { R, r, lipDistance, tangentAlong, tangentInto, outside } = notchShape()
+  const { R, r, lipDistance, tangentAlong, tangentInto, outside } = notchShape(
+    NAV_GEOMETRY.notchLift,
+    NAV_GEOMETRY.puckSize,
+  )
 
   return [
     `M ${round(centerX - lipDistance)} 0`,
@@ -175,7 +203,10 @@ export function notchCutPath(centerX: number): string {
  * horizontal; si en vez de girar se espejara, habría que darlas vuelta.
  */
 export function verticalNotchCutPath(edgeX: number, centerY: number): string {
-  const { R, r, lipDistance, tangentAlong, tangentInto, outside } = notchShape()
+  const { R, r, lipDistance, tangentAlong, tangentInto, outside } = notchShape(
+    RAIL_NOTCH_LIFT,
+    RAIL_PUCK_SIZE,
+  )
 
   return [
     `M ${edgeX} ${round(centerY - lipDistance)}`,

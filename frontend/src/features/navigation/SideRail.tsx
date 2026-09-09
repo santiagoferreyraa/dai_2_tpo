@@ -3,8 +3,9 @@ import { NavLink, useLocation } from 'react-router'
 
 import { isSectionActive, MAIN_SECTIONS } from './navSections'
 import {
-  NAV_GEOMETRY,
   RAIL_GEOMETRY,
+  RAIL_NOTCH_LIFT,
+  RAIL_PUCK_SIZE,
   RAIL_STEP,
   RAIL_WIDTH,
   railClipPath,
@@ -94,8 +95,8 @@ export default function SideRail() {
             porque leen lo mismo.
           */
           '--active-index': activeIndex,
-          '--puck-size': `${NAV_GEOMETRY.puckSize}px`,
-          '--notch-lift': `${NAV_GEOMETRY.notchLift}px`,
+          '--puck-size': `${RAIL_PUCK_SIZE}px`,
+          '--notch-lift': `${RAIL_NOTCH_LIFT}px`,
           '--rail-width': `${RAIL_WIDTH}px`,
           '--rail-pad-y': `${RAIL_GEOMETRY.paddingY}px`,
           '--rail-item': `${RAIL_GEOMETRY.itemSize}px`,
