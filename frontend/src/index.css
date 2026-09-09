@@ -50,6 +50,16 @@
   degradado y solo las lee una regla.
 */
 :root {
+  /*
+    El retoque de los mosaicos del mapa. El proveedor ya sirve dos juegos, uno claro y uno oscuro
+    (ver `mapConfig.ts`), así que esto NO es lo que hace oscuro al mapa: es el último paso para
+    que el gris del proveedor caiga en la misma familia que el gris de la interfaz.
+
+    `grayscale` va primero y no es redundante: el basemap conserva algún resto de color en parques
+    y rutas principales, y la paleta no tiene ni un tono.
+  */
+  --map-filter: grayscale(1) brightness(0.85) contrast(1.05);
+
   --shell-glow-a: rgb(78 96 214 / 0.34);
   --shell-glow-b: rgb(150 100 250 / 0.26);
   --shell-glow-c: rgb(120 200 90 / 0.12);
@@ -64,6 +74,9 @@
   --color-primary: #3f8f0f;
   --color-primary-strong: #357a0c;
   --color-danger: #b91c1c;
+
+  /* Sobre los mosaicos claros no hay nada que oscurecer: apenas se les levanta un punto de luz. */
+  --map-filter: grayscale(1) brightness(1.03) contrast(0.96);
 
   --shell-glow-a: rgb(150 185 240 / 0.55);
   --shell-glow-b: rgb(196 178 240 / 0.45);
@@ -150,7 +163,7 @@
   verde de los anillos se tiñe con el mapa y los badges se dan vuelta.
 */
 .leaflet-tile-pane {
-  filter: grayscale(1) brightness(0.85) contrast(1.05);
+  filter: var(--map-filter);
 }
 
 /*

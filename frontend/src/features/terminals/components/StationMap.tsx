@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from 'react-leaflet'
 
+import { useTheme } from '@/features/theme/theme'
+
 import {
   ARGENTINA_BOUNDS,
   DEFAULT_CENTER,
@@ -117,6 +119,7 @@ export default function StationMap({
   bottomInsetPx = 0,
   dimUnselected = false,
 }: StationMapProps) {
+  const theme = useTheme()
   const [hoveredStationId, setHoveredStationId] = useState<number | null>(null)
   const selectedStation = stations.find((s) => s.stationId === selectedStationId) ?? null
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -171,7 +174,22 @@ export default function StationMap({
       <InvalidateSizeOnResize />
       <FlyToStation station={selectedStation} bottomInsetPx={bottomInsetPx} />
 
-      <TileLayer url={TILES.dark} maxNativeZoom={MAX_NATIVE_ZOOM} maxZoom={MAX_ZOOM} />
+      {/*
+        Los mosaicos cambian con el tema, y son DOS juegos distintos del mismo proveedor: no es el
+        mismo mapa con un filtro encima. Un filtro sobre mosaicos claros no da un mapa oscuro, da
+        los mismos trazos apagados; el proveedor sí redibuja el mapa con tinta clara sobre fondo
+        oscuro, que es otra cosa.
+
+        `key` fuerza a rehacer la capa al cambiar de tema. Sin eso Leaflet cambia la dirección pero
+        deja en pantalla los mosaicos viejos hasta que hace falta pedir uno nuevo, así que al
+        cambiar de tema el mapa se queda con el color anterior hasta que alguien lo mueve.
+      */}
+      <TileLayer
+        key={theme}
+        url={theme === 'light' ? TILES.light : TILES.dark}
+        maxNativeZoom={MAX_NATIVE_ZOOM}
+        maxZoom={MAX_ZOOM}
+      />
 
       {stations.map((station) => (
         <Marker

@@ -34,12 +34,18 @@ export default function MapScrim({ expanded }: MapScrimProps) {
       */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1050] h-32 bg-gradient-to-b from-black/55 to-transparent md:hidden"
+        /*
+          El degradado sale del color de fondo del tema y no de negro fijo. Existe para que lo que
+          flota encima se lea sobre los mosaicos, y en el tema claro el texto que flota es oscuro:
+          un velo negro ahí lo escondería en vez de destacarlo. Atado al token, oscurece en oscuro
+          y aclara en claro, que es lo mismo en los dos casos: alejar el fondo del texto.
+        */
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1050] h-32 bg-gradient-to-b from-background/70 to-transparent md:hidden"
       />
 
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1050] bg-gradient-to-t from-black/75 via-black/40 to-transparent transition-[height] duration-300 md:hidden ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1050] bg-gradient-to-t from-background/85 via-background/45 to-transparent transition-[height] duration-300 md:hidden ${
           expanded ? 'h-2/3' : 'h-40'
         }`}
       />
