@@ -26,7 +26,8 @@
 
   --color-text-muted es un gris agregado, no sale de la paleta: los grises de la paleta original
   no llegaban a los 4.5 de contraste que pide WCAG contra el fondo. El de cada tema está elegido
-  contra SU fondo.
+  contra SU fondo, y desde que hay un fondo animado detrás, contra la zona MENOS favorable de ese
+  fondo —la más oscura en el tema claro, la más clara en el oscuro— y no contra el color plano.
 */
 @theme {
   --color-background: #0d111c;
@@ -54,7 +55,7 @@
   --color-surface: #ffffff;
   --color-border: #d2dae9;
   --color-text: #111827;
-  --color-text-muted: #5b6779;
+  --color-text-muted: #454f61;
   --color-primary: #3f8f0f;
   --color-primary-strong: #357a0c;
 

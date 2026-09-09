@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router'
 
+import IridescentBackdrop from '@/features/backdrop/IridescentBackdrop'
 import Navbar from '@/features/navigation/Navbar'
 
 /**
@@ -27,7 +28,17 @@ export default function App() {
 
       `app-shell` es el degradado del fondo, que cambia con el tema. Ver index.css.
     */
-    <div className="app-shell flex h-full flex-col">
+    <div className="app-shell relative flex h-full flex-col">
+      {/*
+        El fondo animado, debajo de todo. Es el PRIMER hijo y está posicionado, así que lo pinta
+        antes que el resto; el <main> lleva `relative` para quedar por encima. Sin eso el lienzo
+        taparía el contenido, porque un elemento posicionado se dibuja después de uno que no lo
+        está, aunque venga antes en el orden.
+
+        El degradado de `.app-shell` sigue detrás y no es redundante: es lo que se ve mientras el
+        lienzo no dibuja —en el mapa, sin WebGL 2, o durante la disolvencia de entrada—.
+      */}
+      <IridescentBackdrop />
       {/*
         Las tres piezas de la navegación están FUERA del flujo: las de escritorio ancladas a la
         ventana y la del celular fija abajo. Ninguna ocupa lugar acá, así que el <main> mide la
@@ -49,7 +60,7 @@ export default function App() {
         a la izquierda el riel. En el celular no hay ninguno de los dos, y la barra de abajo
         flota sobre el contenido a propósito.
       */}
-      <main className="flex min-h-0 flex-1 flex-col md:pt-20 md:pl-24">
+      <main className="relative flex min-h-0 flex-1 flex-col md:pt-20 md:pl-24">
         <Outlet />
       </main>
     </div>
