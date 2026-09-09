@@ -236,12 +236,13 @@ export default function StationsMapPage() {
     */
     <section className="flex min-h-0 flex-1 flex-col md:px-6 md:pb-6">
       <div className="border-border/60 relative flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-3xl md:border md:shadow-xl">
-        <header className="border-border bg-surface flex items-baseline gap-3 border-b px-6 py-4">
-          <h1 className="text-primary text-2xl font-semibold">Mapa</h1>
-          <p className={loadError !== null ? 'text-st-offline text-sm' : 'text-text-muted text-sm'}>
-            {summary}
-          </p>
-        </header>
+        {/*
+          El título queda solo para lectores de pantalla. La franja que lo mostraba se sacó porque
+          le comía alto al mapa, que es toda la pantalla; el encabezado en sí no se puede borrar
+          —una página sin `h1` deja a quien navega por estructura sin saber dónde está— y la barra
+          de arriba ya dice "Mapa" a la vista.
+        */}
+        <h1 className="sr-only">Mapa</h1>
 
         {/*
         relative + min-h-0. El mapa, el buscador, los degradados y el panel se posicionan
@@ -275,7 +276,7 @@ export default function StationsMapPage() {
           z-index por encima de los 1000 que usa Leaflet para sus controles; el porqué está
           explicado en StationCarousel.
         */}
-          <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] items-start gap-2 lg:w-[calc(100%-23rem)]">
+          <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] flex-wrap items-start gap-2 lg:w-[calc(100%-23rem)]">
             {/*
             En celular el buscador toma el ancho entero de la fila, que ya viene con 1rem de
             aire de cada lado: desplegado queda centrado por simetría, sin cálculos. El `mx-auto`
@@ -303,6 +304,30 @@ export default function StationsMapPage() {
             <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
               <StationFilters value={filters} onChange={setFilters} />
             </div>
+
+            {/*
+              El resumen, donde antes estaba la franja: cuántas estaciones se ven, si están
+              cargando, o qué falló.
+
+              No es un adorno que sobrevivió a la franja. Es el ÚNICO lugar donde aparece un error
+              de carga, así que sacarlo del todo dejaba a la pantalla fallando en silencio: el mapa
+              vacío y nadie explicando por qué. Por eso se pinta en rojo cuando algo se rompió, que
+              es lo que lo saca de ser un dato al pasar.
+
+              `md:ml-auto` lo manda al extremo de la fila, lejos del buscador y de los filtros: es
+              información, no un control, y no tiene por qué competir con ellos por la atención. En
+              el celular no, porque ahí el buscador ocupa el renglón entero y la ficha cae abajo:
+              empujada a la derecha quedaría colgando sola en el aire.
+            */}
+            <p
+              className={`glass-panel shrink-0 rounded-full px-3 py-1.5 text-xs font-medium md:ml-auto ${
+                loadError !== null ? 'text-danger' : 'text-text-muted'
+              }`}
+              /* Los errores se anuncian solos; el conteo no interrumpe. */
+              role={loadError !== null ? 'alert' : undefined}
+            >
+              {summary}
+            </p>
           </div>
 
           {/*
