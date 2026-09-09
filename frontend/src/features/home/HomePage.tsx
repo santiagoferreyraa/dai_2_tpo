@@ -36,17 +36,17 @@ export default function HomePage() {
       ventana para que el mapa pueda medirla, así que la pantalla que sí tiene contenido largo
       scrollea por su cuenta.
 
-      El par `-mt-20 pt-20` de escritorio parece que se cancela y no es así. El <main> reserva el
-      alto de la franja superpuesta con un `padding`; el margen negativo estira ESTA pantalla
-      hacia arriba hasta debajo de la franja, y el `padding` de acá le devuelve al contenido el
-      lugar que perdió. El resultado es que el área que scrollea empieza arriba de todo: al bajar,
-      el contenido pasa POR DEBAJO de la franja y el vidrio tiene algo que difuminar. Sin esto la
-      franja translúcida solo difumina el fondo, que es lo mismo que pintarla de un color.
+      El contenido NO pasa por debajo de la franja de arriba, y eso es deliberado. La franja no
+      es un panel: es transparente, y lo único opaco son las tres piezas que flotan sobre ella
+      —la marca, el interruptor y el perfil—. Sin fondo que difumine, cualquier cosa que le
+      pasara por detrás se cruzaría con esos rótulos y los volvería ilegibles. El `padding` que
+      el <main> reserva para la franja es entonces un piso de verdad, no un lugar por el que
+      scrollear.
 
-      Se hace acá y no en el <main> a propósito: en el <main> afectaría también al mapa y al ABM
-      de estaciones, que son pantallas de otra rama y no tienen por qué enterarse.
+      El riel de la izquierda sí tiene vidrio, y ahí el contenido sí le pasa por detrás y se
+      difumina: es fijo y el área que scrollea es más ancha que él.
     */
-    <div className="relative flex-1 overflow-y-auto md:-mt-20 md:pt-20">
+    <div className="relative flex-1 overflow-y-auto">
       {/* `pb-36` en el celular es el lugar de la barra flotante de navegación. */}
       <div className="mx-auto w-full max-w-6xl px-5 pt-8 pb-36 md:px-8 md:pt-10 md:pb-10">
         {/*
