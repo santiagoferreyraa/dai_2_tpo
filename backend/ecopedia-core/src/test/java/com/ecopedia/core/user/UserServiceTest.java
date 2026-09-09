@@ -118,4 +118,28 @@ class UserServiceTest {
         assertEquals(1, conductors.size());
         assertEquals(Role.CONDUCTOR, conductors.get(0).getRole());
     }
+
+    /*
+     * Comprueba lo que hace el perfil propio: una consulta por email, no un listado que se
+     * filtra después. Verificar que `findAll` no se llama es la mitad que importa —el mismo
+     * resultado se obtenía trayendo el padrón entero, y esa versión pasaba cualquier test que
+     * solo mirara el usuario devuelto—.
+     */
+    @Test
+    void testGetProfileByEmailQueriesInsteadOfScanning() {
+        when(userRepository.findByEmail("conductor@ecopedia.com")).thenReturn(Optional.of(mockUser));
+
+        User found = userService.getProfileByEmail("conductor@ecopedia.com");
+
+        assertEquals(1L, found.getId());
+        assertEquals("conductor@ecopedia.com", found.getEmail());
+        verify(userRepository, never()).findAll();
+    }
+
+    @Test
+    void testGetProfileByEmailNotFoundThrowsException() {
+        when(userRepository.findByEmail("fantasma@ecopedia.com")).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> userService.getProfileByEmail("fantasma@ecopedia.com"));
+    }
 }

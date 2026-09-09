@@ -18,6 +18,15 @@ public interface UserService {
     /** Consulta de perfil por ID. */
     User getProfile(Long userId);
 
+    /**
+     * Consulta de perfil por email, que es lo que identifica al usuario dentro del token.
+     *
+     * <p>Existe para que quien atiende una petición autenticada no tenga que recorrer el
+     * padrón buscando quién la hizo: el email viaja en el token y la columna es única, así que
+     * la consulta va directo. Es la operación sobre la que se apoya la pantalla de perfil.
+     */
+    User getProfileByEmail(String email);
+
     /** Actualización de datos de perfil. */
     User updateProfile(Long userId, ProfileData data);
 

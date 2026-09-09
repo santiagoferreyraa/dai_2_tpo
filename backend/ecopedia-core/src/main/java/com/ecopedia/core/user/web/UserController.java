@@ -20,18 +20,23 @@ public class UserController {
         this.userService = userService;
     }
 
-    /** Consulta del perfil del usuario autenticado. */
+    /**
+     * Consulta del perfil del usuario autenticado.
+     *
+     * <p><b>La regla la pone la anotación, no un {@code if}.</b> Antes el método comprobaba a
+     * mano que hubiera autenticación, que es justo lo que ECO-25 dice evitar: una regla de
+     * acceso escondida dentro del cuerpo no se ve al leer la firma, no la aplica el contenedor
+     * y se pierde en la primera refactorización. {@code isAuthenticated()} pide lo mismo que
+     * pedía el {@code if} —estar logueado, con cualquier rol— y lo deja declarado.
+     *
+     * <p><b>Y el usuario se busca, no se filtra.</b> La versión anterior traía el padrón
+     * entero de la base para quedarse con una fila: con veinte usuarios no se nota, pero es
+     * una consulta que crece con la plataforma para responder algo que el token ya identifica.
+     */
     @GetMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserProfileResponse> getMyProfile(Authentication authentication) {
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return ResponseEntity.status(401).build();
-        }
-        String email = authentication.getPrincipal().toString();
-        User user = userService.listUsers(null).stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(email))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
-
+        User user = userService.getProfileByEmail(authentication.getName());
         return ResponseEntity.ok(UserProfileResponse.fromDomain(user));
     }
 
@@ -46,8 +51,8 @@ public class UserController {
     /** Listar usuarios (Solo ADMIN - ECO-25 / ECO-27). */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserProfileResponse>> listUsers(@RequestParam(required = false) Role rol) {
-        List<User> users = userService.listUsers(rol);
+    public ResponseEntity<List<UserProfileResponse>> listUsers(@RequestParam(required = false) Role role) {
+        List<User> users = userService.listUsers(role);
         return ResponseEntity.ok(
                 users.stream().map(UserProfileResponse::fromDomain).toList());
     }
