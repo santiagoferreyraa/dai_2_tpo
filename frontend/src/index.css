@@ -24,6 +24,10 @@
   cosas: como texto sobre blanco y como fondo con texto claro encima. La pareja
   `bg-primary text-background` queda legible en los dos temas sin que ningún componente elija.
 
+  --color-danger es el rojo de los errores de formulario, y también cambia entre temas por el
+  mismo motivo que el verde: uno claro se lee sobre el fondo oscuro y se pierde sobre el claro.
+  Los dos están medidos contra el vidrio de las tarjetas, que es donde aparecen.
+
   --color-text-muted es un gris agregado, no sale de la paleta: los grises de la paleta original
   no llegaban a los 4.5 de contraste que pide WCAG contra el fondo. El de cada tema está elegido
   contra SU fondo, y desde que hay un fondo animado detrás, contra la zona MENOS favorable de ese
@@ -37,6 +41,7 @@
   --color-text-muted: #a8b2c4;
   --color-primary: #b9fe70;
   --color-primary-strong: #a3e858;
+  --color-danger: #fca5a5;
 }
 
 /*
@@ -58,6 +63,7 @@
   --color-text-muted: #454f61;
   --color-primary: #3f8f0f;
   --color-primary-strong: #357a0c;
+  --color-danger: #b91c1c;
 
   --shell-glow-a: rgb(150 185 240 / 0.55);
   --shell-glow-b: rgb(196 178 240 / 0.45);
