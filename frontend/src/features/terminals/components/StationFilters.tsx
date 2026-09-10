@@ -38,7 +38,11 @@ interface StationFiltersProps {
 function chipClass(active: boolean): string {
   return `shrink-0 rounded-full border px-3 py-2 text-xs whitespace-nowrap shadow-lg backdrop-blur transition-colors ${
     active
-      ? 'border-primary brand-fill text-on-primary font-bold'
+      ? /*
+        El borde sigue estando pero no se ve: transparente en vez de sacado. Sacarlo le quitaría
+        un píxel de cada lado a la burbuja elegida, y encogería justo al elegirla.
+      */
+        'border-transparent brand-fill text-on-primary font-bold'
       : 'border-border bg-surface/95 text-text-muted hover:text-text'
   }`
 }
