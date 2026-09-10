@@ -14,9 +14,10 @@
  * sueltos—.
  *
  * De tablet para arriba encabezan la fila, en el lugar que dejó libre el buscador del mapa
- * cuando se sacó por repetido. No se dibujan en celular —quien lo monta decide con
- * `hidden md:flex`—: ahí el buscador ya se pliega a una burbuja para no comerse el mapa, y seis
- * filtros más al lado harían justo lo que ese plegado evita.
+ * cuando se sacó por repetido. En celular también van: al lado de la burbuja del buscador, o
+ * debajo del campo cuando está desplegado. Ahí la fila scrollea de costado en vez de envolver,
+ * así que las seis conviven con el mapa en lugar de comerle tres renglones. Dónde y cómo caen
+ * lo decide quien las monta.
  */
 
 import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL, POWER_STEPS } from '../format'

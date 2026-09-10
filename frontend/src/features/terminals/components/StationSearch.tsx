@@ -28,6 +28,14 @@ interface StationSearchProps {
   /** Si puede plegarse a una burbuja cuando está vacío y sin foco. */
   collapsible?: boolean
   /**
+   * Aviso de que se plegó o se desplegó.
+   *
+   * El campo sigue siendo dueño de su estado —quien lo usa no tiene por qué manejarlo—, pero en
+   * el mapa hay algo que depende de él: los filtros se acomodan al lado de la burbuja o debajo
+   * del campo desplegado, y sin este aviso no habría cómo saber cuál de las dos formas está.
+   */
+  onExpandedChange?: (expanded: boolean) => void
+  /**
    * Los atributos de combobox, para quien dibuje una lista de sugerencias debajo.
    *
    * Es opcional porque no todos los usos la tienen: en el mapa el campo filtra lo que ya está en
@@ -65,9 +73,15 @@ export default function StationSearch({
   value,
   onChange,
   collapsible = false,
+  onExpandedChange,
   combobox,
 }: StationSearchProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpandedState] = useState(false)
+
+  const setExpanded = (next: boolean) => {
+    setExpandedState(next)
+    onExpandedChange?.(next)
+  }
   const inputRef = useRef<HTMLInputElement>(null)
 
   /* Al desplegarse toma el foco: si no, hay que tocar dos veces para empezar a escribir. */

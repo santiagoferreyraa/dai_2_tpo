@@ -197,6 +197,18 @@ export default function StationsMapPage() {
    * se está en el mapa.
    */
   const suggestionsId = useId()
+
+  /*
+   * Si el buscador de celular se está viendo como burbuja. Lo dice él —el estado de plegado es
+   * suyo—, y acá se usa para una sola cosa: darle o no el ancho de la fila, que es lo que manda
+   * a los filtros a su lado o al renglón de abajo.
+   *
+   * La cuenta se repite de `StationSearch` porque el aviso trae solo la mitad —si tiene el
+   * foco—; la otra mitad es el texto, que vive acá: plegado es sin foco Y vacío.
+   */
+  const [searchExpanded, setSearchExpanded] = useState(false)
+  const searchCollapsed = !searchExpanded && query === ''
+
   const suggestions = query.trim() === '' ? [] : stations.slice(0, MAX_SUGGESTIONS)
 
   const nav = useSuggestionNav(suggestions, (picked) => {
@@ -231,14 +243,15 @@ export default function StationsMapPage() {
     )
   }
 
-  /* El encabezado dice tres cosas distintas, y ninguna sirve mientras las otras dos aplican. */
-  const summary = loading
-    ? 'Cargando estaciones…'
-    : loadError !== null
-      ? loadError
-      : query === '' && filters.connectorType === null && filters.minPowerKw === null
-        ? `${allStations.length} estaciones.`
-        : `${stations.length} de ${allStations.length} estaciones.`
+  /*
+   * La ficha flotante dice lo que la pantalla no puede mostrar sola, y nada más.
+   *
+   * Ya no cuenta estaciones: cuántas hay se ve en el mapa, que son los pines, y repetirlo en un
+   * número ocupaba la esquina con algo que el ojo ya sabía. Quedan los dos casos en los que el
+   * mapa NO alcanza a explicarse: mientras carga, porque un mapa vacío parece un mapa sin
+   * estaciones, y cuando la carga falla, porque si no la pantalla se rompe en silencio.
+   */
+  const notice = loading ? 'Cargando estaciones…' : loadError
 
   /* El panel, escrito una sola vez para las dos formas de la pantalla. */
   const detail = selectedStation && (
@@ -306,9 +319,9 @@ export default function StationsMapPage() {
             El buscador, solo en celular: de ahí para arriba lo reemplaza el de la franja de
             arriba, y desaparecer del todo es lo que deja a los filtros encabezando la fila.
 
-            Toma el ancho entero, que ya viene con 1rem de aire de cada lado: desplegado queda
-            centrado por simetría, sin cálculos. Plegado como burbuja el ancho igual se reserva,
-            así que al desplegarse no salta.
+            Ocupa exactamente lo que dibuja —la burbuja o el campo entero— y no un ancho fijo. El
+            ancho reservado de antes evitaba un saltito al desplegarse, pero ese hueco vacío es
+            justo donde ahora van los filtros, y tenerlos al lado vale más que el salto.
           */}
             {/*
               `relative` porque la lista de coincidencias se cuelga de este contenedor, y
@@ -316,13 +329,14 @@ export default function StationsMapPage() {
               teclas suben desde él igual.
             */}
             <div
-              className="relative mx-auto w-[min(30rem,100%)] shrink-0 md:hidden"
+              className={`relative shrink-0 md:hidden ${searchCollapsed ? 'w-12' : 'w-full'}`}
               onKeyDown={nav.onKeyDown}
             >
               <StationSearch
                 value={query}
                 onChange={handleQueryChange}
                 collapsible
+                onExpandedChange={setSearchExpanded}
                 combobox={{
                   listboxId: suggestionsId,
                   expanded: nav.open,
@@ -348,40 +362,40 @@ export default function StationsMapPage() {
             </div>
 
             {/*
-            Los filtros no van en celular: ver el comentario de StationFilters.
+            Los filtros. Dónde caen no lo decide una clase sino el ancho del buscador que tienen
+            al lado: plegado a burbuja les deja el renglón casi entero y siguen a su derecha,
+            desplegado el campo se lleva la fila completa y bajan solos al renglón de abajo. Es
+            el `flex-wrap` de la fila haciendo el trabajo, sin medir nada.
 
-            Envuelven en vez de scrollear de costado, al revés que en el ABM. Ahí la fila de
-            filtros es un renglón dedicado y el scroll horizontal se entiende; acá flotan sobre
-            el mapa, sin barra ni borde que insinúe que hay más a la derecha, y lo que no entra
-            simplemente no se encontraría. Envolviendo se ven todos, que son seis.
+            En celular scrollean de costado y en pantalla ancha envuelven, y la diferencia es
+            cuánto lugar hay: envolviendo en una pantalla angosta, seis burbujas se comen tres
+            renglones de mapa. La barra del scroll se esconde —`no-scrollbar`— porque flotan
+            sobre los mosaicos y una barra gris ahí se lee como suciedad; lo que insinúa que hay
+            más a la derecha es la burbuja cortada por el borde.
           */}
-            <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
+            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 self-center overflow-x-auto md:flex-auto md:flex-wrap md:self-start md:overflow-x-visible">
               <StationFilters value={filters} onChange={setFilters} />
             </div>
 
             {/*
-              El resumen, donde antes estaba la franja: cuántas estaciones se ven, si están
-              cargando, o qué falló.
-
-              No es un adorno que sobrevivió a la franja. Es el ÚNICO lugar donde aparece un error
-              de carga, así que sacarlo del todo dejaba a la pantalla fallando en silencio: el mapa
-              vacío y nadie explicando por qué. Por eso se pinta en rojo cuando algo se rompió, que
-              es lo que lo saca de ser un dato al pasar.
+              El aviso de carga o de error, el ÚNICO lugar donde aparece un fallo del backend. Se
+              pinta en rojo cuando algo se rompió, que es lo que lo saca de ser un dato al pasar.
 
               `md:ml-auto` lo manda al extremo de la fila, lejos del buscador y de los filtros: es
-              información, no un control, y no tiene por qué competir con ellos por la atención. En
-              el celular no, porque ahí el buscador ocupa el renglón entero y la ficha cae abajo:
-              empujada a la derecha quedaría colgando sola en el aire.
+              información, no un control. En el celular no, porque ahí los filtros ocupan el
+              renglón: empujado a la derecha quedaría colgando solo en el aire.
             */}
-            <p
-              className={`glass-panel shrink-0 rounded-full px-3 py-1.5 text-xs font-medium md:ml-auto ${
-                loadError !== null ? 'text-danger' : 'text-text-muted'
-              }`}
-              /* Los errores se anuncian solos; el conteo no interrumpe. */
-              role={loadError !== null ? 'alert' : undefined}
-            >
-              {summary}
-            </p>
+            {notice !== null && (
+              <p
+                className={`glass-panel shrink-0 rounded-full px-3 py-1.5 text-xs font-medium md:ml-auto ${
+                  loadError !== null ? 'text-danger' : 'text-text-muted'
+                }`}
+                /* Los errores interrumpen; el "cargando" no. */
+                role={loadError !== null ? 'alert' : undefined}
+              >
+                {notice}
+              </p>
+            )}
           </div>
 
           {/*
