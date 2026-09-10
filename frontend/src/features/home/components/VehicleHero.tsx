@@ -119,12 +119,17 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
           </div>
         ) : (
           /*
-            Cada dato es un dibujo a la izquierda y, a su derecha, el rótulo arriba del valor. Los
-            cuatro quedan centrados en la barra en vez de repartidos a lo ancho: pegados al borde
-            de una tarjeta que ocupa la pantalla entera, el primero y el último terminaban a un
-            metro de distancia y dejaban de leerse como una misma ficha.
+            Cada dato es un dibujo a la izquierda y, a su derecha, el rótulo arriba del valor.
+
+            Los cuatro se reparten la barra en columnas iguales y cada uno queda centrado en la
+            suya. Es lo que los mantiene separados en un monitor grande sin que la separación sea
+            un número escrito a mano: la columna mide un cuarto de lo que haya, así que el aire
+            entre ellos lo calcula el navegador y cambia solo con el ancho de la pantalla.
+
+            En pantalla angosta son dos columnas de dos. Cuatro no entran, y apretarlos hasta que
+            entren pierde justo lo que se está buscando acá.
           */
-          <dl className="flex flex-wrap items-center justify-center gap-x-12 gap-y-5">
+          <dl className="grid grid-cols-2 justify-items-center gap-x-4 gap-y-5 sm:grid-cols-4">
             {DRIVER_VEHICLE.specs.map((spec) => {
               const Icon = SPEC_ICONS[spec.icon]
               return (
