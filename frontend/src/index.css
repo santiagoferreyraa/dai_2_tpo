@@ -123,6 +123,12 @@
   El realce del mouse ahora es un aclarado, que no tiene dirección, y solo existe donde hay un
   puntero de verdad: `(hover: hover)` deja afuera al celular, que es donde el estado se pegaba.
 
+  **Y el aclarado entra de golpe, sin transición.** Suavizarlo obligaba a declarar `transition`
+  acá, y esta regla vive fuera de las capas de Tailwind: le ganaba a la transición propia de cada
+  elemento. Le pasó a la perilla del interruptor de tema, que dejó de deslizarse, y a la barra de
+  progreso, que dejó de crecer. Un cambio de brillo al pasar el mouse no vale un efecto que
+  desactiva el de todos los demás.
+
   Sobre un elemento deshabilitado hay que apagarlo con `disabled:bg-none`: un `bg-*` cambia el
   color de fondo, pero el degradado es una IMAGEN y se sigue dibujando encima.
 */
@@ -131,19 +137,8 @@
 }
 
 @media (hover: hover) {
-  .brand-fill {
-    transition: filter 200ms ease;
-  }
-
   .brand-fill:hover {
     filter: brightness(1.06);
-  }
-}
-
-/* Quien pidió menos movimiento no necesita ver el cambio. */
-@media (prefers-reduced-motion: reduce) {
-  .brand-fill {
-    transition: none;
   }
 }
 
