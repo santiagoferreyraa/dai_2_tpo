@@ -180,3 +180,44 @@ export function ClockIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/** Escudo con tilde: la compatibilidad del auto con el conector de una estación. */
+export function ShieldCheckIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M12 2.75 5 5.5v5.2c0 4.3 2.9 8.3 7 9.55 4.1-1.25 7-5.25 7-9.55V5.5l-7-2.75Z" />
+      <path d="m9 11.6 2.2 2.2L15.2 9.8" />
+    </svg>
+  )
+}
+
+/** Barras de un gráfico: la actividad de carga del conductor. */
+export function ChartIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4 20h16" />
+      <path d="M7 20v-6M12 20V6M17 20v-9" />
+    </svg>
+  )
+}
+
+/**
+ * Volante: el conductor, en su ficha de la franja de arriba.
+ *
+ * Reemplaza al rayo que estaba ahí. El rayo es el símbolo de la CARGA y ya aparece en la ficha
+ * del vehículo, en los pines del mapa y en las tarjetas de estación: en el lugar donde va el
+ * avatar decía "electricidad" cuando lo que tiene que decir es "sos vos, y manejás".
+ *
+ * Tres rayos a las 12, las 4 y las 8, que es el volante de tres brazos de cualquier auto. Los
+ * números salen de proyectar cada ángulo entre el radio del cubo y el de la llanta, así que
+ * arrancan justo donde termina el círculo del medio y no lo pisan.
+ */
+export function SteeringWheelIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="2.75" />
+      <path d="M12 9.25V3.5M9.62 13.38 4.64 16.25M14.38 13.38 19.36 16.25" />
+    </svg>
+  )
+}

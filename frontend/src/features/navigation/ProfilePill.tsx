@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { displayNameFrom } from '@/lib/displayName'
 
-import { BoltIcon } from './icons'
+import { SteeringWheelIcon } from './icons'
 import { PROFILE_SECTION } from './navSections'
 
 /**
@@ -58,16 +58,25 @@ export default function ProfilePill() {
       aria-label={`Perfil de ${session.email}`}
     >
       {/*
-        El rayo, en un círculo verde. Redondo y no cuadrado porque es lo que ocupa el lugar del
+        El volante, en un círculo verde. Redondo y no cuadrado porque es lo que ocupa el lugar del
         avatar que todavía no existe, y un avatar es redondo en todos lados.
 
-        El rayo va con el color del FONDO de la página, que es el mismo recurso que usan la luna y
-        el sol de la perilla del interruptor: oscuro sobre el tema oscuro, claro sobre el claro.
-        Es lo que lo hace leer como recortado del círculo verde y no como un dibujo apoyado
-        encima, y es lo que mantiene a los dos vecinos de la franja hablando el mismo idioma.
+        **Es un volante y no un rayo**, que es lo que había antes. El rayo es el símbolo de la
+        carga y ya está en la ficha del vehículo, en los pines del mapa y en las fichas de la
+        cinta; acá, en el lugar del avatar, decía "electricidad" cuando lo que tiene que decir es
+        quién sos. El volante además acompaña al rol que va escrito justo debajo.
+
+        Va con el color del FONDO de la página, que es el mismo recurso que usan la luna y el sol
+        de la perilla del interruptor: oscuro sobre el tema oscuro, claro sobre el claro. Es lo
+        que lo hace leer como recortado del círculo verde y no como un dibujo apoyado encima, y es
+        lo que mantiene a los dos vecinos de la franja hablando el mismo idioma.
+
+        Un punto más grande que el rayo (20px contra 16): el rayo es una silueta maciza y se lee
+        de golpe, el volante es de trazo y tiene un círculo adentro, así que apretado a 16px los
+        tres brazos se empastan contra el cubo.
       */}
       <span className="text-background brand-fill flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-        <BoltIcon className="h-4 w-4" />
+        <SteeringWheelIcon className="h-5 w-5" />
       </span>
 
       <span className="flex flex-col leading-tight">

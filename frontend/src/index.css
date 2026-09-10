@@ -270,6 +270,322 @@
   opacity: 0;
 }
 
+/* ─────────────────────── Ubicación del dispositivo en el mapa ───────────────────────
+  El punto del "estás acá" y su halo, que late. Ver `devicePin.ts`.
+
+  El latido no es decoración: distingue el punto que el navegador está midiendo AHORA de un pin
+  cualquiera dibujado sobre el mapa. Es lento —2,4 s— y sale de adentro hacia afuera, que es el
+  gesto que ya usan todos los mapas para lo mismo.
+
+  Se desvanece del todo antes de terminar (70%) y se queda invisible el resto del ciclo: sin esa
+  pausa el halo vuelve a empezar apenas termina y late como un corazón acelerado, que sobre un
+  mapa quieto se lee como una alarma.
+*/
+@keyframes device-pin-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+
+/*
+  El halo va del verde de la marca, y de las dos puntas del par le toca la CLARA —`--brand-from`,
+  la misma que usa `::selection`— y no el degradado.
+
+  El disco de abajo sí lleva el degradado entero, con `brand-fill`. Acá no, y la diferencia no es
+  un descuido: un degradado sobre una forma que se está agrandando y desvaneciendo al mismo
+  tiempo no se lee como degradado, se lee como una mancha sucia de un lado. Un color plano se
+  expande parejo, que es lo único que este halo tiene que hacer.
+*/
+.device-pin__pulse {
+  background-color: var(--brand-from);
+  animation: device-pin-pulse 2400ms ease-out infinite;
+}
+
+/* Para quien pidió menos movimiento, el halo se queda quieto en vez de desaparecer: el punto
+   sigue leyéndose como ubicación en vivo, solo que sin latir. */
+@media (prefers-reduced-motion: reduce) {
+  .device-pin__pulse {
+    animation: none;
+    opacity: 0.3;
+  }
+}
+
+/* ─────────────────────── La línea del dispositivo a la estación ───────────────────────
+  Aparece al reservar, titila, y se va sola. Ver el `Polyline` de `StationMap`.
+
+  **Las duraciones de acá están atadas a TRACE_DURATION_MS, en `StationsMapPage`.** Son 2500 ms
+  repartidos así: tres parpadeos de 620 ms (1860), una pausa encendida, y el desvanecido de
+  300 ms arrancando a los 2200 para terminar justo cuando React desmonta la línea. Si allá se
+  cambia el plazo, hay que rehacer este reparto o la línea desaparece de golpe a mitad de
+  desvanecido —que es exactamente el corte seco que esto existe para evitar—.
+
+  El parpadeo NO lleva `forwards`: al terminar, la opacidad vuelve al valor del atributo que
+  escribe Leaflet, que es 1. Esa es la pausa encendida, y sale gratis. El desvanecido sí lo
+  lleva, porque su valor final —invisible— tiene que quedar fijo hasta el desmontaje.
+
+  Punteada y no llena: es dirección y distancia, no un recorrido por calles. Una línea llena
+  prometería un camino que nadie calculó.
+*/
+@keyframes station-trace-blink {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.15;
+  }
+}
+
+@keyframes station-trace-fade {
+  to {
+    stroke-opacity: 0;
+  }
+}
+
+.station-trace {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1 14;
+  animation:
+    station-trace-blink 620ms ease-in-out 3,
+    station-trace-fade 300ms ease-in 2200ms forwards;
+}
+
+/*
+  Sin movimiento la línea no titila, pero SIGUE yéndose sola: el titileo es el énfasis, la
+  desaparición es la función. Una línea que se queda para siempre sobre el mapa es otra cosa.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .station-trace {
+    animation: station-trace-fade 300ms ease-in 2200ms forwards;
+  }
+}
+
+/* ─────────────────────── La cinta de "próximamente" ───────────────────────
+  La faja cruzada sobre un recuadro que todavía no se puede usar, como la cinta de obra. La pone
+  `TapedCard.tsx`, que es quien explica el resto del tratamiento.
+
+  **Va en CSS y no como imagen.** Una PNG exportada tendría el verde quemado en los píxeles, así
+  que al cambiar de tema quedaría con el verde del otro; el texto no se podría corregir sin
+  volver a exportar; y en una pantalla retina habría que mantener dos archivos. Hecha con
+  gradientes sale del mismo par de la marca que todo lo demás y cambia de tema sola.
+
+  Se sale del recuadro por los dos costados a propósito —de ahí los `-2rem`—: una cinta que
+  termina justo en el borde se lee como un cartel pegado adentro, y una que se corta contra el
+  borde se lee como una cinta que sigue de largo, que es lo que es. El `overflow-hidden` de la
+  tarjeta es el que la recorta.
+
+  La rotación es negativa para que suba hacia la derecha. En sentido horario —positiva— la cinta
+  baja, y el conjunto se lee como algo que se cayó en vez de algo que alguien pegó.
+*/
+.taped-card__tape {
+  position: absolute;
+  left: -2rem;
+  right: -2rem;
+  top: 50%;
+  /*
+    El ángulo lo pone quien usa la tarjeta, con -11deg por omisión. Es variable porque dos
+    tarjetas tapadas pueden quedar una al lado de la otra, y con la misma inclinación las dos
+    cintas se alinean y se leen como una sola cruzando la fila entera.
+  */
+  transform: translateY(-50%) rotate(var(--tape-angle, -11deg));
+
+  /*
+    Dos capas: las franjas diagonales arriba y el degradado de la marca abajo. Las franjas son
+    la tinta oscura del verde a media opacidad, así que son el MISMO color que usaría un texto
+    encima; con un negro suelto la cinta se ensucia y deja de pertenecer a la paleta.
+  */
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--color-on-primary) 22%, transparent) 0 10px,
+      transparent 10px 26px
+    ),
+    linear-gradient(135deg, var(--brand-from), var(--brand-to));
+
+  /* Los bordes de arriba y abajo, apenas más oscuros: es lo que le da canto y la despega del
+     recuadro en vez de dejarla como una mancha impresa sobre el vidrio. */
+  border-top: 2px solid color-mix(in srgb, var(--color-on-primary) 28%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--color-on-primary) 28%, transparent);
+
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.3);
+
+  padding: 0.45rem 0;
+  overflow: hidden;
+}
+
+.taped-card__text {
+  display: block;
+  white-space: nowrap;
+  text-align: center;
+
+  color: var(--color-on-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* ─────────────────────── La cinta de estaciones de la portada ───────────────────────
+  Se desplaza sola en bucle y frena al pasarle el mouse. Ver `StationTicker.tsx`, que explica
+  por qué la lista se dibuja dos veces y por qué la separación va como margen y no como `gap`.
+
+  El ancho y el margen de la ficha viven ACÁ y no como utilidades en el componente porque son
+  las dos medidas de las que depende que el bucle no tenga costura: la cinta se corre hasta el
+  50% de su ancho, y eso solo cae en un punto idéntico si cada ficha mide exactamente lo mismo,
+  margen incluido. Separadas en dos archivos, cambiar una sin la otra rompe el bucle de una
+  forma que no salta hasta que uno se queda mirando la franja un rato largo.
+*/
+@keyframes station-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.station-ticker {
+  overflow: hidden;
+
+  /*
+    **El aire de arriba y abajo es para la SOMBRA, no para separar.**
+
+    Un contenedor con `overflow: hidden` recorta en los cuatro lados: el navegador no deja pedir
+    solo el horizontal. Sin lugar de sobra, la sombra de cada ficha se corta al ras contra el
+    borde de la cinta y dibuja dos líneas horizontales de punta a punta — que es exactamente la
+    separación rara que se veía alrededor de la franja. El margen negativo devuelve el lugar
+    prestado, así que la cinta sigue ocupando en la página lo mismo que antes.
+
+    Es el mismo arreglo que ya tiene la fila de filtros del mapa, por el mismo motivo y con el
+    mismo truco. Los 40px salen de la sombra de la ficha, con margen de sobra.
+  */
+  padding-block: 2.5rem;
+  margin-block: -2.5rem;
+
+  /*
+    Y ese lugar prestado no atrapa el mouse: la caja se estira 40px sobre la fila de tarjetas de
+    arriba, invisible, y sin esto se quedaría con los clics de esa franja. Las fichas lo vuelven
+    a encender para sí mismas.
+  */
+  pointer-events: none;
+
+  /* Enmascarado en las dos puntas: sin esto las fichas aparecen y desaparecen de golpe contra
+     el borde, que se lee como un recorte y no como una cinta que sigue de largo. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 4rem,
+    black calc(100% - 4rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 4rem,
+    black calc(100% - 4rem),
+    transparent
+  );
+}
+
+.station-ticker__track {
+  display: flex;
+  width: max-content;
+  animation: station-ticker-scroll var(--ticker-duration, 60s) linear infinite;
+
+  /*
+    El mouse se vuelve a encender ACÁ y no en la ficha, y la diferencia importa: la cinta lo apagó
+    para no quedarse con los clics de su relleno de 40px, y ese relleno es del contenedor. El
+    track ocupa exactamente el alto de las fichas, así que encendido acá recibe el mouse justo
+    sobre la franja visible y no sobre el aire prestado de arriba y abajo.
+
+    Encenderlo solo en la ficha no alcanzaba: el freno de abajo se dispara con `:hover`, y un
+    elemento con `pointer-events: none` NO recibe hover — el selector no coincidiría nunca y la
+    cinta no frenaría más.
+  */
+  pointer-events: auto;
+}
+
+/*
+  Frena con el mouse encima. Va sobre el track y no sobre `.station-ticker` por lo que explica el
+  comentario de arriba: el contenedor no recibe hover.
+
+  Y encima es lo correcto por otro motivo: sobre el contenedor, la cinta frenaría también al
+  pasar el mouse por los 40px de relleno invisible, o sea sin estar tocándola.
+*/
+.station-ticker__track:hover {
+  animation-play-state: paused;
+}
+
+/*
+  También frena con el foco del teclado. Las fichas son enlaces, así que se puede llegar a ellas
+  tabulando, y perseguir con el Tab un blanco en movimiento es imposible: sin esto la cinta es
+  navegable solo con mouse.
+
+  `:focus-within` y no `:focus`: el que recibe el foco es el enlace de adentro, no la cinta.
+*/
+.station-ticker:focus-within .station-ticker__track {
+  animation-play-state: paused;
+}
+
+/*
+  La ficha: ancho, separación y superficie.
+
+  **Es la única tarjeta de la aplicación que NO es de vidrio, y no se puede hacer de otra forma.**
+  `backdrop-filter` necesita ver el fondo de la página para desenfocarlo, y un ancestro con
+  `mask-image` o con un `transform` animado —la cinta tiene los dos— crea un "backdrop root" que
+  le corta esa vista: el desenfoque se queda sin nada que muestrear y las fichas salen planas y
+  lavadas, distintas del resto de la portada. Con una superficie opaca se dibujan siempre igual,
+  adentro o afuera de la cinta.
+
+  El cuerpo va al 88% y no al 100% para que el fondo animado de la aplicación se insinúe por
+  detrás, que es lo que las mantiene en la misma familia que las tarjetas de vidrio aunque no
+  compartan la técnica.
+
+  El mouse no se toca acá: lo enciende el track, que es su padre. Ver el comentario de allá.
+*/
+.station-ticker__card {
+  width: 17rem;
+  margin-right: 1rem;
+  flex: none;
+
+  background-color: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.1);
+}
+
+/*
+  Para quien pidió menos movimiento, la cinta se queda quieta y pasa a arrastrarse con el dedo o
+  la rueda. La información no se pierde —están todas las fichas—, cambia quién la mueve.
+
+  La segunda copia queda visible y es lo correcto: sacarla necesitaría que el componente supiera
+  de esta preferencia, y repetida no molesta cuando uno controla el desplazamiento.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .station-ticker {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .station-ticker::-webkit-scrollbar {
+    display: none;
+  }
+
+  .station-ticker__track {
+    animation: none;
+  }
+}
+
 /*
   La barra de scroll del carrusel se oculta: la columna está superpuesta sobre el mapa y una
   barra clara al costado corta el degradado justo donde tiene que desvanecerse. La posición

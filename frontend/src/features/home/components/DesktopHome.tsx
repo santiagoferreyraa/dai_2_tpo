@@ -1,10 +1,12 @@
-import { Link } from 'react-router'
-
-import { MapIcon } from '@/features/navigation/icons'
-
-import ActivityCard from './ActivityCard'
-import NextChargeCard from './NextChargeCard'
+import ActivityTeaser from './ActivityTeaser'
+import ChargeTimeCard from './ChargeTimeCard'
+import { CompatibilityBody } from './CompatibilityCard'
+import NearestStationCard from './NearestStationCard'
+import StationTicker from './StationTicker'
+import TapedCard from './TapedCard'
 import VehicleHero from './VehicleHero'
+
+import { useHomeStations } from '../data/homeStations'
 
 /**
  * La portada de escritorio y tablet.
@@ -13,17 +15,27 @@ import VehicleHero from './VehicleHero'
  * qué se fue: el reparto de conectores por tipo, la potencia máxima de la plataforma y el total de
  * conectores libres eran datos ciertos, pero de infraestructura. Al conductor no le resuelven nada
  * —su pregunta es dónde puede cargar ahora— y al operador sí, así que se mudaron a Estaciones, que
- * ya es su pantalla. Lo mismo con el bloque de emisiones: quedaba lindo y no aportaba a la tarea.
+ * ya es su pantalla.
  *
- * Lo que queda son cuatro cosas y todas miran al conductor: su auto, su próxima carga, su
- * actividad y la puerta al mapa.
+ * Lo que queda son cinco cosas y todas miran al conductor: su auto, dónde cargarlo ahora, si el
+ * enchufe le sirve, cuánto va a tardar y qué otras estaciones hay.
  *
- * **Dos de esas cuatro están vacías hoy, y con razón.** Las reservas y las sesiones de carga
- * dependen de servicios que todavía no existen, así que las tarjetas muestran su estado vacío, que
- * es verdadero, con el estado lleno ya escrito esperando los datos. Ver `data/nextCharge.ts` y
- * `data/chargingActivity.ts`.
+ * **Todos los datos salen de UNA sola carga.** `useHomeStations` pide las estaciones una vez y de
+ * ahí salen los tres recuadros que hablan de ellas. La distancia se calcula en el navegador, así
+ * que moverse con el GPS prendido reordena la portada sin un solo pedido de red. El porqué está
+ * en `terminals/geo.ts`.
+ *
+ * **Dos recuadros de la fila del medio están tapados con la cinta, y por motivos distintos.**
+ * Actividad porque el dato no existe —depende de las sesiones de carga, RF11/RF12/RF16—, y
+ * compatibilidad porque el dato existe pero todavía no está decidido si es lo que conviene decir
+ * en ese lugar. El tratamiento es el mismo y lo pone `TapedCard`: desenfoque sobre todo el
+ * contenido, cinta nítida encima. Lo que cambia es la inclinación de la cinta, para que dos
+ * tarjetas vecinas no se lean como una sola faja cruzando la fila.
  */
 export default function DesktopHome() {
+  const { stations, nearest, compatibleCount, usableCount, deviceLocation, loading, error } =
+    useHomeStations()
+
   return (
     /*
       Sin ancho máximo y con el MISMO `px-6` que la franja de arriba: así los recuadros arrancan y
@@ -32,46 +44,65 @@ export default function DesktopHome() {
     */
     <div className="flex w-full flex-col gap-5 px-6 pt-6 pb-10">
       {/*
-        El auto y la próxima carga comparten la primera fila, y la actividad ocupa la segunda de
-        lado a lado.
+        La grilla de tres columnas, y la clave de la disposición está en la columna DERECHA: la
+        estación más cercana y la compatibilidad se apilan ahí y juntas miden lo mismo que el auto
+        más la fila de abajo. Por eso el auto ocupa dos columnas y no tres.
 
-        La alternativa era apilar auto y actividad a la izquierda con la próxima carga alta al
-        costado, y se veía peor: esa tarjeta hoy dice dos renglones, así que estirada a la altura
-        de las otras dos quedaba con medio recuadro de aire. Emparejada solo con el auto, el aire
-        que le sobra es el de una tarjeta y se lee como respiro.
+        Debajo de `xl` todo pasa a una sola columna. En un ancho intermedio, tres columnas dejan
+        el mapa chico convertido en una estampilla y el nombre de la estación cortado a la mitad.
       */}
       <div className="grid gap-5 xl:grid-cols-3">
         <VehicleHero className="xl:col-span-2" />
-        <NextChargeCard />
+
+        <NearestStationCard
+          nearest={nearest}
+          stations={stations}
+          deviceLocation={deviceLocation}
+          loading={loading}
+        />
+
+        {/*
+          La fila de abajo. `xl:col-span-2` repartido entre dos recuadros deja a la
+          compatibilidad justo debajo del mapa chico, cerrando la columna derecha.
+        */}
+        <ChargeTimeCard nearest={nearest} loading={loading} />
+        <ActivityTeaser />
+        {/*
+          Tapado como Actividad, y por decisión de producto: los números de adentro son reales,
+          pero todavía no está resuelto qué conviene que diga este lugar. La cinta es lo que dice
+          "acá falta decidir algo" sin sacar el recuadro de la grilla, que es lo que dejaría la
+          fila coja.
+
+          El ángulo va al revés que el de Actividad. Con los dos iguales, las cintas de dos
+          tarjetas vecinas se alinean y se leen como una sola faja cruzando la fila entera.
+        */}
+        <TapedCard label="Compatibilidad de tu vehículo con la red. Próximamente." tapeAngle="9deg">
+          <CompatibilityBody
+            compatibleCount={compatibleCount}
+            usableCount={usableCount}
+            totalCount={stations.length}
+          />
+        </TapedCard>
       </div>
 
-      <ActivityCard />
+      {/*
+        El único lugar de la portada donde aparece un fallo del backend.
 
-      {/* La franja de cierre: la última oportunidad de mandar al mapa. */}
-      <section className="glass-panel flex flex-col gap-5 rounded-3xl p-6 md:flex-row md:items-center md:gap-8">
-        <div className="flex items-center gap-4">
-          {/* Suelto y grande, igual que los de la ficha del vehículo: ver el comentario de allá. */}
-          <MapIcon className="text-primary h-11 w-11 shrink-0" />
-          <div>
-            <p className="text-text-muted text-xs font-medium">Una sola cuenta</p>
-            <p className="text-text mt-1 text-sm font-semibold text-pretty">
-              Sin una aplicación distinta por cada operador de carga.
-            </p>
-          </div>
-        </div>
-
-        <p className="text-text-muted border-border/60 text-sm leading-relaxed text-pretty md:flex-1 md:border-l md:pl-8">
-          Buscás en el mapa, reservás el conector por la ventana que necesitás y cargás. Se cobra lo
-          que consumiste, con la seña ya descontada.
+        Va acá abajo y no arriba de todo a propósito: la portada NO se rompe sin estaciones —el
+        auto, el conector y la explicación del producto siguen en pie—, así que un cartel rojo
+        encabezando la pantalla exageraría lo que pasó. Lo que sí hace falta es que quien ve tres
+        recuadros diciendo "no hay estación" entienda que el problema es la conexión y no la red
+        de carga.
+      */}
+      {error !== null && (
+        <p className="text-danger text-sm" role="alert">
+          {error}
         </p>
+      )}
 
-        <Link
-          to="/stations/map"
-          className="brand-fill text-on-primary shrink-0 rounded-xl px-5 py-2.5 text-center text-sm font-semibold transition-colors"
-        >
-          Ver el mapa
-        </Link>
-      </section>
+      {/* La cinta de estaciones: la última oportunidad de mandar al mapa, y la más concreta —cada
+          ficha es una estación de verdad y lleva a la suya. */}
+      <StationTicker stations={stations} className="-mx-6" />
     </div>
   )
 }

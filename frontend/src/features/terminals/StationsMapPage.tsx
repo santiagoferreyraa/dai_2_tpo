@@ -25,7 +25,7 @@
  * de abajo se entera.
  */
 
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import type { LatLngTuple } from 'leaflet'
 
@@ -41,6 +41,7 @@ import { searchStations } from './data/stationsRepository'
 import { matchesFilters, matchesQuery } from './format'
 import type { ConnectorFilters } from './format'
 import { COUNTRY_RADIUS_KM, DEFAULT_CENTER } from './mapConfig'
+import { useDeviceLocation } from './useDeviceLocation'
 import { useMediaQuery } from './useMediaQuery'
 import { useSuggestionNav } from './useSuggestionNav'
 import type { ConnectorSummary, StationResult } from './types'
@@ -63,6 +64,15 @@ const WIDE_QUERY = '(min-width: 1024px)'
  * verdad obligaría a un ResizeObserver sobre un panel que entra animado.
  */
 const SHEET_INSET_PX = 380
+
+/**
+ * Cuánto dura la línea entre el dispositivo y la estación al reservar.
+ *
+ * **Está atado a las animaciones de `.station-trace`, en index.css**, que reparten exactamente
+ * este plazo entre los parpadeos y el desvanecido final. Cambiar el número acá sin rehacer aquel
+ * reparto deja la línea desapareciendo de golpe.
+ */
+const TRACE_DURATION_MS = 2500
 
 /**
  * El conector que viene elegido de arranque: el más rápido de los que están libres.
@@ -106,6 +116,29 @@ export default function StationsMapPage() {
   const [searchParams] = useSearchParams()
   const urlQuery = searchParams.get('q') ?? ''
 
+  /*
+   * `?station=3` abre el mapa con esa estación ya elegida y el panel arriba.
+   *
+   * Existe para la portada: el recuadro de la estación más cercana la nombra, y tocarlo tiene
+   * que llevar a ESA estación abierta. Sin esto, el conductor aterriza en el mapa teniendo que
+   * buscar de nuevo la que le acaban de mostrar.
+   *
+   * Es el mismo mecanismo que ya usa el ABM (ver `STATION_PARAM` en `StationsPage`), con el
+   * mismo nombre de parámetro a propósito: son la misma idea, y un enlace armado a mano para una
+   * pantalla funciona en la otra.
+   *
+   * Se aplica UNA sola vez, cuando llegan las estaciones, y después se olvida. Si se aplicara en
+   * cada render, cerrar el panel lo volvería a abrir en el cuadro siguiente y la estación no se
+   * podría sacar de encima sin editar la dirección.
+   */
+  const [pendingStationId, setPendingStationId] = useState<number | null>(() => {
+    const raw = searchParams.get('station')
+    if (raw === null) return null
+
+    const parsed = Number(raw)
+    return Number.isInteger(parsed) ? parsed : null
+  })
+
   const [query, setQuery] = useState(urlQuery)
   const [lastUrlQuery, setLastUrlQuery] = useState(urlQuery)
 
@@ -127,6 +160,28 @@ export default function StationsMapPage() {
 
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null)
   const [selectedConnectorId, setSelectedConnectorId] = useState<number | null>(null)
+
+  /*
+   * La ubicación del dispositivo. Se pide al entrar al mapa y no detrás de un botón: es la
+   * pantalla donde el permiso se explica solo, y donde pedirlo en otro momento sería más raro
+   * que pedirlo acá.
+   *
+   * Que falte no rompe nada. Sin permiso, sin HTTPS o fuera del país no hay punto azul y la
+   * reserva no traza línea; todo lo demás de la pantalla funciona igual. Por eso el estado no
+   * se muestra hoy en ningún cartel: el hook distingue los cuatro motivos (ver
+   * `DeviceLocationStatus`) para el día que se quiera decirlo, pero un aviso permanente de
+   * "activá la ubicación" sobre un mapa que anda sin ella es ruido.
+   */
+  const device = useDeviceLocation()
+
+  /*
+   * La estación hacia la que se está trazando la línea, mientras dura. Es un estado aparte de
+   * `selectedStationId` y no un booleano colgado de él porque son dos cosas distintas: la
+   * selección la manda el usuario y dura hasta que la cambie, el trazo lo dispara la reserva y
+   * se apaga solo.
+   */
+  const [tracedStationId, setTracedStationId] = useState<number | null>(null)
+  const traceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wide = useMediaQuery(WIDE_QUERY)
 
@@ -161,6 +216,24 @@ export default function StationsMapPage() {
     return () => controller.abort()
   }, [])
 
+  /*
+   * La estación de `?station=` se aplica en cuanto llegan los datos.
+   *
+   * Va DURANTE el render y no en un efecto, que es el mismo patrón que usa la búsqueda unas
+   * líneas más arriba y el que React recomienda para el estado que se deriva de algo de afuera.
+   * Hecho en un efecto se alcanza a ver un cuadro con el mapa sin nada elegido antes de que se
+   * abra el panel, que es exactamente el parpadeo que este parámetro existe para evitar.
+   *
+   * `setPendingStationId(null)` primero: es lo que hace que esto pase una sola vez y que cerrar
+   * el panel no lo vuelva a abrir en el render siguiente.
+   */
+  if (pendingStationId !== null && allStations.length > 0) {
+    setPendingStationId(null)
+    setSelectedStationId(pendingStationId)
+    /* El conector arranca de nuevo, igual que en cualquier otra selección. */
+    setSelectedConnectorId(null)
+  }
+
   const stations = useMemo(
     () =>
       allStations.filter(
@@ -178,6 +251,13 @@ export default function StationsMapPage() {
    * costaría volver a buscarla.
    */
   const selectedStation = stations.find((s) => s.stationId === selectedStationId) ?? null
+
+  /*
+   * La estación del trazo se resuelve como la elegida, contra la lista ya filtrada: `find`
+   * devuelve siempre la misma referencia mientras no cambie el arreglo, y de eso depende que el
+   * encuadre de `FitTrace` ocurra una sola vez y no en cada arreglo del GPS.
+   */
+  const tracedStation = stations.find((s) => s.stationId === tracedStationId) ?? null
 
   /*
    * El conector elegido se resuelve contra la estación de ahora y cae en el de por omisión si
@@ -231,16 +311,72 @@ export default function StationsMapPage() {
     setSelectedConnectorId(null)
   }
 
-  function handleReserve() {
-    /*
-     * RF08 —reserva de slot con seña— todavía no existe: no hay BookingService ni pantalla de
-     * reserva. El botón se deja activo igual para que la regla que sí está implementada —un
-     * conector fuera de servicio no se reserva— se pueda probar de verdad contra el estado
-     * habilitado. Cuando entre RF08, este cuerpo pasa a ser la navegación al alta.
-     */
+  function clearTraceTimer() {
+    if (traceTimer.current === null) return
+    clearTimeout(traceTimer.current)
+    traceTimer.current = null
+  }
+
+  /*
+   * Si la pantalla se desmonta con el trazo corriendo, el setState posterior cae sobre un
+   * componente que ya no existe — y encima saltaría el cartel de la reserva sobre otra pantalla.
+   */
+  useEffect(() => clearTraceTimer, [])
+
+  /**
+   * El aviso de que RF08 —reserva de slot con seña— todavía no existe: no hay BookingService ni
+   * pantalla de reserva. El botón se deja activo igual para que la regla que sí está
+   * implementada —un conector fuera de servicio no se reserva— se pueda probar de verdad contra
+   * el estado habilitado. Cuando entre RF08, esto pasa a ser la navegación al alta.
+   */
+  function notifyReservationPending() {
     window.alert(
       'La reserva todavía no está disponible: llega con RF08, que incluye el cobro de la seña.',
     )
+  }
+
+  /**
+   * Dibuja la línea hasta la estación y la apaga sola. Ver TRACE_DURATION_MS.
+   *
+   * El temporizador anterior se corta antes de abrir otro: sin eso, tocar Reservar dos veces
+   * deja dos plazos corriendo y el primero en vencer apaga la línea que acababa de encender el
+   * segundo, cortándola a la mitad.
+   */
+  function startTrace(stationId: number) {
+    clearTraceTimer()
+    setTracedStationId(stationId)
+
+    traceTimer.current = setTimeout(() => {
+      traceTimer.current = null
+      setTracedStationId(null)
+      notifyReservationPending()
+    }, TRACE_DURATION_MS)
+  }
+
+  function handleReserve() {
+    if (selectedStation === null) return
+
+    /*
+     * Sin ubicación no hay línea que trazar —no hay punto de partida—, así que el botón hace lo
+     * único que sabe hacer hoy: avisar que la reserva no está.
+     */
+    if (device.location === null) {
+      notifyReservationPending()
+      return
+    }
+
+    /*
+     * Con ubicación, primero el trazo y el aviso DESPUÉS, cuando la línea terminó.
+     *
+     * No es una preferencia de ritmo: `window.alert` congela el hilo de la página, animaciones
+     * incluidas. Lanzado acá, el mapa se queda clavado en el cuadro anterior y ni el encuadre ni
+     * el titileo llegan a verse hasta que alguien cierre el cartel — y para entonces ya pasaron.
+     *
+     * El día que RF08 exista este orden deja de importar, porque lo que va a haber acá es una
+     * navegación y no un cartel modal. Mientras tanto, el aviso al final es lo que deja convivir
+     * las dos cosas.
+     */
+    startTrace(selectedStation.stationId)
   }
 
   /*
@@ -295,6 +431,8 @@ export default function StationsMapPage() {
             onSelect={selectStation}
             bottomInsetPx={!wide && selectedStation !== null ? SHEET_INSET_PX : 0}
             dimUnselected={selectedStation !== null}
+            deviceLocation={device.location}
+            traceTo={tracedStation}
           />
 
           {/*

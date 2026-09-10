@@ -5,7 +5,7 @@ import { displayNameFrom } from '@/lib/displayName'
 
 import { BatteryIcon, BoltIcon, GaugeIcon, PlugIcon } from '@/features/navigation/icons'
 
-import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE } from '../vehicle'
+import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE, specsOf } from '../vehicle'
 import type { SpecIcon } from '../vehicle'
 
 /**
@@ -58,17 +58,28 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
         backgroundImage: `url("${image}")`,
         backgroundRepeat: 'no-repeat',
         /*
-          El auto se apoya arriba a la derecha y sobresale por el borde: encuadrado entero y
-          centrado se ve como una foto de catálogo, y asomando se ve como parte de la pantalla.
+          El auto va centrado a lo ancho y APOYADO sobre la barra de la ficha, metiéndose un poco
+          detrás de ella.
+
+          Los 4rem se miden desde el borde de abajo de la tarjeta y no desde la barra, porque un
+          fondo no sabe dónde está un elemento. El número sale de sumar lo que ocupa la barra: el
+          `p-6` de la tarjeta más el alto de la barra dejan su borde superior a unos 6rem del
+          piso, así que el auto terminando a 4rem queda unos 2rem por dentro. Como la barra es de
+          vidrio, esa franja del auto se sigue viendo a través, que es lo que hace que se lea como
+          apoyado y no como recortado.
+
+          Centrado y no contra el borde derecho, que es donde estaba: en una tarjeta de dos
+          columnas el saludo ocupa la izquierda y sobra lugar en el medio, así que el auto entra
+          entero sin pisar el texto.
         */
-        backgroundPosition: 'right -1.5rem top 12%',
+        backgroundPosition: 'center bottom 4rem',
         /*
           El tamaño se mide contra el ALTO de la tarjeta, no contra su ancho. Es lo que lo vuelve
           estable: la tarjeta ocupa todo el ancho de la pantalla, así que atado al ancho el auto
           crecía sin freno en un monitor grande hasta taparle el texto al saludo, mientras que el
           alto lo fija el contenido y casi no cambia.
         */
-        backgroundSize: 'auto 62%',
+        backgroundSize: 'auto 60%',
       }}
     >
       <header>
@@ -130,7 +141,7 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
             entren pierde justo lo que se está buscando acá.
           */
           <dl className="grid grid-cols-2 justify-items-center gap-x-4 gap-y-5 sm:grid-cols-4">
-            {DRIVER_VEHICLE.specs.map((spec) => {
+            {specsOf(DRIVER_VEHICLE).map((spec) => {
               const Icon = SPEC_ICONS[spec.icon]
               return (
                 <div key={spec.label} className="flex items-center gap-3">
