@@ -45,8 +45,15 @@ export default function ContactField({ label, error, hint, children }: ContactFi
   const message = error ?? hint
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-text-muted text-xs font-medium">
+    /*
+      Las dos clases sueltas —sin prefijo de Tailwind— las define index.css: son el rótulo que se
+      enciende cuando su campo tiene el foco. Va escrito allá y no acá porque el foco lo tiene el
+      `<input>`, que viene DESPUÉS del rótulo, y para pintar hacia atrás hay que preguntarle al
+      contenedor; esa regla compite con la del color de reposo y conviene que gane siempre, sin
+      depender del orden en que Tailwind emita sus utilidades.
+    */
+    <div className="contact-field flex flex-col gap-1.5">
+      <label htmlFor={id} className="contact-field__label text-xs font-medium">
         {label}
       </label>
 

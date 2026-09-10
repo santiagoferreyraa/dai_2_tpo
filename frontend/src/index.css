@@ -455,6 +455,49 @@ body {
 }
 
 /*
+  El rótulo de un campo de contacto, que se enciende con el verde de la marca mientras se escribe
+  en ese campo.
+
+  Es la misma señal que ya da el subrayado, repetida arriba: en un formulario de varias casillas
+  una línea fina al pie del campo es poco para decir dónde está parado el cursor.
+
+  El rótulo va ANTES del control, así que no hay hermano al que mirar: la pregunta se la hace el
+  contenedor con `:has`. Y va acá, fuera de las capas de Tailwind, para que le gane siempre al
+  color de reposo sin depender de en qué orden se emitan dos utilidades.
+*/
+.contact-field__label {
+  color: var(--color-text-muted);
+  transition: color 200ms ease;
+}
+
+.contact-field:has(:focus) .contact-field__label {
+  color: var(--color-primary);
+}
+
+/*
+  El relleno que Chrome le pone a un campo autocompletado.
+
+  Cuando el navegador completa un campo con un dato guardado, le pinta el fondo de un celeste
+  propio y le cambia el color al texto. Nuestros campos son transparentes sobre vidrio —de eso
+  vive el formulario— así que ese celeste aparecía como un recuadro blanco en medio de la
+  tarjeta, encendido justo en el campo que se estaba usando.
+
+  El fondo no se puede pisar: el navegador lo dibuja aparte y `background-color` no lo toca. Lo
+  que sí se puede es no dejarlo llegar nunca, dándole a la transición del fondo una duración
+  absurda; es el truco de siempre para esto, y es el único que funciona sin tapar el campo con
+  una sombra opaca —que acá arruinaría el vidrio de atrás—. El color del texto y el del cursor sí
+  se piden directo.
+*/
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  transition: background-color 100000s ease-in-out 0s;
+}
+
+/*
   La marca de la barra de arriba.
 
   El logo se dibuja como MÁSCARA y no como una imagen normal, y eso es lo que le permite cambiar
