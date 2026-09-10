@@ -372,8 +372,13 @@ export default function StationsMapPage() {
             renglones de mapa. La barra del scroll se esconde —`no-scrollbar`— porque flotan
             sobre los mosaicos y una barra gris ahí se lee como suciedad; lo que insinúa que hay
             más a la derecha es la burbuja cortada por el borde.
+
+            El `py-3 -my-3` es para la sombra, no para el aire: un contenedor que scrollea de
+            costado recorta también arriba y abajo —el navegador no deja pedir una sola de las
+            dos— y sin lugar de sobra las burbujas quedaban con la sombra cortada al ras. El
+            margen negativo devuelve ese lugar prestado, así que la fila mide lo mismo que antes.
           */}
-            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 self-center overflow-x-auto md:flex-auto md:flex-wrap md:self-start md:overflow-x-visible">
+            <div className="no-scrollbar -my-3 flex min-w-0 flex-1 items-center gap-2 self-center overflow-x-auto py-3 md:flex-auto md:flex-wrap md:self-start md:overflow-x-visible">
               <StationFilters value={filters} onChange={setFilters} />
             </div>
 
