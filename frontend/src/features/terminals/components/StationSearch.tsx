@@ -14,6 +14,12 @@
  * es la misma píldora en dos tamaños, y así el plegarse se lee como que el campo se encoge y no
  * como que un rectángulo se convierte en otra cosa.
  *
+ * **El alto es fijo, `h-12`, y no el que salga del padding.** Son las tres cuartas partes de una
+ * decisión que no es de este componente: en la franja de escritorio, el campo, el interruptor de
+ * tema y la ficha del perfil tienen que medir lo mismo, y este es el que manda. De paso arregla
+ * algo de acá: la burbuja plegada mide exactamente eso, así que desplegarse ya no cambia el alto
+ * dos píxeles.
+ *
  * **En celular empieza plegado**, como una burbuja con la lupa, y se despliega al tocarlo. El
  * motivo es el espacio: en una pantalla angosta la barra entera se come el ancho del mapa para
  * mostrar un campo vacío que la mayoría de las veces no se usa. En pantalla ancha no hay ese
@@ -106,7 +112,7 @@ export default function StationSearch({
   }
 
   return (
-    <div className="border-border bg-surface/95 flex items-center gap-3 rounded-full border px-4 py-3 shadow-lg backdrop-blur">
+    <div className="border-border bg-surface/95 flex h-12 items-center gap-3 rounded-full border px-4 shadow-lg backdrop-blur">
       <SearchIcon className="text-text-muted h-5 w-5 shrink-0" />
 
       <input

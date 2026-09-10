@@ -25,7 +25,14 @@ export default function ThemeToggle() {
       aria-checked={isLight}
       aria-label="Tema claro"
       onClick={toggleTheme}
-      className="border-border/70 bg-surface/60 relative flex h-9 w-16 shrink-0 items-center rounded-full border px-1 transition-colors"
+      /*
+        El alto es el del buscador, que es el que manda en la franja: los tres controles de
+        arriba miden lo mismo. De ese alto sale todo lo demás —la perilla, los íconos y el
+        ancho—, así que las medidas de acá abajo no son sueltas: `w-22` menos el `px-1` da
+        exactamente dos íconos de `w-10`, y por eso la perilla viaja `translate-x-10`, que es
+        justo de un ícono al otro.
+      */
+      className="border-border/70 bg-surface/60 relative flex h-12 w-22 shrink-0 items-center rounded-full border px-1 transition-colors"
     >
       {/*
         La perilla. Viaja con `transform` y no cambiando `left`: así el navegador la mueve sin
@@ -33,8 +40,8 @@ export default function ThemeToggle() {
       */}
       <span
         aria-hidden="true"
-        className={`brand-fill absolute h-7 w-7 rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-          isLight ? 'translate-x-7' : 'translate-x-0'
+        className={`brand-fill absolute h-10 w-10 rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          isLight ? 'translate-x-10' : 'translate-x-0'
         }`}
       />
 
@@ -44,19 +51,19 @@ export default function ThemeToggle() {
       */}
       <span
         aria-hidden="true"
-        className={`relative z-10 flex h-7 w-7 items-center justify-center transition-colors duration-300 ${
+        className={`relative z-10 flex h-10 w-10 items-center justify-center transition-colors duration-300 ${
           isLight ? 'text-text-muted' : 'text-background'
         }`}
       >
-        <MoonIcon className="h-4 w-4" />
+        <MoonIcon className="h-5 w-5" />
       </span>
       <span
         aria-hidden="true"
-        className={`relative z-10 flex h-7 w-7 items-center justify-center transition-colors duration-300 ${
+        className={`relative z-10 flex h-10 w-10 items-center justify-center transition-colors duration-300 ${
           isLight ? 'text-background' : 'text-text-muted'
         }`}
       >
-        <SunIcon className="h-4 w-4" />
+        <SunIcon className="h-5 w-5" />
       </span>
     </button>
   )
