@@ -1,38 +1,69 @@
-import { useEffect, useId, useState, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useId, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 
 import StationSearch from '@/features/terminals/components/StationSearch'
+import StationSuggestions, {
+  MAX_SUGGESTIONS,
+} from '@/features/terminals/components/StationSuggestions'
 import { fetchAllStations } from '@/features/terminals/data/allStations'
 import { matchesQuery } from '@/features/terminals/format'
+import { useSuggestionNav } from '@/features/terminals/useSuggestionNav'
 import type { StationResult } from '@/features/terminals/types'
 
 /**
- * El buscador de estaciones fuera del mapa, con sugerencias.
+ * El buscador de estaciones de la franja de arriba, con sugerencias.
  *
- * **Envuelve el buscador del mapa, no lo reimplementa.** `StationSearch` sabe dibujarse, plegarse
- * y limpiarse, pero por sí solo filtra una lista que le pasan; acá no hay lista, así que este
+ * **Envuelve el buscador del mapa, no lo reimplementa.** `StationSearch` sabe dibujarse y
+ * limpiarse, pero por sí solo filtra una lista que le pasan; acá no hay lista, así que este
  * componente pone las dos cosas que faltan: de dónde salen las estaciones y a dónde se va con lo
  * elegido.
  *
+ * **De tablet para arriba es el ÚNICO buscador**: el mapa ya no dibuja el suyo, que quedaba a
+ * cuatro centímetros de este y hacía dudar de cuál era cuál. Eso le agrega una obligación que
+ * antes no tenía: estando en el mapa, el texto acá es el filtro de allá, así que se copia a la
+ * dirección con cada tecla y el mapa refiltra en vivo, como lo hacía su campo propio. Fuera del
+ * mapa no, porque no hay nada que filtrar todavía.
+ *
  * Hay dos maneras de salir, y hacen cosas distintas a propósito. Elegir una sugerencia lleva al
- * mapa con ESA estación; apretar Enter sin elegir ninguna lleva al mapa con el texto tal cual,
- * que puede dar varias. Quien ya vio la que buscaba no tiene por qué pasar por una lista de una
- * sola fila, y quien está explorando no tiene por qué elegir a ciegas.
+ * mapa con ESA estación; apretar Enter sin elegir ninguna lleva con el texto tal cual, que puede
+ * dar varias. Quien ya vio la que buscaba no tiene por qué pasar por una lista de una sola fila,
+ * y quien está explorando no tiene por qué elegir a ciegas.
  *
  * La búsqueda viaja en la dirección (`?q=`) y no en el estado del router: así el resultado se
  * puede compartir, guardar en favoritos y recargar. Del otro lado la levanta `StationsMapPage`.
  */
 
-/** Cuántas sugerencias se muestran. Más que esto deja de ser una ayuda y pasa a ser la pantalla. */
-const MAX_SUGGESTIONS = 6
+const MAP_PATH = '/stations/map'
 
 export default function SearchBox({ className = '' }: { className?: string }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [query, setQuery] = useState('')
   const [stations, setStations] = useState<StationResult[]>([])
-  const [highlighted, setHighlighted] = useState(-1)
 
   const listboxId = useId()
+
+  /*
+   * El texto que dice la dirección, que fuera del mapa es ninguno.
+   *
+   * Se copia al campo DURANTE el render y no en un efecto —el patrón que recomienda React para
+   * el estado que se deriva de algo de afuera, el mismo que usa `StationsMapPage`—, y se compara
+   * contra la última dirección vista y no contra `query` a secas: copiándolo siempre, borrar el
+   * texto a mano lo repondría desde la dirección en el render siguiente.
+   *
+   * Sirve para dos cosas: llegar al mapa con un `?q=` de un enlace compartido deja el campo
+   * mostrando lo que se está filtrando, y salir del mapa lo vacía, que es lo que corresponde
+   * cuando ya no hay nada filtrado.
+   */
+  const onMap = location.pathname === MAP_PATH
+  const urlQuery = onMap ? (new URLSearchParams(location.search).get('q') ?? '') : ''
+
+  const [lastUrlQuery, setLastUrlQuery] = useState(urlQuery)
+
+  if (urlQuery !== lastUrlQuery) {
+    setLastUrlQuery(urlQuery)
+    setQuery(urlQuery)
+  }
 
   /*
    * Las estaciones se piden con la primera letra, no al montar. Este buscador está en todas las
@@ -68,132 +99,67 @@ export default function SearchBox({ className = '' }: { className?: string }) {
       ? []
       : stations.filter((station) => matchesQuery(station, query)).slice(0, MAX_SUGGESTIONS)
 
-  const open = matches.length > 0
-
   const goToMap = (search: string) => {
     const trimmed = search.trim()
-    /* Vacía lleva al mapa sin filtro, que es lo que corresponde a una búsqueda sin términos. */
-    void navigate(
-      trimmed === '' ? '/stations/map' : `/stations/map?q=${encodeURIComponent(trimmed)}`,
-    )
+    setQuery(trimmed)
     /*
-      Y se vacía el campo. La búsqueda ya viajó en la dirección y del otro lado la muestra el
-      buscador del mapa: si acá quedara el texto, quedaría también la lista de sugerencias, abierta
-      y tapando el mapa al que se acaba de llegar.
+      Vacía lleva al mapa sin filtro, que es lo que corresponde a una búsqueda sin términos.
+
+      Estando ya en el mapa se reemplaza la entrada del historial en vez de agregar una: cada
+      búsqueda es un ajuste del mismo destino, y apiladas obligarían a apretar "atrás" una vez
+      por tecleo para salir de la pantalla.
     */
-    setQuery('')
-    setHighlighted(-1)
+    const to = trimmed === '' ? MAP_PATH : `${MAP_PATH}?q=${encodeURIComponent(trimmed)}`
+    void navigate(to, { replace: onMap })
   }
 
   /* Con una sugerencia resaltada gana ella; si no, vale lo escrito. */
-  const submitCurrent = () => {
-    goToMap(highlighted >= 0 ? matches[highlighted].name : query)
-  }
-
-  /*
-   * Las flechas mueven el resaltado y Escape cierra. Sin esto la lista sería alcanzable solo con
-   * el mouse, que para quien navega con teclado equivale a que no exista.
-   *
-   * Va en el formulario y no en el campo porque el campo lo dibuja otro componente: las teclas
-   * suben desde él igual.
-   */
-  const handleKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
-    /*
-      Enter se atiende acá y no con el `submit` del formulario. Un formulario sin botón de envío
-      depende del envío implícito del navegador, que es frágil: alcanza con que mañana alguien
-      agregue un segundo campo para que deje de dispararse. Con la tecla a la vista, el buscador
-      hace lo mismo sin depender de esa regla.
-    */
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      submitCurrent()
-      return
-    }
-
-    if (!open) return
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      setHighlighted((current) => (current + 1) % matches.length)
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      setHighlighted((current) => (current <= 0 ? matches.length - 1 : current - 1))
-    } else if (event.key === 'Escape') {
-      setHighlighted(-1)
-      setQuery('')
-    }
-  }
+  const nav = useSuggestionNav(matches, (picked) => {
+    goToMap(picked === null ? query : picked.name)
+  })
 
   const handleChange = (value: string) => {
     setQuery(value)
-    /* Al escribir se suelta el resaltado: la lista de abajo ya no es la misma. */
-    setHighlighted(-1)
+    nav.reopen()
+    /* En el mapa el campo filtra en vivo, y el filtro es la dirección. Ver el encabezado. */
+    if (onMap) {
+      const to = value.trim() === '' ? MAP_PATH : `${MAP_PATH}?q=${encodeURIComponent(value)}`
+      void navigate(to, { replace: true })
+    }
   }
 
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault()
-        submitCurrent()
       }}
-      onKeyDown={handleKeyDown}
+      /* Las teclas suben desde el campo, que lo dibuja otro componente. */
+      onKeyDown={nav.onKeyDown}
       /* `relative` para colgar la lista, que se posiciona contra este contenedor. */
       className={`relative ${className}`}
     >
-      {/*
-        El buscador trae el borde y el fondo del mapa, sin esquinas redondeadas porque allá va
-        pegado al borde de la pantalla. Se las pone este envoltorio, con `overflow-hidden` para que
-        el recorte alcance también a ese fondo.
-      */}
-      <div className="overflow-hidden rounded-full">
-        <StationSearch
-          value={query}
-          onChange={handleChange}
-          combobox={{
-            listboxId,
-            expanded: open,
-            activeOptionId: highlighted >= 0 ? `${listboxId}-${String(highlighted)}` : undefined,
+      <StationSearch
+        value={query}
+        onChange={handleChange}
+        combobox={{
+          listboxId,
+          expanded: nav.open,
+          activeOptionId:
+            nav.highlighted >= 0 ? `${listboxId}-${String(nav.highlighted)}` : undefined,
+        }}
+      />
+
+      {nav.open && (
+        <StationSuggestions
+          listboxId={listboxId}
+          matches={matches}
+          highlighted={nav.highlighted}
+          onHighlight={nav.setHighlighted}
+          onPick={(station) => {
+            goToMap(station.name)
+            nav.dismiss()
           }}
         />
-      </div>
-
-      {open && (
-        <ul
-          id={listboxId}
-          role="listbox"
-          aria-label="Estaciones que coinciden"
-          className="glass-panel absolute inset-x-0 top-full z-10 mt-2 overflow-hidden rounded-2xl py-1"
-        >
-          {matches.map((station, index) => (
-            <li
-              key={station.stationId}
-              id={`${listboxId}-${String(index)}`}
-              role="option"
-              aria-selected={index === highlighted}
-            >
-              <button
-                type="button"
-                /*
-                  `onMouseDown` y no `onClick`: el clic llega DESPUÉS de que el campo pierde el
-                  foco, y para entonces la lista ya se cerró y este botón no existe. Bajando el
-                  mouse se adelanta a ese cierre. Es el mismo motivo por el que la cruz de limpiar
-                  del buscador usa `onMouseDown`.
-                */
-                onMouseDown={(event) => {
-                  event.preventDefault()
-                  goToMap(station.name)
-                }}
-                onMouseEnter={() => setHighlighted(index)}
-                className={`flex w-full flex-col px-4 py-2.5 text-left transition-colors ${
-                  index === highlighted ? 'bg-primary/15' : ''
-                }`}
-              >
-                <span className="text-text truncate text-sm font-semibold">{station.name}</span>
-                <span className="text-text-muted truncate text-xs">{station.address}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </form>
   )

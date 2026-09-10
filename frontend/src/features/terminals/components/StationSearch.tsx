@@ -10,6 +10,10 @@
  * a que el usuario deje de escribir solo agregaría una demora que no compra nada. El día que
  * la consulta viaje al servidor, el debounce va con ella.
  *
+ * Redondeado del todo, como la burbuja en la que se pliega y como las burbujas de los filtros:
+ * es la misma píldora en dos tamaños, y así el plegarse se lee como que el campo se encoge y no
+ * como que un rectángulo se convierte en otra cosa.
+ *
  * **En celular empieza plegado**, como una burbuja con la lupa, y se despliega al tocarlo. El
  * motivo es el espacio: en una pantalla angosta la barra entera se come el ancho del mapa para
  * mostrar un campo vacío que la mayoría de las veces no se usa. En pantalla ancha no hay ese
@@ -88,7 +92,7 @@ export default function StationSearch({
   }
 
   return (
-    <div className="border-border bg-surface/95 flex items-center gap-3 border px-4 py-3 shadow-lg backdrop-blur">
+    <div className="border-border bg-surface/95 flex items-center gap-3 rounded-full border px-4 py-3 shadow-lg backdrop-blur">
       <SearchIcon className="text-text-muted h-5 w-5 shrink-0" />
 
       <input

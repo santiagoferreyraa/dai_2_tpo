@@ -25,7 +25,7 @@
  * de abajo se entera.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import type { LatLngTuple } from 'leaflet'
 
@@ -36,11 +36,13 @@ import StationDetailPanel from './components/StationDetailPanel'
 import StationFilters from './components/StationFilters'
 import StationMap from './components/StationMap'
 import StationSearch from './components/StationSearch'
+import StationSuggestions, { MAX_SUGGESTIONS } from './components/StationSuggestions'
 import { searchStations } from './data/stationsRepository'
 import { matchesFilters, matchesQuery } from './format'
 import type { ConnectorFilters } from './format'
 import { COUNTRY_RADIUS_KM, DEFAULT_CENTER } from './mapConfig'
 import { useMediaQuery } from './useMediaQuery'
+import { useSuggestionNav } from './useSuggestionNav'
 import type { ConnectorSummary, StationResult } from './types'
 
 /* El centro de la consulta, como par de números: es lo que espera `SearchCriteria`. */
@@ -81,12 +83,17 @@ export default function StationsMapPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   /*
-   * La búsqueda puede venir de la dirección (`?q=`) o escribirse acá.
+   * La búsqueda puede venir de la dirección (`?q=`) o escribirse acá, y de qué pantalla se trate
+   * decide cuál de las dos manda.
    *
-   * Las dos cosas tienen que convivir. El buscador de la barra de arriba no filtra nada por su
-   * cuenta —no tiene la lista— así que lo que hace es traer el texto hasta acá por la dirección;
-   * el de adentro del mapa sí filtra en vivo. Que viaje por la dirección y no por el estado del
-   * router es lo que deja el resultado compartible y recargable.
+   * De tablet para arriba esta pantalla ya NO dibuja su buscador: quedaba a cuatro centímetros
+   * del de la franja de arriba, con el mismo aspecto y la misma función, y no había forma de
+   * saber cuál era cuál. Manda la dirección, que ese buscador reescribe con cada tecla. En
+   * celular no hay franja de arriba, así que el campo de acá es el único y escribe el estado
+   * directo.
+   *
+   * Que la búsqueda viaje por la dirección y no por el estado del router es lo que deja el
+   * resultado compartible y recargable.
    *
    * El estado se ajusta DURANTE el render y no en un efecto. Es el patrón que recomienda React
    * para el estado que se deriva de algo de afuera, y el mismo que usa `BottomSheet`: hecho en un
@@ -183,6 +190,24 @@ export default function StationsMapPage() {
       : (selectedStation.matchingConnectors.find((c) => c.connectorId === selectedConnectorId) ??
         defaultConnector(selectedStation))
 
+  /*
+   * Las sugerencias del celular salen de lo que YA está filtrado, no de todas las estaciones: es
+   * la misma lista que dibujan los pines, así que lo que se ofrece elegir es exactamente lo que
+   * se está viendo. Elegir una la selecciona y sube el panel; no navega a ningún lado, porque ya
+   * se está en el mapa.
+   */
+  const suggestionsId = useId()
+  const suggestions = query.trim() === '' ? [] : stations.slice(0, MAX_SUGGESTIONS)
+
+  const nav = useSuggestionNav(suggestions, (picked) => {
+    if (picked !== null) selectStation(picked.stationId)
+  })
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value)
+    nav.reopen()
+  }
+
   function selectStation(stationId: number) {
     setSelectedStationId(stationId)
     /* El conector arranca de nuevo en cada estación: lo resuelve `defaultConnector`. */
@@ -278,19 +303,48 @@ export default function StationsMapPage() {
         */}
           <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] flex-wrap items-start gap-2 lg:w-[calc(100%-23rem)]">
             {/*
-            En celular el buscador toma el ancho entero de la fila, que ya viene con 1rem de
-            aire de cada lado: desplegado queda centrado por simetría, sin cálculos. El `mx-auto`
-            cubre el caso de la tablet angosta, donde el tope de 30rem deja espacio libre y sin
-            él la barra quedaría pegada a la izquierda.
+            El buscador, solo en celular: de ahí para arriba lo reemplaza el de la franja de
+            arriba, y desaparecer del todo es lo que deja a los filtros encabezando la fila.
 
-            Plegado como burbuja el ancho igual se reserva, así que al desplegarse no salta.
-
-            En pantalla ancha la fila se corta antes de llegar al carrusel (20rem de fichas más
-            aire). No es estético: esta capa va por ENCIMA del carrusel, así que una burbuja que
-            llegue hasta allá le queda dibujada arriba de las fichas.
+            Toma el ancho entero, que ya viene con 1rem de aire de cada lado: desplegado queda
+            centrado por simetría, sin cálculos. Plegado como burbuja el ancho igual se reserva,
+            así que al desplegarse no salta.
           */}
-            <div className="mx-auto w-[min(30rem,100%)] shrink-0 md:mx-0 md:w-96">
-              <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
+            {/*
+              `relative` porque la lista de coincidencias se cuelga de este contenedor, y
+              `onKeyDown` acá y no en el campo porque el campo lo dibuja otro componente: las
+              teclas suben desde él igual.
+            */}
+            <div
+              className="relative mx-auto w-[min(30rem,100%)] shrink-0 md:hidden"
+              onKeyDown={nav.onKeyDown}
+            >
+              <StationSearch
+                value={query}
+                onChange={handleQueryChange}
+                collapsible
+                combobox={{
+                  listboxId: suggestionsId,
+                  expanded: nav.open,
+                  activeOptionId:
+                    nav.highlighted >= 0
+                      ? `${suggestionsId}-${String(nav.highlighted)}`
+                      : undefined,
+                }}
+              />
+
+              {nav.open && (
+                <StationSuggestions
+                  listboxId={suggestionsId}
+                  matches={suggestions}
+                  highlighted={nav.highlighted}
+                  onHighlight={nav.setHighlighted}
+                  onPick={(station) => {
+                    selectStation(station.stationId)
+                    nav.dismiss()
+                  }}
+                />
+              )}
             </div>
 
             {/*
