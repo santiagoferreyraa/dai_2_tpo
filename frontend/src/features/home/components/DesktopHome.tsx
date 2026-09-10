@@ -50,9 +50,8 @@ export default function DesktopHome() {
       {/* La franja de cierre: la última oportunidad de mandar al mapa. */}
       <section className="glass-panel flex flex-col gap-5 rounded-3xl p-6 md:flex-row md:items-center md:gap-8">
         <div className="flex items-center gap-4">
-          <span className="bg-primary/15 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
-            <MapIcon className="h-5 w-5" />
-          </span>
+          {/* Suelto y grande, igual que los de la ficha del vehículo: ver el comentario de allá. */}
+          <MapIcon className="text-primary h-11 w-11 shrink-0" />
           <div>
             <p className="text-text-muted text-xs font-medium">Una sola cuenta</p>
             <p className="text-text mt-1 text-sm font-semibold text-pretty">

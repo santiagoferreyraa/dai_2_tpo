@@ -135,7 +135,12 @@ export default function StationSearch({
         aria-expanded={combobox?.expanded}
         aria-controls={combobox?.listboxId}
         aria-activedescendant={combobox?.activeOptionId}
-        className="text-text placeholder:text-text-muted min-w-0 flex-1 bg-transparent text-sm outline-none"
+        /*
+          `truncate` por el rótulo de adentro: en la columna angosta de la franja, "Buscar estación
+          o dirección" no entra, y sin esto el navegador lo corta al ras en cualquier letra. Con
+          puntos suspensivos se lee como una frase que sigue y no como una palabra rota.
+        */
+        className="text-text placeholder:text-text-muted min-w-0 flex-1 truncate bg-transparent text-sm outline-none"
       />
 
       {value !== '' && (

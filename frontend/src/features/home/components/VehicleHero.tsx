@@ -135,13 +135,13 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
               return (
                 <div key={spec.label} className="flex items-center gap-3">
                   {/*
-                    El dibujo va en el verde de la marca y en su propio recuadro tenue: es lo que
-                    lo separa del valor sin ponerle un borde, y lo que hace que los cuatro se
-                    reconozcan de un vistazo como la misma clase de dato.
+                    El dibujo va suelto, en el verde de la marca, del tamaño que antes tenía su
+                    recuadro. El recuadro tenue lo separaba del valor, pero adentro de una barra
+                    que ya es de vidrio eran cuatro cajas dentro de otra caja; el dibujo grande
+                    sostiene solo el mismo peso, y el aire alrededor hace el trabajo que hacía el
+                    borde.
                   */}
-                  <span className="bg-primary/15 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                    <Icon className="h-5 w-5" />
-                  </span>
+                  <Icon className="text-primary h-10 w-10 shrink-0" />
 
                   <div>
                     <dt className="text-text-muted text-[11px] font-medium">{spec.label}</dt>

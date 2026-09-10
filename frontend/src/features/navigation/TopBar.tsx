@@ -121,12 +121,17 @@ export default function TopBar() {
           espera de un logo, y sin texto adentro necesita su propio nombre para el lector de
           pantalla.
         */}
-        <div className="flex items-center gap-3 justify-self-start">
+        {/*
+          Sin `justify-self`: la celda se estira y el buscador puede pedir su ancho contra ella.
+          Con `justify-self-start` la celda se encogía hasta el contenido, y ahí el `w-full` del
+          buscador se resolvía contra sí mismo y quedaba en la mitad de lo que tenía disponible.
+        */}
+        <div className="flex items-center gap-3">
           <Link to="/" aria-label="Ecopedia, ir a la portada">
             <span className="brand-mark brand-fill block h-9 w-9" aria-hidden="true" />
           </Link>
 
-          <SearchBox className="w-full max-w-xs" />
+          <SearchBox className="w-full max-w-sm" />
         </div>
 
         <nav
