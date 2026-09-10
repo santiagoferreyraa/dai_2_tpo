@@ -23,6 +23,20 @@ interface StationSearchProps {
   onChange: (value: string) => void
   /** Si puede plegarse a una burbuja cuando está vacío y sin foco. */
   collapsible?: boolean
+  /**
+   * Los atributos de combobox, para quien dibuje una lista de sugerencias debajo.
+   *
+   * Es opcional porque no todos los usos la tienen: en el mapa el campo filtra lo que ya está en
+   * pantalla, sin lista que desplegar, y anunciarlo como combobox sería prometerle a un lector de
+   * pantalla unas opciones que no existen. La lista la dibuja quien usa esto —el campo no sabe de
+   * sugerencias—, así que los identificadores vienen de afuera.
+   */
+  combobox?: {
+    listboxId: string
+    expanded: boolean
+    /** El `id` de la opción resaltada, si hay alguna. */
+    activeOptionId?: string
+  }
 }
 
 /** La lupa. Se dibuja igual plegado y desplegado, así que se escribe una vez. */
@@ -47,6 +61,7 @@ export default function StationSearch({
   value,
   onChange,
   collapsible = false,
+  combobox,
 }: StationSearchProps) {
   const [expanded, setExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,6 +106,11 @@ export default function StationSearch({
         // el estilo de cada uno, que convive mal con la que dibujamos abajo.
         aria-label="Buscar estación por nombre o dirección"
         placeholder="Buscar estación o dirección"
+        role={combobox === undefined ? undefined : 'combobox'}
+        aria-autocomplete={combobox === undefined ? undefined : 'list'}
+        aria-expanded={combobox?.expanded}
+        aria-controls={combobox?.listboxId}
+        aria-activedescendant={combobox?.activeOptionId}
         className="text-text placeholder:text-text-muted min-w-0 flex-1 bg-transparent text-sm outline-none"
       />
 
