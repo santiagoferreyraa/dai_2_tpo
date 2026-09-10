@@ -113,31 +113,34 @@
   Tailwind las emite, que no es algo que convenga adivinar. Escrito aparte, se ve en el componente
   qué color tiene el texto.
 
-  El degradado tiene tres paradas y no dos, y la tela mide más que la caja: eso deja lugar para
-  correrla al pasar el mouse, que es el reemplazo del viejo `hover:bg-primary-strong`. El verde se
-  desplaza en vez de saltar a otro tono, así que el estado se siente sin que aparezca un color que
-  no estaba en la paleta.
+  **El degradado no se mueve nunca.** La primera versión lo corría al pasar el mouse, como
+  reemplazo del viejo `hover:bg-primary-strong`, y estaba mal por dos motivos. En el celular el
+  `:hover` se queda pegado después de tocar: la burbuja elegida quedaba con el verde corrido
+  hasta que se tocaba otra cosa, y ahí volvía sola. Y con mouse pasaba lo mismo al pasar por
+  encima. Las dos cosas se leen como que la marca cambia de dirección, que es exactamente lo
+  contrario de lo que un color de marca tiene que hacer.
+
+  El realce del mouse ahora es un aclarado, que no tiene dirección, y solo existe donde hay un
+  puntero de verdad: `(hover: hover)` deja afuera al celular, que es donde el estado se pegaba.
 
   Sobre un elemento deshabilitado hay que apagarlo con `disabled:bg-none`: un `bg-*` cambia el
   color de fondo, pero el degradado es una IMAGEN y se sigue dibujando encima.
 */
 @utility brand-fill {
-  background-image: linear-gradient(
-    135deg,
-    var(--brand-from) 0%,
-    var(--brand-to) 55%,
-    var(--brand-from) 100%
-  );
-  background-size: 220% 220%;
-  background-position: 0% 0%;
-  transition: background-position 400ms ease;
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+}
 
-  &:hover {
-    background-position: 100% 100%;
+@media (hover: hover) {
+  .brand-fill {
+    transition: filter 200ms ease;
+  }
+
+  .brand-fill:hover {
+    filter: brightness(1.06);
   }
 }
 
-/* Quien pidió menos movimiento no necesita ver correr el degradado. */
+/* Quien pidió menos movimiento no necesita ver el cambio. */
 @media (prefers-reduced-motion: reduce) {
   .brand-fill {
     transition: none;
