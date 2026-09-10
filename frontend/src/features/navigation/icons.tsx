@@ -130,6 +130,47 @@ export function LeafIcon({ className }: IconProps) {
   )
 }
 
+/**
+ * Conector: un enchufe con dos patas.
+ *
+ * Es un enchufe y no un surtidor a propósito: al lado dice "CCS2", que es el tipo de boca del
+ * auto, no el lugar donde se carga. El surtidor ya significa otra cosa en esta aplicación —la
+ * sección de estaciones—, y repetirlo acá diría que el dato es dónde cargar.
+ */
+export function PlugIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M9 3v5" />
+      <path d="M15 3v5" />
+      <path d="M6 8h12v3a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8Z" />
+      <path d="M12 17v4" />
+    </svg>
+  )
+}
+
+/** Medidor: la aguja de un tablero, para la potencia máxima que el auto acepta. */
+export function GaugeIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4 18a8 8 0 1 1 16 0" />
+      <path d="m12 18 4.5-5" />
+      <path d="M12 18h.01" />
+    </svg>
+  )
+}
+
+/** Batería: la capacidad del paquete, que es dato de catálogo y no una lectura del auto. */
+export function BatteryIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <rect x="2" y="8" width="16" height="9" rx="2" />
+      <path d="M21 11v3" />
+      <path d="M6 11.5v2" />
+      <path d="M10 11.5v2" />
+    </svg>
+  )
+}
+
 /** Reloj: los tiempos y las ventanas de reserva, en la home. */
 export function ClockIcon({ className }: IconProps) {
   return (

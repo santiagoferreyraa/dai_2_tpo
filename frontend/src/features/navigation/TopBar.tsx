@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { NavLink, useLocation } from 'react-router'
+import { Link, NavLink, useLocation } from 'react-router'
 
 import { useSession } from '@/features/auth/session'
 import ThemeToggle from '@/features/theme/ThemeToggle'
@@ -109,7 +109,25 @@ export default function TopBar() {
   return (
     <header className="fixed inset-x-0 top-0 z-[1050] hidden md:block">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 py-4">
-        <SearchBox className="w-full max-w-xs justify-self-start" />
+        {/*
+          El logo y el buscador, juntos a la izquierda.
+
+          El logo se dibuja como MÁSCARA y no como `<img>`, y eso es lo que le permite ser del
+          verde de la marca —degradado incluido— en vez del verde con el que está guardado el
+          archivo: de un `mask-image` el navegador usa la silueta, y el color lo pone el fondo del
+          elemento. Ver `.brand-mark` en index.css.
+
+          Lleva a la portada, así que es un enlace y no un dibujo suelto: es lo que cualquiera
+          espera de un logo, y sin texto adentro necesita su propio nombre para el lector de
+          pantalla.
+        */}
+        <div className="flex items-center gap-3 justify-self-start">
+          <Link to="/" aria-label="Ecopedia, ir a la portada">
+            <span className="brand-mark brand-fill block h-9 w-9" aria-hidden="true" />
+          </Link>
+
+          <SearchBox className="w-full max-w-xs" />
+        </div>
 
         <nav
           ref={listRef}

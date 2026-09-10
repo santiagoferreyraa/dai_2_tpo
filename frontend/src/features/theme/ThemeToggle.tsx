@@ -31,8 +31,12 @@ export default function ThemeToggle() {
         ancho—, así que las medidas de acá abajo no son sueltas: `w-22` menos el `px-1` da
         exactamente dos íconos de `w-10`, y por eso la perilla viaja `translate-x-10`, que es
         justo de un ícono al otro.
+
+        El vidrio es el mismo de la ficha del perfil, que tiene al lado: antes era un fondo
+        propio, parecido pero sin la sombra, y de los dos controles solo uno se despegaba de la
+        página.
       */
-      className="border-border/70 bg-surface/60 relative flex h-12 w-22 shrink-0 items-center rounded-full border px-1 transition-colors"
+      className="glass-panel relative flex h-12 w-22 shrink-0 items-center rounded-full px-1"
     >
       {/*
         La perilla. Viaja con `transform` y no cambiando `left`: así el navegador la mueve sin

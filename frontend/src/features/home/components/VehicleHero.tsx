@@ -3,7 +3,10 @@ import { Link } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { displayNameFrom } from '@/lib/displayName'
 
+import { BatteryIcon, BoltIcon, GaugeIcon, PlugIcon } from '@/features/navigation/icons'
+
 import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE } from '../vehicle'
+import type { SpecIcon } from '../vehicle'
 
 /**
  * El recuadro grande de la portada: el saludo, el vehículo y su ficha.
@@ -20,6 +23,20 @@ import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE } from '../vehicle'
  * existe simplemente no se dibuja y el recuadro se ve entero, mientras que una imagen rota deja el
  * ícono gris del navegador en el medio de lo primero que alguien mira.
  */
+
+/**
+ * El dibujo de cada dato.
+ *
+ * La traducción vive acá y no en `vehicle.ts` por lo mismo que explica el tipo: allá están los
+ * datos, acá el dibujo. El día que el vehículo venga del backend, el nombre del ícono llega en
+ * el JSON y esta tabla no se toca.
+ */
+const SPEC_ICONS: Record<SpecIcon, (props: { className?: string }) => React.ReactElement> = {
+  motor: BoltIcon,
+  connector: PlugIcon,
+  power: GaugeIcon,
+  battery: BatteryIcon,
+}
 
 /** El saludo, según la hora del aparato. */
 function greetingFor(hour: number): string {
@@ -101,15 +118,35 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
             </Link>
           </div>
         ) : (
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-            {DRIVER_VEHICLE.specs.map((spec) => (
-              <div key={spec.label}>
-                <dt className="text-text-muted text-[11px] font-medium">{spec.label}</dt>
-                <dd className="text-text mt-0.5 text-lg font-extrabold tracking-tight">
-                  {spec.value}
-                </dd>
-              </div>
-            ))}
+          /*
+            Cada dato es un dibujo a la izquierda y, a su derecha, el rótulo arriba del valor. Los
+            cuatro quedan centrados en la barra en vez de repartidos a lo ancho: pegados al borde
+            de una tarjeta que ocupa la pantalla entera, el primero y el último terminaban a un
+            metro de distancia y dejaban de leerse como una misma ficha.
+          */
+          <dl className="flex flex-wrap items-center justify-center gap-x-12 gap-y-5">
+            {DRIVER_VEHICLE.specs.map((spec) => {
+              const Icon = SPEC_ICONS[spec.icon]
+              return (
+                <div key={spec.label} className="flex items-center gap-3">
+                  {/*
+                    El dibujo va en el verde de la marca y en su propio recuadro tenue: es lo que
+                    lo separa del valor sin ponerle un borde, y lo que hace que los cuatro se
+                    reconozcan de un vistazo como la misma clase de dato.
+                  */}
+                  <span className="bg-primary/15 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                    <Icon className="h-5 w-5" />
+                  </span>
+
+                  <div>
+                    <dt className="text-text-muted text-[11px] font-medium">{spec.label}</dt>
+                    <dd className="text-text text-lg leading-tight font-extrabold tracking-tight">
+                      {spec.value}
+                    </dd>
+                  </div>
+                </div>
+              )
+            })}
           </dl>
         )}
       </div>

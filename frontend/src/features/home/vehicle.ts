@@ -16,9 +16,19 @@
  * para que acompañen a la imagen que haya en `public/car.png`.
  */
 
+/**
+ * Cuál de los cuatro dibujos acompaña al dato.
+ *
+ * Va como NOMBRE y no como componente porque este archivo es de datos y no dibuja nada: metiendo
+ * un componente acá habría que convertirlo en `.tsx` y pasaría a depender de la biblioteca de
+ * íconos. Quien lo muestra traduce el nombre.
+ */
+export type SpecIcon = 'motor' | 'connector' | 'power' | 'battery'
+
 export interface VehicleSpec {
   label: string
   value: string
+  icon: SpecIcon
 }
 
 export interface Vehicle {
@@ -32,10 +42,10 @@ export const DRIVER_VEHICLE: Vehicle = {
   name: 'Modelo 7',
   brand: 'Eléctrico · SUV',
   specs: [
-    { label: 'Motor', value: '150 kW' },
-    { label: 'Conector', value: 'CCS2' },
-    { label: 'Carga máx.', value: '80 kW' },
-    { label: 'Batería', value: '60 kWh' },
+    { label: 'Motor', value: '150 kW', icon: 'motor' },
+    { label: 'Conector', value: 'CCS2', icon: 'connector' },
+    { label: 'Carga máx.', value: '80 kW', icon: 'power' },
+    { label: 'Batería', value: '60 kWh', icon: 'battery' },
   ],
 }
 

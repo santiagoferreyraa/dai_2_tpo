@@ -60,8 +60,11 @@ export default function ProfilePill() {
       {/*
         El rayo, en un círculo verde. Redondo y no cuadrado porque es lo que ocupa el lugar del
         avatar que todavía no existe, y un avatar es redondo en todos lados.
+
+        El rayo va blanco y no con la tinta oscura de encima del verde: es un dibujo, no un
+        renglón, y en blanco el círculo se lee como una insignia en lugar de como un botón.
       */}
-      <span className="brand-fill text-on-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+      <span className="brand-fill flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white">
         <BoltIcon className="h-4 w-4" />
       </span>
 
