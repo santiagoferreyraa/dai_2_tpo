@@ -17,12 +17,24 @@
   colores vivan en tokens: `bg-surface` no sabe de qué color es, y no tiene por qué saberlo.
   Quien decide es `features/theme/theme.ts`, que escribe el atributo en <html>.
 
-  **El verde cambia entre los dos temas y no es un descuido.** `#b9fe70` es un verde claro:
-  funciona como FONDO con texto oscuro encima, y así se usa en los botones y en el círculo de la
-  navegación. Pero también se usa como TEXTO (`text-primary`), y sobre el fondo claro un verde
-  así se vuelve ilegible. En el tema claro pasa a ser un verde oscuro, que sirve para las dos
-  cosas: como texto sobre blanco y como fondo con texto claro encima. La pareja
-  `bg-primary text-background` queda legible en los dos temas sin que ningún componente elija.
+  **El verde de la marca no es un color sino un par**, y de ahí sale todo lo verde de la
+  aplicación. En el tema oscuro va de `#b9fe70` a `#98df4b`; en el claro, de `#98df4b` a
+  `#569e08`. Los dos pares comparten el del medio a propósito: son el mismo verde visto con más
+  o menos luz alrededor, no dos marcas distintas.
+
+  Ese par se usa de dos maneras, y conviene tener clara la diferencia:
+
+  - Como RELLENO —un botón, el círculo de la navegación, la perilla del interruptor— va el
+    degradado entero, con la utilidad `brand-fill`. Es lo que pidió el diseño y es donde un
+    degradado se lee.
+  - Como TINTA —texto, íconos, bordes, anillos de foco— va un color solo, `--color-primary`, que
+    es la punta del par que se lee contra el fondo de ESE tema: la clara en el oscuro, la oscura
+    en el claro. Un degradado sobre un renglón de 12px no se ve, y la punta equivocada lo deja
+    ilegible.
+
+  `--color-on-primary` es la tinta que va ENCIMA del verde, y es oscura en los dos temas: las dos
+  puntas del par son verdes con luz de sobra, así que lo que se lee sobre ellas es lo oscuro. No
+  puede ser `--color-background` como antes, porque en el tema claro eso es casi blanco.
 
   --color-danger es el rojo de los errores de formulario, y también cambia entre temas por el
   mismo motivo que el verde: uno claro se lee sobre el fondo oscuro y se pierde sobre el claro.
@@ -40,7 +52,7 @@
   --color-text: #e9edf5;
   --color-text-muted: #a8b2c4;
   --color-primary: #b9fe70;
-  --color-primary-strong: #a3e858;
+  --color-on-primary: #0d111c;
   --color-danger: #fca5a5;
 }
 
@@ -60,6 +72,14 @@
   */
   --map-filter: grayscale(1) brightness(0.85) contrast(1.05);
 
+  /*
+    Las dos puntas del verde de la marca. Van sueltas y no en `@theme` porque no son un color de
+    la interfaz que alguien vaya a pedir por su nombre: son los extremos de un degradado, y quien
+    los lee es una sola utilidad.
+  */
+  --brand-from: #b9fe70;
+  --brand-to: #98df4b;
+
   --shell-glow-a: rgb(78 96 214 / 0.34);
   --shell-glow-b: rgb(150 100 250 / 0.26);
   --shell-glow-c: rgb(120 200 90 / 0.12);
@@ -71,9 +91,11 @@
   --color-border: #d2dae9;
   --color-text: #111827;
   --color-text-muted: #454f61;
-  --color-primary: #3f8f0f;
-  --color-primary-strong: #357a0c;
+  --color-primary: #569e08;
   --color-danger: #b91c1c;
+
+  --brand-from: #98df4b;
+  --brand-to: #569e08;
 
   /* Sobre los mosaicos claros no hay nada que oscurecer: apenas se les levanta un punto de luz. */
   --map-filter: grayscale(1) brightness(1.03) contrast(0.96);
@@ -81,6 +103,45 @@
   --shell-glow-a: rgb(150 185 240 / 0.55);
   --shell-glow-b: rgb(196 178 240 / 0.45);
   --shell-glow-c: rgb(255 255 255 / 0.75);
+}
+
+/*
+  El relleno verde de la marca: el degradado entre las dos puntas del par.
+
+  **Pone el fondo y nada más.** La tinta de encima la elige quien lo usa, con `text-on-primary`,
+  y no la pone esta regla: dos utilidades que escriben `color` se resuelven por el orden en que
+  Tailwind las emite, que no es algo que convenga adivinar. Escrito aparte, se ve en el componente
+  qué color tiene el texto.
+
+  El degradado tiene tres paradas y no dos, y la tela mide más que la caja: eso deja lugar para
+  correrla al pasar el mouse, que es el reemplazo del viejo `hover:bg-primary-strong`. El verde se
+  desplaza en vez de saltar a otro tono, así que el estado se siente sin que aparezca un color que
+  no estaba en la paleta.
+
+  Sobre un elemento deshabilitado hay que apagarlo con `disabled:bg-none`: un `bg-*` cambia el
+  color de fondo, pero el degradado es una IMAGEN y se sigue dibujando encima.
+*/
+@utility brand-fill {
+  background-image: linear-gradient(
+    135deg,
+    var(--brand-from) 0%,
+    var(--brand-to) 55%,
+    var(--brand-from) 100%
+  );
+  background-size: 220% 220%;
+  background-position: 0% 0%;
+  transition: background-position 400ms ease;
+
+  &:hover {
+    background-position: 100% 100%;
+  }
+}
+
+/* Quien pidió menos movimiento no necesita ver correr el degradado. */
+@media (prefers-reduced-motion: reduce) {
+  .brand-fill {
+    transition: none;
+  }
 }
 
 /*
@@ -377,17 +438,17 @@ body {
 /*
   El texto seleccionado, en el verde de la marca.
 
-  El verde va escrito literal y no como `var(--color-primary)`, que es lo que uno esperaría. El
-  motivo es que ese token NO vale lo mismo en los dos temas: en el claro es un verde oscuro,
-  elegido para poder usarse como TEXTO sobre fondo claro. Acá el verde es el FONDO de la
-  selección, así que el que sirve es el claro de la marca, en los dos temas.
+  Va la punta CLARA del par y no `--color-primary`, que es lo que uno esperaría: acá el verde es
+  el FONDO de la selección, y el token de la tinta en el tema claro es un verde oscuro, elegido
+  justamente para lo contrario. Un degradado tampoco sirve —`::selection` acepta un color y nada
+  más—, así que de las dos puntas va la que hace de fondo.
 
-  El texto de la selección va oscuro y fijo por lo mismo: sobre este verde, cualquier color claro
-  se pierde. No puede ser `var(--color-background)` porque en el tema claro es casi blanco.
+  El texto de la selección va con la tinta de encima del verde, por el mismo motivo que en los
+  botones: sobre este verde, cualquier color claro se pierde.
 */
 ::selection {
-  background-color: #b9fe70;
-  color: #0d111c;
+  background-color: var(--brand-from);
+  color: var(--color-on-primary);
 }
 
 /*

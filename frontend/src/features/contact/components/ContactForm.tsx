@@ -129,7 +129,7 @@ export default function ContactForm() {
       <div className="flex flex-col gap-3">
         <button
           type="submit"
-          className="bg-primary text-background hover:bg-primary-strong self-start rounded-xl px-6 py-3 text-sm font-semibold transition-colors"
+          className="brand-fill text-on-primary self-start rounded-xl px-6 py-3 text-sm font-semibold transition-colors"
         >
           Enviar mensaje
         </button>

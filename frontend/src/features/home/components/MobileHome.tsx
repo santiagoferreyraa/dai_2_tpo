@@ -69,7 +69,7 @@ export default function MobileHome() {
 
         <Link
           to="/stations/map"
-          className="bg-primary text-background hover:bg-primary-strong relative mt-5 inline-flex self-start rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
+          className="brand-fill text-on-primary relative mt-5 inline-flex self-start rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
         >
           Ver el mapa
         </Link>

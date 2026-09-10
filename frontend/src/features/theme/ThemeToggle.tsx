@@ -33,7 +33,7 @@ export default function ThemeToggle() {
       */}
       <span
         aria-hidden="true"
-        className={`bg-primary absolute h-7 w-7 rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`brand-fill absolute h-7 w-7 rounded-full shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           isLight ? 'translate-x-7' : 'translate-x-0'
         }`}
       />

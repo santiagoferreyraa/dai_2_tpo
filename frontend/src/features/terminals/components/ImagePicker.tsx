@@ -98,7 +98,7 @@ export default function ImagePicker({ value, onChange }: ImagePickerProps) {
           type="button"
           onClick={add}
           aria-label="Agregar foto"
-          className="bg-st-accent hover:bg-st-accent-strong focus-visible:outline-st-accent flex h-11 w-12 shrink-0 items-center justify-center rounded-2xl text-[#12251a] transition-colors focus-visible:outline-2"
+          className="brand-fill text-on-primary focus-visible:outline-st-accent flex h-11 w-12 shrink-0 items-center justify-center rounded-2xl focus-visible:outline-2"
         >
           {/* Dibujada y no el carácter "+", que nunca queda centrado. */}
           <svg

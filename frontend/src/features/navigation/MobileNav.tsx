@@ -231,7 +231,7 @@ export default function MobileNav() {
           no haría nada.
         */}
         {ActiveIcon !== null && (
-          <div className="mobile-nav__puck bg-primary text-background pointer-events-none absolute flex items-center justify-center rounded-full">
+          <div className="mobile-nav__puck brand-fill text-on-primary pointer-events-none absolute flex items-center justify-center rounded-full">
             <ActiveIcon className="h-6 w-6" />
           </div>
         )}

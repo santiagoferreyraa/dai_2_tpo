@@ -145,7 +145,7 @@ export default function TopBar() {
           <span
             ref={dotRef}
             aria-hidden="true"
-            className="top-nav__dot top-nav__dot--idle bg-primary absolute bottom-0.5 left-0 h-1 w-1 rounded-full opacity-0"
+            className="top-nav__dot top-nav__dot--idle brand-fill absolute bottom-0.5 left-0 h-1 w-1 rounded-full opacity-0"
           />
         </nav>
 

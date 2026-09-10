@@ -63,7 +63,7 @@ export default function CellChart({ cells, className = '' }: CellChartProps) {
                 <span
                   key={row}
                   className={`h-2 w-2 rounded-[2px] ${
-                    row < filled ? 'bg-primary' : 'bg-text-muted/20'
+                    row < filled ? 'brand-fill' : 'bg-text-muted/20'
                   }`}
                 />
               ))}

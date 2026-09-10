@@ -38,7 +38,7 @@ interface StationFiltersProps {
 function chipClass(active: boolean): string {
   return `shrink-0 rounded-full border px-3 py-2 text-xs whitespace-nowrap shadow-lg backdrop-blur transition-colors ${
     active
-      ? 'border-primary bg-primary font-bold text-[#12251a]'
+      ? 'border-primary brand-fill text-on-primary font-bold'
       : 'border-border bg-surface/95 text-text-muted hover:text-text'
   }`
 }

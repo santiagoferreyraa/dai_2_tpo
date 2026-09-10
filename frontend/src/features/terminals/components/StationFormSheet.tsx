@@ -171,7 +171,7 @@ export default function StationFormSheet({ station, onSubmit, onDelete }: Statio
       <button
         type="submit"
         disabled={saving}
-        className="bg-st-accent hover:bg-st-accent-strong focus-visible:outline-st-accent mt-7 w-full rounded-full py-4 text-base font-extrabold tracking-wide text-[#12251a] transition-colors disabled:opacity-60"
+        className="brand-fill text-on-primary focus-visible:outline-st-accent mt-7 w-full rounded-full py-4 text-base font-extrabold tracking-wide disabled:opacity-60"
       >
         {saving ? 'SAVING…' : station ? 'SAVE CHANGES' : 'ADD'}
       </button>

@@ -175,7 +175,7 @@ export default function StationsPage() {
   const chipClass = (active: boolean) =>
     `shrink-0 rounded-full px-4 py-2 text-xs whitespace-nowrap transition-colors ${
       active
-        ? 'bg-st-accent font-bold text-[#12251a]'
+        ? 'brand-fill text-on-primary font-bold'
         : 'bg-st-surface text-st-muted hover:text-st-text'
     }`
 
@@ -251,7 +251,7 @@ export default function StationsPage() {
             type="button"
             onClick={() => setSheet({ kind: 'add' })}
             aria-label="Agregar estación"
-            className="bg-st-accent hover:bg-st-accent-strong focus-visible:outline-st-accent flex h-12 w-14 shrink-0 items-center justify-center rounded-2xl text-[#12251a] transition-colors focus-visible:outline-2"
+            className="brand-fill text-on-primary focus-visible:outline-st-accent flex h-12 w-14 shrink-0 items-center justify-center rounded-2xl focus-visible:outline-2"
           >
             {/*
               La cruz es un dibujo y no el carácter "+": el glifo trae su propio espacio

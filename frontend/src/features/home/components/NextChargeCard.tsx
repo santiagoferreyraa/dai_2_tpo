@@ -69,7 +69,7 @@ function ChargingBody({ charge }: { charge: ActiveCharge }) {
       */}
       <div className="bg-text-muted/20 mt-4 h-2 overflow-hidden rounded-full">
         <div
-          className="bg-primary h-full rounded-full transition-[width] duration-700"
+          className="brand-fill h-full rounded-full transition-[width] duration-700"
           style={{
             width: `${Math.min(100, (charge.batteryPercent / charge.targetPercent) * 100)}%`,
           }}
@@ -114,7 +114,7 @@ export default function NextChargeCard({ className = '' }: { className?: string 
             </p>
             <Link
               to="/stations/map"
-              className="bg-primary text-background hover:bg-primary-strong mt-5 inline-flex self-start rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors"
+              className="brand-fill text-on-primary mt-5 inline-flex self-start rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors"
             >
               Buscar estación
             </Link>

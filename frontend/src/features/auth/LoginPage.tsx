@@ -105,7 +105,7 @@ export default function LoginPage() {
         )}
 
         <button
-          className="bg-primary rounded-lg text-white px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+          className="brand-fill text-on-primary rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
           type="submit"
           disabled={sending}
         >

@@ -68,7 +68,7 @@ export default function DesktopHome() {
 
         <Link
           to="/stations/map"
-          className="bg-primary text-background hover:bg-primary-strong shrink-0 rounded-xl px-5 py-2.5 text-center text-sm font-semibold transition-colors"
+          className="brand-fill text-on-primary shrink-0 rounded-xl px-5 py-2.5 text-center text-sm font-semibold transition-colors"
         >
           Ver el mapa
         </Link>

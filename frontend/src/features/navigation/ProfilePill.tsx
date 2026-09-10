@@ -61,7 +61,7 @@ export default function ProfilePill() {
     */
     return (
       <Link to="/login" className={SHELL} aria-label="Iniciar sesión">
-        <span className={`${BOLT_SQUARE} bg-primary`}>
+        <span className={`${BOLT_SQUARE} brand-fill text-on-primary`}>
           <BoltIcon className="h-4 w-4" />
         </span>
         <span className="text-text text-sm font-medium">Iniciar sesión</span>

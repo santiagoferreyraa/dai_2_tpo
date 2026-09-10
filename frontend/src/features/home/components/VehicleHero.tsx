@@ -95,7 +95,7 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
             {/* `/login` la trae ECO-36. Ver el comentario de `ProfilePill.tsx`. */}
             <Link
               to="/login"
-              className="bg-primary text-background hover:bg-primary-strong rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+              className="brand-fill text-on-primary rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
             >
               Iniciar sesión
             </Link>
