@@ -22,7 +22,7 @@ export default function ProfileTabs() {
         La barra de scroll se saca a mano porque no hay utilidad de Tailwind: una raya clara
         debajo de cinco fichas, en el medio de la pantalla, se lee como un elemento más.
       */
-      className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden"
+      className="-ml-5 flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 pl-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden"
     >
       {PROFILE_SECTIONS.map((section) => (
         <NavLink

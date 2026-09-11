@@ -303,3 +303,37 @@ export function EditIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Una cruz: salir de la sesión, en el botón de abajo del riel.
+ *
+ * **Es una cruz y no una puerta con una flecha.** El dibujo de la puerta es el de "salir de
+ * acá", y lo que hace este botón es cerrar la sesión, que es otra cosa: la pantalla se queda
+ * donde está. La cruz dice cortar, que es lo que pasa.
+ */
+export function CrossIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </svg>
+  )
+}
+
+/** Flecha a la izquierda: volver al listado desde el detalle de una configuración. */
+export function ArrowLeftIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M19 12H5.5" />
+      <path d="M11 5.5 4.5 12l6.5 6.5" />
+    </svg>
+  )
+}
+
+/** Galón a la derecha: el renglón de una lista que abre algo. */
+export function ChevronRightIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </svg>
+  )
+}

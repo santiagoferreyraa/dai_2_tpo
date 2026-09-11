@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router'
 
+import ProfileExit from './components/ProfileExit'
 import ProfileHeader from './components/ProfileHeader'
 import ProfileRail from './components/ProfileRail'
 import ProfileTabs from './components/ProfileTabs'
@@ -39,8 +40,16 @@ export default function ProfileLayout() {
       <ProfileHeader />
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row md:gap-5">
-        <ProfileRail />
-        <ProfileTabs />
+        {/*
+          La columna de la navegación de la pantalla. Cambia de eje con el ancho y por eso es un
+          solo envoltorio y no dos: en escritorio es el riel con el botón de salir debajo, y en
+          el celular la cinta de secciones con ese mismo botón al final del renglón.
+        */}
+        <div className="flex shrink-0 items-center gap-3 md:flex-col md:items-start">
+          <ProfileRail />
+          <ProfileTabs />
+          <ProfileExit />
+        </div>
 
         <div className="min-h-0 flex-1">
           <Outlet />
