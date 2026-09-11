@@ -1,7 +1,8 @@
 import { Link } from 'react-router'
 
+import { roleLabel } from '@/features/auth/roles'
 import { useSession } from '@/features/auth/session'
-import { displayNameFrom } from '@/lib/displayName'
+import { displayNameOf } from '@/lib/displayName'
 
 import { SteeringWheelIcon } from './icons'
 import { PROFILE_SECTION } from './navSections'
@@ -19,13 +20,6 @@ import { PROFILE_SECTION } from './navSections'
  * de tema, que son sus vecinos de fila. Uno que creciera al iniciar sesión correría a los otros
  * de lugar y la franja daría un salto.
  */
-
-/** Cómo se lee cada rol en pantalla. El enum viaja en inglés técnico; el usuario no. */
-const ROLE_LABEL = {
-  CONDUCTOR: 'Conductor',
-  CPO: 'Operador',
-  ADMIN: 'Administrador',
-} as const
 
 /** El alto de la franja. Lo fija el buscador; acá se repite para no quedar desparejo. */
 const HEIGHT = 'h-12'
@@ -80,14 +74,14 @@ export default function ProfilePill() {
       </span>
 
       <span className="flex flex-col leading-tight">
-        <span className="text-text text-sm font-medium">{displayNameFrom(session.email)}</span>
+        <span className="text-text text-sm font-medium">{displayNameOf(session)}</span>
         {/*
           El rol debajo del nombre, en chico y en el verde de la marca. Es lo que explica por qué
           dos cuentas ven pantallas distintas, y sin él un operador no tiene forma de saber con
           cuál entró. Va en el verde de TINTA y no en el degradado: sobre once píxeles de alto un
           degradado no se ve, y la punta clara del par sobre el tema claro no se lee.
         */}
-        <span className="text-primary text-[11px] font-semibold">{ROLE_LABEL[session.role]}</span>
+        <span className="text-primary text-[11px] font-semibold">{roleLabel(session.role)}</span>
       </span>
     </Link>
   )

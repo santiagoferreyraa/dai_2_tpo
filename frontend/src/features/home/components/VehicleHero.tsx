@@ -1,11 +1,11 @@
 import { Link } from 'react-router'
 
 import { useSession } from '@/features/auth/session'
-import { displayNameFrom } from '@/lib/displayName'
+import { displayNameOf } from '@/lib/displayName'
 
 import { BatteryIcon, BoltIcon, GaugeIcon, PlugIcon } from '@/features/navigation/icons'
 
-import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE, specsOf } from '../vehicle'
+import { DRIVER_VEHICLE, VEHICLE_IMAGE, specsOf } from '../vehicle'
 import type { SpecIcon } from '../vehicle'
 
 /**
@@ -49,13 +49,11 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
   const session = useSession()
   const greeting = greetingFor(new Date().getHours())
 
-  const image = session === null ? GUEST_IMAGE : VEHICLE_IMAGE
-
   return (
     <section
       className={`glass-panel relative flex min-h-[22rem] flex-col justify-between overflow-hidden rounded-3xl p-6 ${className}`}
       style={{
-        backgroundImage: `url("${image}")`,
+        backgroundImage: `url("${VEHICLE_IMAGE}")`,
         backgroundRepeat: 'no-repeat',
         /*
           El auto va centrado a lo ancho y APOYADO sobre la barra de la ficha, metiéndose un poco
@@ -84,7 +82,7 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
     >
       <header>
         <p className="text-text-muted text-sm font-medium">
-          {session === null ? greeting : `${greeting}, ${displayNameFrom(session.email)}`} 👋
+          {session === null ? greeting : `${greeting}, ${displayNameOf(session)}`} 👋
         </p>
 
         {session === null ? (

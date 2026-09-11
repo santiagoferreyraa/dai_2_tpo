@@ -12,7 +12,8 @@
  * La cinta, el desenfoque y el rótulo para lectores de pantalla los pone `TapedCard`. Acá vive
  * solo lo que este recuadro tiene de propio: qué se ve detrás.
  *
- * Cuando el servicio entre, se borra este archivo y vuelve `ActivityCard`, que ya está escrita.
+ * Cuando el servicio entre, este recuadro se reemplaza por el gráfico de verdad, con los kWh
+ * que devuelva la API.
  */
 
 import { ChartIcon } from '@/features/navigation/icons'

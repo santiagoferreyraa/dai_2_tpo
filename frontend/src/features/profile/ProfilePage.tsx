@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router'
 
+import { roleLabel } from '@/features/auth/roles'
 import { clearSession, useSession } from '@/features/auth/session'
-import { displayNameFrom } from '@/lib/displayName'
+import { displayNameOf } from '@/lib/displayName'
 import ThemeToggle from '@/features/theme/ThemeToggle'
 
 /**
@@ -55,7 +56,7 @@ export default function ProfilePage() {
           <dl className="glass-panel mt-6 flex flex-col gap-3 rounded-2xl px-4 py-4">
             <div className="flex items-center justify-between">
               <dt className="text-text-muted text-sm">Nombre</dt>
-              <dd className="text-text text-sm font-semibold">{displayNameFrom(session.email)}</dd>
+              <dd className="text-text text-sm font-semibold">{displayNameOf(session)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-text-muted text-sm">Correo</dt>
@@ -63,7 +64,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-text-muted text-sm">Rol</dt>
-              <dd className="text-text text-sm font-semibold">{session.role}</dd>
+              <dd className="text-text text-sm font-semibold">{roleLabel(session.role)}</dd>
             </div>
           </dl>
         )}
