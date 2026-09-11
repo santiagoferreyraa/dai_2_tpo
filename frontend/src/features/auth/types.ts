@@ -58,6 +58,9 @@ export interface UserProfile {
  * Es `AuthResponse` con el vencimiento resuelto a un instante absoluto en vez de una
  * duración: guardar "24 horas" no sirve para saber si un token rehidratado tres días después
  * sigue valiendo, y guardar el instante sí.
+ *
+ * Lleva además el nombre, que `AuthResponse` no trae: lo devuelve `GET /users/profile`, que es
+ * otra llamada. Ver `fullName`.
  */
 export interface Session {
   token: string
@@ -65,4 +68,13 @@ export interface Session {
   email: string
   role: Role
   expiresAt: number
+  /**
+   * El nombre real, o `null` mientras no se sepa.
+   *
+   * **Es `null` y no una cadena vacía porque son dos cosas distintas**: vacío sería "no tiene
+   * nombre", y lo que pasa acá es "todavía no llegó". El login no lo trae, así que entre que se
+   * abre la sesión y contesta el perfil hay un rato —y si esa llamada falla, nunca llega— en el
+   * que hay que mostrar algo igual. De eso se ocupa `displayNameOf`.
+   */
+  fullName: string | null
 }

@@ -2,9 +2,30 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ecopedia</title>
+
+    <!--
+      Plus Jakarta Sans: la tipografía de la interfaz.
+
+      Va acá y no con un `@import` desde el CSS porque un `@import` encadena descargas —el
+      navegador tiene que bajar y leer la hoja para recién ahí enterarse de que hay una fuente—,
+      mientras que un `<link>` en el head arranca en paralelo con el resto.
+
+      El `preconnect` a los dos dominios abre la conexión antes de saber qué pedir. Son dos y no
+      uno porque Google sirve la hoja de estilos desde un dominio y los archivos de fuente desde
+      otro; sin el segundo, la conexión al que de verdad pesa se abre tarde.
+
+      `display=swap` para que el texto se lea con la tipografía del sistema mientras la otra
+      baja, en vez de dejar la pantalla en blanco.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

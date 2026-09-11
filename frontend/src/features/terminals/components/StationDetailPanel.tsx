@@ -118,7 +118,7 @@ export default function StationDetailPanel({
           type="button"
           onClick={onReserve}
           disabled={!reservable}
-          className="bg-primary hover:bg-primary-strong focus-visible:outline-primary disabled:bg-surface disabled:text-text-muted w-full rounded-2xl py-4 text-sm font-bold tracking-wide text-[#12251a] uppercase transition-colors focus-visible:outline-2 disabled:cursor-not-allowed"
+          className="brand-fill text-on-primary focus-visible:outline-primary disabled:bg-none disabled:bg-surface disabled:text-text-muted w-full rounded-2xl py-4 text-sm font-bold tracking-wide uppercase focus-visible:outline-2 disabled:cursor-not-allowed"
         >
           Reservar
         </button>

@@ -20,11 +20,17 @@
   --color-st-text: #e6ebf2;
   --color-st-muted: #7b8798;
 
-  --color-st-accent: #a5e845;
-  --color-st-accent-strong: #8ed52f;
+  /*
+    El verde de estas pantallas NO es propio: sale del par de la marca, que define index.css. Era
+    propio y era otro —un tercer verde, parecido pero distinto—, y esa era exactamente la clase
+    de deriva que un token existe para evitar. Referenciado y no copiado, el día que el par
+    cambie estas pantallas cambian con él.
+  */
+  --color-st-accent: var(--brand-from);
+  --color-st-accent-strong: var(--brand-to);
 
   /* Un color por estado operativo. Son los tres de OperationalStatus. */
-  --color-st-available: #9ede3a;
+  --color-st-available: var(--brand-from);
   --color-st-occupied: #e8a33d;
   --color-st-offline: #e05c4e;
 }

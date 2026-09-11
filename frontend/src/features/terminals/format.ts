@@ -214,3 +214,36 @@ export function matchesQuery(station: StationResult, query: string): boolean {
 
   return normalize(station.name).includes(needle) || normalize(station.address).includes(needle)
 }
+
+/**
+ * Una estación del ABM, vista como resultado de búsqueda.
+ *
+ * Hace falta porque el backend devuelve la MISMA estación con dos formas según por dónde entre:
+ * `GET /api/stations` da `Station` con `Connector[]`, y `GET /api/search` da `StationResult`
+ * con `ConnectorSummary[]`. Son los mismos campos con otros nombres alrededor —el archivo de
+ * tipos ya lo señala—, así que quien recibe una y necesita la otra convierte en vez de pedir
+ * los datos por segunda vez.
+ *
+ * Lo usa la portada: carga las estaciones una sola vez con `listStations` —que es la única
+ * llamada que trae las fotos— y necesita esta forma para dibujar los pines del mapa, que están
+ * escritos contra `StationResult`.
+ *
+ * `distanceKm` va en cero y no es un descuido: esta conversión no sabe desde dónde se mide. La
+ * distancia la calcula quien tenga el punto de origen, con `distanceKm` de `geo.ts`.
+ */
+export function toStationResult(station: StationDetail): StationResult {
+  return {
+    stationId: station.id,
+    name: station.name,
+    address: station.address,
+    latitude: station.latitude,
+    longitude: station.longitude,
+    distanceKm: 0,
+    matchingConnectors: station.connectors.map((connector) => ({
+      connectorId: connector.id,
+      connectorType: connector.connectorType,
+      maxPowerKw: connector.maxPowerKw,
+      operationalStatus: connector.operationalStatus,
+    })),
+  }
+}
