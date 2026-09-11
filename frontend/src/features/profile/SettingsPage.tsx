@@ -23,15 +23,13 @@ export default function SettingsPage() {
   const open = SETTINGS.find((setting) => setting.id === openId) ?? null
 
   return (
-    <div className="grid md:h-full">
-      <ProfileCard className="md:overflow-y-auto">
-        {open === null ? (
-          <SettingsList onOpen={setOpenId} />
-        ) : (
-          <SettingDetail setting={open} onBack={() => setOpenId(null)} />
-        )}
-      </ProfileCard>
-    </div>
+    <ProfileCard>
+      {open === null ? (
+        <SettingsList onOpen={setOpenId} />
+      ) : (
+        <SettingDetail setting={open} onBack={() => setOpenId(null)} />
+      )}
+    </ProfileCard>
   )
 }
 

@@ -8,9 +8,5 @@ import ProfileCard from './components/ProfileCard'
  * porque el lugar ya está decidido y el contenido no.
  */
 export default function NotificationsPage() {
-  return (
-    <div className="grid md:h-full">
-      <ProfileCard />
-    </div>
-  )
+  return <ProfileCard />
 }

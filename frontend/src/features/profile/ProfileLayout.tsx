@@ -30,13 +30,16 @@ export default function ProfileLayout() {
       `pb-36` en el celular es el lugar de la barra de abajo, que flota sobre el contenido: sin
       eso, la última tarjeta termina debajo de ella y no hay forma de llegarle.
 
-      **El desborde es visible en escritorio y eso es lo que hace falta**, no un descuido. Las
-      tarjetas son de vidrio y su sombra se derrama 32 píxeles por fuera del borde; adentro de
-      un contenedor que recorta, esa sombra se corta contra el borde invisible y queda una raya
-      recta al costado. En el celular sí recorta, porque ahí este contenedor es el que scrollea,
-      y el `px-5` le deja a la sombra más lugar del que ocupa.
+      **Este contenedor es el que scrollea, en las dos resoluciones**, y por eso la tarjeta de
+      cada sección mide lo que mide su contenido en vez de estirarse hasta abajo: si el
+      contenido no entra, lo que crece y scrollea es la página, no un recuadro con barra propia.
+
+      El relleno de los costados no es solo aire: las tarjetas son de vidrio y su sombra se
+      derrama unos píxeles por fuera del borde. Un contenedor que scrollea recorta contra su
+      caja de relleno, así que sin esos veinticuatro píxeles la sombra quedaría cortada en una
+      raya recta al costado de cada tarjeta.
     */
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pt-6 pb-36 md:gap-5 md:overflow-visible md:px-6 md:pt-6 md:pb-10">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pt-6 pb-36 md:gap-5 md:px-6 md:pt-6 md:pb-10">
       <ProfileHeader />
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row md:gap-5">

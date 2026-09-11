@@ -9,9 +9,5 @@ import ProfileCard from './components/ProfileCard'
  * de próxima carga de la portada dice que no hay ninguna. Ver `home/data/nextCharge.ts`.
  */
 export default function ReservationsPage() {
-  return (
-    <div className="grid md:h-full">
-      <ProfileCard />
-    </div>
-  )
+  return <ProfileCard />
 }

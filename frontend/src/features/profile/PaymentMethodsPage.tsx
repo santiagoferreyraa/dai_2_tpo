@@ -18,10 +18,8 @@ import ProfileCard from './components/ProfileCard'
  */
 export default function PaymentMethodsPage() {
   return (
-    <div className="grid md:h-full">
-      <ProfileCard className="md:overflow-y-auto">
-        <PaymentMethods />
-      </ProfileCard>
-    </div>
+    <ProfileCard>
+      <PaymentMethods />
+    </ProfileCard>
   )
 }
