@@ -6,16 +6,18 @@
  * criterio. Lo que comparten de verdad es `matchesFilters`, en format.ts; acá solo está la
  * forma que toman sobre el mapa.
  *
- * Rectangulares y no redondeadas, igual que el buscador y el panel de detalle: sobre el mapa
- * todo lo que flota es del mismo material, y una píldora al lado de un rectángulo se lee como
- * de otra pantalla.
+ * Redondeadas del todo, igual que el buscador: sobre el mapa todo lo que flota es del mismo
+ * material, y un rectángulo al lado de una píldora se lee como de otra pantalla.
  *
- * Cada burbuja es su propio recuadro en vez de ir todas dentro de una barra: el buscador ya es
- * un bloque, y una segunda barra pegada a su derecha parecería una continuación del campo.
+ * Cada burbuja es su propio recuadro en vez de ir todas dentro de una barra: una barra sola
+ * sobre el mapa se leería como un control con estado propio, y no lo es —son seis interruptores
+ * sueltos—.
  *
- * No se dibuja en celular —quien lo monta decide con `hidden md:flex`—: ahí el buscador ya se
- * pliega a una burbuja para no comerse el mapa, y seis filtros más al lado harían justo lo que
- * ese plegado evita.
+ * De tablet para arriba encabezan la fila, en el lugar que dejó libre el buscador del mapa
+ * cuando se sacó por repetido. En celular también van: al lado de la burbuja del buscador, o
+ * debajo del campo cuando está desplegado. Ahí la fila scrollea de costado en vez de envolver,
+ * así que las seis conviven con el mapa en lugar de comerle tres renglones. Dónde y cómo caen
+ * lo decide quien las monta.
  */
 
 import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL, POWER_STEPS } from '../format'
@@ -34,9 +36,13 @@ interface StationFiltersProps {
  * sin eso "150+ kW" se parte en dos renglones y la burbuja crece hacia abajo.
  */
 function chipClass(active: boolean): string {
-  return `shrink-0 border px-3 py-2 text-xs whitespace-nowrap shadow-lg backdrop-blur transition-colors ${
+  return `shrink-0 rounded-full border px-3 py-2 text-xs whitespace-nowrap shadow-lg backdrop-blur transition-colors ${
     active
-      ? 'border-primary bg-primary font-bold text-[#12251a]'
+      ? /*
+        El borde sigue estando pero no se ve: transparente en vez de sacado. Sacarlo le quitaría
+        un píxel de cada lado a la burbuja elegida, y encogería justo al elegirla.
+      */
+        'border-transparent brand-fill text-on-primary font-bold'
       : 'border-border bg-surface/95 text-text-muted hover:text-text'
   }`
 }

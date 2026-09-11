@@ -19,7 +19,7 @@ export default function ForbiddenPage() {
         <p className="text-text-muted mt-2 text-sm">No tenés permiso para entrar a esta sección.</p>
 
         <Link
-          className="bg-primary mt-6 inline-block rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
+          className="brand-fill text-on-primary mt-6 inline-block rounded-lg px-4 py-2.5 text-sm font-semibold"
           to="/"
         >
           Volver al inicio

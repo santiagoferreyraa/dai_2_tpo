@@ -10,6 +10,16 @@
  * a que el usuario deje de escribir solo agregaría una demora que no compra nada. El día que
  * la consulta viaje al servidor, el debounce va con ella.
  *
+ * Redondeado del todo, como la burbuja en la que se pliega y como las burbujas de los filtros:
+ * es la misma píldora en dos tamaños, y así el plegarse se lee como que el campo se encoge y no
+ * como que un rectángulo se convierte en otra cosa.
+ *
+ * **El alto es fijo, `h-12`, y no el que salga del padding.** Son las tres cuartas partes de una
+ * decisión que no es de este componente: en la franja de escritorio, el campo, el interruptor de
+ * tema y la ficha del perfil tienen que medir lo mismo, y este es el que manda. De paso arregla
+ * algo de acá: la burbuja plegada mide exactamente eso, así que desplegarse ya no cambia el alto
+ * dos píxeles.
+ *
  * **En celular empieza plegado**, como una burbuja con la lupa, y se despliega al tocarlo. El
  * motivo es el espacio: en una pantalla angosta la barra entera se come el ancho del mapa para
  * mostrar un campo vacío que la mayoría de las veces no se usa. En pantalla ancha no hay ese
@@ -23,6 +33,28 @@ interface StationSearchProps {
   onChange: (value: string) => void
   /** Si puede plegarse a una burbuja cuando está vacío y sin foco. */
   collapsible?: boolean
+  /**
+   * Aviso de que se plegó o se desplegó.
+   *
+   * El campo sigue siendo dueño de su estado —quien lo usa no tiene por qué manejarlo—, pero en
+   * el mapa hay algo que depende de él: los filtros se acomodan al lado de la burbuja o debajo
+   * del campo desplegado, y sin este aviso no habría cómo saber cuál de las dos formas está.
+   */
+  onExpandedChange?: (expanded: boolean) => void
+  /**
+   * Los atributos de combobox, para quien dibuje una lista de sugerencias debajo.
+   *
+   * Es opcional porque no todos los usos la tienen: en el mapa el campo filtra lo que ya está en
+   * pantalla, sin lista que desplegar, y anunciarlo como combobox sería prometerle a un lector de
+   * pantalla unas opciones que no existen. La lista la dibuja quien usa esto —el campo no sabe de
+   * sugerencias—, así que los identificadores vienen de afuera.
+   */
+  combobox?: {
+    listboxId: string
+    expanded: boolean
+    /** El `id` de la opción resaltada, si hay alguna. */
+    activeOptionId?: string
+  }
 }
 
 /** La lupa. Se dibuja igual plegado y desplegado, así que se escribe una vez. */
@@ -47,8 +79,15 @@ export default function StationSearch({
   value,
   onChange,
   collapsible = false,
+  onExpandedChange,
+  combobox,
 }: StationSearchProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpandedState] = useState(false)
+
+  const setExpanded = (next: boolean) => {
+    setExpandedState(next)
+    onExpandedChange?.(next)
+  }
   const inputRef = useRef<HTMLInputElement>(null)
 
   /* Al desplegarse toma el foco: si no, hay que tocar dos veces para empezar a escribir. */
@@ -73,7 +112,7 @@ export default function StationSearch({
   }
 
   return (
-    <div className="border-border bg-surface/95 flex items-center gap-3 border px-4 py-3 shadow-lg backdrop-blur">
+    <div className="border-border bg-surface/95 flex h-12 items-center gap-3 rounded-full border px-4 shadow-lg backdrop-blur">
       <SearchIcon className="text-text-muted h-5 w-5 shrink-0" />
 
       <input
@@ -91,7 +130,17 @@ export default function StationSearch({
         // el estilo de cada uno, que convive mal con la que dibujamos abajo.
         aria-label="Buscar estación por nombre o dirección"
         placeholder="Buscar estación o dirección"
-        className="text-text placeholder:text-text-muted min-w-0 flex-1 bg-transparent text-sm outline-none"
+        role={combobox === undefined ? undefined : 'combobox'}
+        aria-autocomplete={combobox === undefined ? undefined : 'list'}
+        aria-expanded={combobox?.expanded}
+        aria-controls={combobox?.listboxId}
+        aria-activedescendant={combobox?.activeOptionId}
+        /*
+          `truncate` por el rótulo de adentro: en la columna angosta de la franja, "Buscar estación
+          o dirección" no entra, y sin esto el navegador lo corta al ras en cualquier letra. Con
+          puntos suspensivos se lee como una frase que sigue y no como una palabra rota.
+        */
+        className="text-text placeholder:text-text-muted min-w-0 flex-1 truncate bg-transparent text-sm outline-none"
       />
 
       {value !== '' && (

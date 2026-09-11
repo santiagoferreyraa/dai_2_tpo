@@ -25,7 +25,8 @@
  * de abajo se entera.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import type { LatLngTuple } from 'leaflet'
 
 import BottomSheet from './components/BottomSheet'
@@ -35,11 +36,14 @@ import StationDetailPanel from './components/StationDetailPanel'
 import StationFilters from './components/StationFilters'
 import StationMap from './components/StationMap'
 import StationSearch from './components/StationSearch'
+import StationSuggestions, { MAX_SUGGESTIONS } from './components/StationSuggestions'
 import { searchStations } from './data/stationsRepository'
 import { matchesFilters, matchesQuery } from './format'
 import type { ConnectorFilters } from './format'
 import { COUNTRY_RADIUS_KM, DEFAULT_CENTER } from './mapConfig'
+import { useDeviceLocation } from './useDeviceLocation'
 import { useMediaQuery } from './useMediaQuery'
+import { useSuggestionNav } from './useSuggestionNav'
 import type { ConnectorSummary, StationResult } from './types'
 
 /* El centro de la consulta, como par de números: es lo que espera `SearchCriteria`. */
@@ -62,6 +66,15 @@ const WIDE_QUERY = '(min-width: 1024px)'
 const SHEET_INSET_PX = 380
 
 /**
+ * Cuánto dura la línea entre el dispositivo y la estación al reservar.
+ *
+ * **Está atado a las animaciones de `.station-trace`, en index.css**, que reparten exactamente
+ * este plazo entre los parpadeos y el desvanecido final. Cambiar el número acá sin rehacer aquel
+ * reparto deja la línea desapareciendo de golpe.
+ */
+const TRACE_DURATION_MS = 2500
+
+/**
  * El conector que viene elegido de arranque: el más rápido de los que están libres.
  *
  * Libre primero y potencia después, en ese orden, porque es el orden en que decide alguien que
@@ -79,7 +92,60 @@ export default function StationsMapPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [query, setQuery] = useState('')
+  /*
+   * La búsqueda puede venir de la dirección (`?q=`) o escribirse acá, y de qué pantalla se trate
+   * decide cuál de las dos manda.
+   *
+   * De tablet para arriba esta pantalla ya NO dibuja su buscador: quedaba a cuatro centímetros
+   * del de la franja de arriba, con el mismo aspecto y la misma función, y no había forma de
+   * saber cuál era cuál. Manda la dirección, que ese buscador reescribe con cada tecla. En
+   * celular no hay franja de arriba, así que el campo de acá es el único y escribe el estado
+   * directo.
+   *
+   * Que la búsqueda viaje por la dirección y no por el estado del router es lo que deja el
+   * resultado compartible y recargable.
+   *
+   * El estado se ajusta DURANTE el render y no en un efecto. Es el patrón que recomienda React
+   * para el estado que se deriva de algo de afuera, y el mismo que usa `BottomSheet`: hecho en un
+   * efecto, se alcanza a ver un cuadro con la lista filtrada por la búsqueda anterior.
+   *
+   * Se compara contra la última dirección vista y no contra `query` a secas: si se copiara
+   * siempre, borrar el texto a mano lo repondría desde la dirección en el render siguiente y el
+   * campo no se dejaría vaciar nunca.
+   */
+  const [searchParams] = useSearchParams()
+  const urlQuery = searchParams.get('q') ?? ''
+
+  /*
+   * `?station=3` abre el mapa con esa estación ya elegida y el panel arriba.
+   *
+   * Existe para la portada: el recuadro de la estación más cercana la nombra, y tocarlo tiene
+   * que llevar a ESA estación abierta. Sin esto, el conductor aterriza en el mapa teniendo que
+   * buscar de nuevo la que le acaban de mostrar.
+   *
+   * Es el mismo mecanismo que ya usa el ABM (ver `STATION_PARAM` en `StationsPage`), con el
+   * mismo nombre de parámetro a propósito: son la misma idea, y un enlace armado a mano para una
+   * pantalla funciona en la otra.
+   *
+   * Se aplica UNA sola vez, cuando llegan las estaciones, y después se olvida. Si se aplicara en
+   * cada render, cerrar el panel lo volvería a abrir en el cuadro siguiente y la estación no se
+   * podría sacar de encima sin editar la dirección.
+   */
+  const [pendingStationId, setPendingStationId] = useState<number | null>(() => {
+    const raw = searchParams.get('station')
+    if (raw === null) return null
+
+    const parsed = Number(raw)
+    return Number.isInteger(parsed) ? parsed : null
+  })
+
+  const [query, setQuery] = useState(urlQuery)
+  const [lastUrlQuery, setLastUrlQuery] = useState(urlQuery)
+
+  if (urlQuery !== lastUrlQuery) {
+    setLastUrlQuery(urlQuery)
+    setQuery(urlQuery)
+  }
 
   /*
    * Los filtros viven acá arriba y no adentro de StationFilters por el mismo motivo que el
@@ -94,6 +160,28 @@ export default function StationsMapPage() {
 
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null)
   const [selectedConnectorId, setSelectedConnectorId] = useState<number | null>(null)
+
+  /*
+   * La ubicación del dispositivo. Se pide al entrar al mapa y no detrás de un botón: es la
+   * pantalla donde el permiso se explica solo, y donde pedirlo en otro momento sería más raro
+   * que pedirlo acá.
+   *
+   * Que falte no rompe nada. Sin permiso, sin HTTPS o fuera del país no hay punto azul y la
+   * reserva no traza línea; todo lo demás de la pantalla funciona igual. Por eso el estado no
+   * se muestra hoy en ningún cartel: el hook distingue los cuatro motivos (ver
+   * `DeviceLocationStatus`) para el día que se quiera decirlo, pero un aviso permanente de
+   * "activá la ubicación" sobre un mapa que anda sin ella es ruido.
+   */
+  const device = useDeviceLocation()
+
+  /*
+   * La estación hacia la que se está trazando la línea, mientras dura. Es un estado aparte de
+   * `selectedStationId` y no un booleano colgado de él porque son dos cosas distintas: la
+   * selección la manda el usuario y dura hasta que la cambie, el trazo lo dispara la reserva y
+   * se apaga solo.
+   */
+  const [tracedStationId, setTracedStationId] = useState<number | null>(null)
+  const traceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wide = useMediaQuery(WIDE_QUERY)
 
@@ -128,6 +216,24 @@ export default function StationsMapPage() {
     return () => controller.abort()
   }, [])
 
+  /*
+   * La estación de `?station=` se aplica en cuanto llegan los datos.
+   *
+   * Va DURANTE el render y no en un efecto, que es el mismo patrón que usa la búsqueda unas
+   * líneas más arriba y el que React recomienda para el estado que se deriva de algo de afuera.
+   * Hecho en un efecto se alcanza a ver un cuadro con el mapa sin nada elegido antes de que se
+   * abra el panel, que es exactamente el parpadeo que este parámetro existe para evitar.
+   *
+   * `setPendingStationId(null)` primero: es lo que hace que esto pase una sola vez y que cerrar
+   * el panel no lo vuelva a abrir en el render siguiente.
+   */
+  if (pendingStationId !== null && allStations.length > 0) {
+    setPendingStationId(null)
+    setSelectedStationId(pendingStationId)
+    /* El conector arranca de nuevo, igual que en cualquier otra selección. */
+    setSelectedConnectorId(null)
+  }
+
   const stations = useMemo(
     () =>
       allStations.filter(
@@ -147,6 +253,13 @@ export default function StationsMapPage() {
   const selectedStation = stations.find((s) => s.stationId === selectedStationId) ?? null
 
   /*
+   * La estación del trazo se resuelve como la elegida, contra la lista ya filtrada: `find`
+   * devuelve siempre la misma referencia mientras no cambie el arreglo, y de eso depende que el
+   * encuadre de `FitTrace` ocurra una sola vez y no en cada arreglo del GPS.
+   */
+  const tracedStation = stations.find((s) => s.stationId === tracedStationId) ?? null
+
+  /*
    * El conector elegido se resuelve contra la estación de ahora y cae en el de por omisión si
    * el guardado no le pertenece. Sin eso, cambiar de estación dejaría el panel apuntando al
    * conector de la anterior, que en esta ni existe.
@@ -156,6 +269,36 @@ export default function StationsMapPage() {
       ? null
       : (selectedStation.matchingConnectors.find((c) => c.connectorId === selectedConnectorId) ??
         defaultConnector(selectedStation))
+
+  /*
+   * Las sugerencias del celular salen de lo que YA está filtrado, no de todas las estaciones: es
+   * la misma lista que dibujan los pines, así que lo que se ofrece elegir es exactamente lo que
+   * se está viendo. Elegir una la selecciona y sube el panel; no navega a ningún lado, porque ya
+   * se está en el mapa.
+   */
+  const suggestionsId = useId()
+
+  /*
+   * Si el buscador de celular se está viendo como burbuja. Lo dice él —el estado de plegado es
+   * suyo—, y acá se usa para una sola cosa: darle o no el ancho de la fila, que es lo que manda
+   * a los filtros a su lado o al renglón de abajo.
+   *
+   * La cuenta se repite de `StationSearch` porque el aviso trae solo la mitad —si tiene el
+   * foco—; la otra mitad es el texto, que vive acá: plegado es sin foco Y vacío.
+   */
+  const [searchExpanded, setSearchExpanded] = useState(false)
+  const searchCollapsed = !searchExpanded && query === ''
+
+  const suggestions = query.trim() === '' ? [] : stations.slice(0, MAX_SUGGESTIONS)
+
+  const nav = useSuggestionNav(suggestions, (picked) => {
+    if (picked !== null) selectStation(picked.stationId)
+  })
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value)
+    nav.reopen()
+  }
 
   function selectStation(stationId: number) {
     setSelectedStationId(stationId)
@@ -168,26 +311,83 @@ export default function StationsMapPage() {
     setSelectedConnectorId(null)
   }
 
-  function handleReserve() {
-    /*
-     * RF08 —reserva de slot con seña— todavía no existe: no hay BookingService ni pantalla de
-     * reserva. El botón se deja activo igual para que la regla que sí está implementada —un
-     * conector fuera de servicio no se reserva— se pueda probar de verdad contra el estado
-     * habilitado. Cuando entre RF08, este cuerpo pasa a ser la navegación al alta.
-     */
+  function clearTraceTimer() {
+    if (traceTimer.current === null) return
+    clearTimeout(traceTimer.current)
+    traceTimer.current = null
+  }
+
+  /*
+   * Si la pantalla se desmonta con el trazo corriendo, el setState posterior cae sobre un
+   * componente que ya no existe — y encima saltaría el cartel de la reserva sobre otra pantalla.
+   */
+  useEffect(() => clearTraceTimer, [])
+
+  /**
+   * El aviso de que RF08 —reserva de slot con seña— todavía no existe: no hay BookingService ni
+   * pantalla de reserva. El botón se deja activo igual para que la regla que sí está
+   * implementada —un conector fuera de servicio no se reserva— se pueda probar de verdad contra
+   * el estado habilitado. Cuando entre RF08, esto pasa a ser la navegación al alta.
+   */
+  function notifyReservationPending() {
     window.alert(
       'La reserva todavía no está disponible: llega con RF08, que incluye el cobro de la seña.',
     )
   }
 
-  /* El encabezado dice tres cosas distintas, y ninguna sirve mientras las otras dos aplican. */
-  const summary = loading
-    ? 'Cargando estaciones…'
-    : loadError !== null
-      ? loadError
-      : query === '' && filters.connectorType === null && filters.minPowerKw === null
-        ? `${allStations.length} estaciones.`
-        : `${stations.length} de ${allStations.length} estaciones.`
+  /**
+   * Dibuja la línea hasta la estación y la apaga sola. Ver TRACE_DURATION_MS.
+   *
+   * El temporizador anterior se corta antes de abrir otro: sin eso, tocar Reservar dos veces
+   * deja dos plazos corriendo y el primero en vencer apaga la línea que acababa de encender el
+   * segundo, cortándola a la mitad.
+   */
+  function startTrace(stationId: number) {
+    clearTraceTimer()
+    setTracedStationId(stationId)
+
+    traceTimer.current = setTimeout(() => {
+      traceTimer.current = null
+      setTracedStationId(null)
+      notifyReservationPending()
+    }, TRACE_DURATION_MS)
+  }
+
+  function handleReserve() {
+    if (selectedStation === null) return
+
+    /*
+     * Sin ubicación no hay línea que trazar —no hay punto de partida—, así que el botón hace lo
+     * único que sabe hacer hoy: avisar que la reserva no está.
+     */
+    if (device.location === null) {
+      notifyReservationPending()
+      return
+    }
+
+    /*
+     * Con ubicación, primero el trazo y el aviso DESPUÉS, cuando la línea terminó.
+     *
+     * No es una preferencia de ritmo: `window.alert` congela el hilo de la página, animaciones
+     * incluidas. Lanzado acá, el mapa se queda clavado en el cuadro anterior y ni el encuadre ni
+     * el titileo llegan a verse hasta que alguien cierre el cartel — y para entonces ya pasaron.
+     *
+     * El día que RF08 exista este orden deja de importar, porque lo que va a haber acá es una
+     * navegación y no un cartel modal. Mientras tanto, el aviso al final es lo que deja convivir
+     * las dos cosas.
+     */
+    startTrace(selectedStation.stationId)
+  }
+
+  /*
+   * La ficha flotante dice lo que la pantalla no puede mostrar sola, y nada más.
+   *
+   * Ya no cuenta estaciones: cuántas hay se ve en el mapa, que son los pines, y repetirlo en un
+   * número ocupaba la esquina con algo que el ojo ya sabía. Quedan los dos casos en los que el
+   * mapa NO alcanza a explicarse: mientras carga, porque un mapa vacío parece un mapa sin
+   * estaciones, y cuando la carga falla, porque si no la pantalla se rompe en silencio.
+   */
+  const notice = loading ? 'Cargando estaciones…' : loadError
 
   /* El panel, escrito una sola vez para las dos formas de la pantalla. */
   const detail = selectedStation && (
@@ -200,37 +400,49 @@ export default function StationsMapPage() {
   )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
-      <header className="border-border bg-surface flex items-baseline gap-3 border-b px-6 py-4">
-        <h1 className="text-primary text-2xl font-semibold">Mapa</h1>
-        <p className={loadError !== null ? 'text-st-offline text-sm' : 'text-text-muted text-sm'}>
-          {summary}
-        </p>
-      </header>
+    /*
+      De tablet para arriba el mapa vive adentro de una tarjeta redondeada, separada de los
+      bordes: es la disposición que pidió el diseño y hace juego con los recuadros de la portada.
 
-      {/*
+      En el celular NO: ahí sigue a sangre. El aire de los costados le come ancho a la única
+      pantalla que es puro mapa, y la barra de navegación de abajo está pensada para flotar sobre
+      los mosaicos, no sobre un margen.
+    */
+    <section className="flex min-h-0 flex-1 flex-col md:px-6 md:pb-6">
+      <div className="border-border/60 relative flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-3xl md:border md:shadow-xl">
+        {/*
+          El título queda solo para lectores de pantalla. La franja que lo mostraba se sacó porque
+          le comía alto al mapa, que es toda la pantalla; el encabezado en sí no se puede borrar
+          —una página sin `h1` deja a quien navega por estructura sin saber dónde está— y la barra
+          de arriba ya dice "Mapa" a la vista.
+        */}
+        <h1 className="sr-only">Mapa</h1>
+
+        {/*
         relative + min-h-0. El mapa, el buscador, los degradados y el panel se posicionan
         absolutos contra este div, así que necesita ser el contenedor de referencia; y min-h-0
         porque un ítem flex se niega por omisión a achicarse por debajo de su contenido, con lo
         que empujaría la página hacia abajo en vez de ocupar el hueco que queda.
       */}
-      <div className="relative min-h-0 flex-1">
-        <StationMap
-          stations={stations}
-          selectedStationId={selectedStation?.stationId ?? null}
-          onSelect={selectStation}
-          bottomInsetPx={!wide && selectedStation !== null ? SHEET_INSET_PX : 0}
-          dimUnselected={selectedStation !== null}
-        />
+        <div className="relative min-h-0 flex-1">
+          <StationMap
+            stations={stations}
+            selectedStationId={selectedStation?.stationId ?? null}
+            onSelect={selectStation}
+            bottomInsetPx={!wide && selectedStation !== null ? SHEET_INSET_PX : 0}
+            dimUnselected={selectedStation !== null}
+            deviceLocation={device.location}
+            traceTo={tracedStation}
+          />
 
-        {/*
+          {/*
           El degradado de abajo se agranda solo en celular. Ahí el panel ocupa el ancho entero
           y necesita apoyarse sobre algo oscuro; acá el panel es una tarjeta en la esquina, y
           un degradado de dos tercios a todo el ancho oscurece medio mapa para enmarcarla.
         */}
-        <MapScrim expanded={!wide && selectedStation !== null} />
+          <MapScrim expanded={!wide && selectedStation !== null} />
 
-        {/*
+          {/*
           Centrado en celular y pegado a la izquierda de ahí para arriba.
 
           En celular el ancho se acota a lo disponible menos 6rem, que deja 3rem de cada lado:
@@ -240,50 +452,116 @@ export default function StationsMapPage() {
           z-index por encima de los 1000 que usa Leaflet para sus controles; el porqué está
           explicado en StationCarousel.
         */}
-        <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] items-start gap-2 lg:w-[calc(100%-23rem)]">
-          {/*
-            En celular el buscador toma el ancho entero de la fila, que ya viene con 1rem de
-            aire de cada lado: desplegado queda centrado por simetría, sin cálculos. El `mx-auto`
-            cubre el caso de la tablet angosta, donde el tope de 30rem deja espacio libre y sin
-            él la barra quedaría pegada a la izquierda.
+          <div className="absolute top-4 left-4 z-[1120] flex w-[calc(100%-2rem)] flex-wrap items-start gap-2 lg:w-[calc(100%-23rem)]">
+            {/*
+            El buscador, solo en celular: de ahí para arriba lo reemplaza el de la franja de
+            arriba, y desaparecer del todo es lo que deja a los filtros encabezando la fila.
 
-            Plegado como burbuja el ancho igual se reserva, así que al desplegarse no salta.
-
-            En pantalla ancha la fila se corta antes de llegar al carrusel (20rem de fichas más
-            aire). No es estético: esta capa va por ENCIMA del carrusel, así que una burbuja que
-            llegue hasta allá le queda dibujada arriba de las fichas.
+            Ocupa exactamente lo que dibuja —la burbuja o el campo entero— y no un ancho fijo. El
+            ancho reservado de antes evitaba un saltito al desplegarse, pero ese hueco vacío es
+            justo donde ahora van los filtros, y tenerlos al lado vale más que el salto.
           */}
-          <div className="mx-auto w-[min(30rem,100%)] shrink-0 md:mx-0 md:w-96">
-            <StationSearch value={query} onChange={setQuery} collapsible={!wide} />
+            {/*
+              `relative` porque la lista de coincidencias se cuelga de este contenedor, y
+              `onKeyDown` acá y no en el campo porque el campo lo dibuja otro componente: las
+              teclas suben desde él igual.
+            */}
+            <div
+              className={`relative shrink-0 md:hidden ${searchCollapsed ? 'w-12' : 'w-full'}`}
+              onKeyDown={nav.onKeyDown}
+            >
+              <StationSearch
+                value={query}
+                onChange={handleQueryChange}
+                collapsible
+                onExpandedChange={setSearchExpanded}
+                combobox={{
+                  listboxId: suggestionsId,
+                  expanded: nav.open,
+                  activeOptionId:
+                    nav.highlighted >= 0
+                      ? `${suggestionsId}-${String(nav.highlighted)}`
+                      : undefined,
+                }}
+              />
+
+              {nav.open && (
+                <StationSuggestions
+                  listboxId={suggestionsId}
+                  matches={suggestions}
+                  highlighted={nav.highlighted}
+                  onHighlight={nav.setHighlighted}
+                  onPick={(station) => {
+                    selectStation(station.stationId)
+                    nav.dismiss()
+                  }}
+                />
+              )}
+            </div>
+
+            {/*
+            Los filtros. Dónde caen no lo decide una clase sino el ancho del buscador que tienen
+            al lado: plegado a burbuja les deja el renglón casi entero y siguen a su derecha,
+            desplegado el campo se lleva la fila completa y bajan solos al renglón de abajo. Es
+            el `flex-wrap` de la fila haciendo el trabajo, sin medir nada.
+
+            En celular scrollean de costado y en pantalla ancha envuelven, y la diferencia es
+            cuánto lugar hay: envolviendo en una pantalla angosta, seis burbujas se comen tres
+            renglones de mapa. La barra del scroll se esconde —`no-scrollbar`— porque flotan
+            sobre los mosaicos y una barra gris ahí se lee como suciedad; lo que insinúa que hay
+            más a la derecha es la burbuja cortada por el borde.
+
+            El `py-6 -my-6` es para la sombra, no para el aire: un contenedor que scrollea de
+            costado recorta también arriba y abajo —el navegador no deja pedir una sola de las
+            dos— y sin lugar de sobra las burbujas quedan con la sombra cortada al ras. Son 24px
+            porque eso es lo que baja `shadow-lg`: 10 de desplazamiento más 15 de difuminado,
+            menos 3 que encoge. El margen negativo devuelve ese lugar prestado, así que la fila
+            mide lo mismo que antes.
+
+            Y ese lugar prestado no atrapa el dedo: la caja se estira sobre el mapa, invisible,
+            y sin `pointer-events-none` se quedaría con los arrastres de una franja de mapa que
+            no se ve por ningún lado. Las burbujas lo vuelven a encender para sí mismas, y el
+            scroll de la fila sigue andando porque empieza en ellas.
+          */}
+            <div className="no-scrollbar pointer-events-none -my-6 flex min-w-0 flex-1 items-center gap-2 self-center overflow-x-auto py-6 [&>*]:pointer-events-auto md:flex-auto md:flex-wrap md:self-start md:overflow-x-visible">
+              <StationFilters value={filters} onChange={setFilters} />
+            </div>
+
+            {/*
+              El aviso de carga o de error, el ÚNICO lugar donde aparece un fallo del backend. Se
+              pinta en rojo cuando algo se rompió, que es lo que lo saca de ser un dato al pasar.
+
+              `md:ml-auto` lo manda al extremo de la fila, lejos del buscador y de los filtros: es
+              información, no un control. En el celular no, porque ahí los filtros ocupan el
+              renglón: empujado a la derecha quedaría colgando solo en el aire.
+            */}
+            {notice !== null && (
+              <p
+                className={`glass-panel shrink-0 rounded-full px-3 py-1.5 text-xs font-medium md:ml-auto ${
+                  loadError !== null ? 'text-danger' : 'text-text-muted'
+                }`}
+                /* Los errores interrumpen; el "cargando" no. */
+                role={loadError !== null ? 'alert' : undefined}
+              >
+                {notice}
+              </p>
+            )}
           </div>
 
           {/*
-            Los filtros no van en celular: ver el comentario de StationFilters.
-
-            Envuelven en vez de scrollear de costado, al revés que en el ABM. Ahí la fila de
-            filtros es un renglón dedicado y el scroll horizontal se entiende; acá flotan sobre
-            el mapa, sin barra ni borde que insinúe que hay más a la derecha, y lo que no entra
-            simplemente no se encontraría. Envolviendo se ven todos, que son seis.
-          */}
-          <div className="hidden min-w-0 flex-wrap items-center gap-2 md:flex">
-            <StationFilters value={filters} onChange={setFilters} />
-          </div>
-        </div>
-
-        {/*
           El carrusel es de pantalla ancha nada más. En celular la lista de estaciones son los
           pines, y quien quiere ver una la toca: una segunda lista encima del mapa competiría
           por el mismo espacio con el panel que se abre justo abajo.
         */}
-        {wide && (
-          <StationCarousel
-            stations={stations}
-            selectedStationId={selectedStation?.stationId ?? null}
-            onSelect={selectStation}
-          />
-        )}
+          {wide && (
+            <StationCarousel
+              stations={stations}
+              selectedStationId={selectedStation?.stationId ?? null}
+              onSelect={selectStation}
+            />
+          )}
 
-        {/*
+          {/*
           Pantalla ancha: el detalle sube desde el borde de abajo, pegado a él y sin esquinas
           redondeadas. Apoya contra el borde en vez de flotar sobre el mapa, que es lo que lo
           hace leer como una parte de la pantalla y no como una tarjeta suelta. Queda a la
@@ -293,53 +571,53 @@ export default function StationsMapPage() {
           se lee como un pedazo de la ventana, y separado se lee como algo apoyado sobre el
           mapa, que es lo que es.
         */}
-        {wide && detail && (
-          <aside className="station-panel border-border bg-surface/95 absolute bottom-0 left-12 z-[1120] flex w-[26rem] flex-col border border-b-0 shadow-lg shadow-black/40 backdrop-blur">
-            {/*
+          {wide && detail && (
+            <aside className="station-panel border-border bg-surface/95 absolute bottom-0 left-12 z-[1120] flex w-[26rem] flex-col border border-b-0 shadow-lg shadow-black/40 backdrop-blur">
+              {/*
               La flecha ocupa el ancho entero y no es un ícono en una esquina: apunta hacia
               abajo, que es a donde se va el panel, y esa franja es el blanco más grande que
               se puede dar para cerrarlo.
             */}
-            <button
-              type="button"
-              onClick={closePanel}
-              aria-label="Cerrar detalle"
-              className="border-border text-text-muted hover:text-text hover:bg-surface focus-visible:outline-primary flex w-full shrink-0 justify-center border-b py-2 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-                aria-hidden="true"
+              <button
+                type="button"
+                onClick={closePanel}
+                aria-label="Cerrar detalle"
+                className="border-border text-text-muted hover:text-text hover:bg-surface focus-visible:outline-primary flex w-full shrink-0 justify-center border-b py-2 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2"
               >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
 
-            {/*
+              {/*
               El contenido scrollea por su cuenta y el panel se topa contra el alto del mapa:
               una estación con muchos conectores no puede empujar el botón de reservar fuera
               de la pantalla.
             */}
-            <div className="no-scrollbar max-h-[60vh] overflow-y-auto p-5">{detail}</div>
-          </aside>
-        )}
-      </div>
+              <div className="no-scrollbar max-h-[60vh] overflow-y-auto p-5">{detail}</div>
+            </aside>
+          )}
+        </div>
 
-      {/* Celular: lo mismo, como panel que sube desde abajo. */}
-      {!wide && (
-        <BottomSheet
-          open={selectedStation !== null}
-          onClose={closePanel}
-          label="Detalle de la estación"
-          /* Ver el comentario de la prop: acá atrás está el mapa, y taparlo sería esconder
+        {/* Celular: lo mismo, como panel que sube desde abajo. */}
+        {!wide && (
+          <BottomSheet
+            open={selectedStation !== null}
+            onClose={closePanel}
+            label="Detalle de la estación"
+            /* Ver el comentario de la prop: acá atrás está el mapa, y taparlo sería esconder
              el pin que se acaba de elegir. */
-          dimBackground={false}
-          /*
+            dimBackground={false}
+            /*
             El mismo gris que la tarjeta de escritorio: es el mismo panel en dos formas, y con
             el fondo por omisión del ABM se veía casi negro solo en el celular.
 
@@ -347,11 +625,12 @@ export default function StationsMapPage() {
             del MISMO color al 100% quedarían exactamente del tono del panel y se borrarían.
             Con el panel apenas translúcido conservan el escalón que se ve en el diseño.
           */
-          backgroundClass="bg-surface/95 backdrop-blur"
-        >
-          {detail}
-        </BottomSheet>
-      )}
+            backgroundClass="bg-surface/95 backdrop-blur"
+          >
+            {detail}
+          </BottomSheet>
+        )}
+      </div>
     </section>
   )
 }

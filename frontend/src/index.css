@@ -7,33 +7,204 @@
 @import "./features/terminals/terminals.css";
 
 /*
-  Tema de la aplicación.
+  Tema de la aplicación (RNF07 y RNF08).
 
-  Los tokens se definen acá una sola vez y se usan como clases de Tailwind
-  (bg-background, text-text, etc.). La base es oscura: los cuatro neutros de la paleta van de
-  más oscuro a más claro y cubren fondo, superficie, borde y texto. Cuando implementemos el
-  cambio de tema en tiempo real (RNF08, puntos extra en la Entrega Final), lo que se agrega es
-  la variante CLARA bajo [data-theme="light"], sin tocar ningún componente.
+  Los tokens se definen acá una sola vez y se usan como clases de Tailwind (bg-background,
+  text-text, etc.). El bloque `@theme` es el tema OSCURO, que es el que manda por omisión; el
+  claro solo redefine los mismos nombres bajo `[data-theme="light"]`.
 
-  Dos valores no salen directo de la paleta:
+  Que se pueda cambiar de tema sin tocar un solo componente es exactamente la razón de que los
+  colores vivan en tokens: `bg-surface` no sabe de qué color es, y no tiene por qué saberlo.
+  Quien decide es `features/theme/theme.ts`, que escribe el atributo en <html>.
 
-  --color-text-muted es un gris agregado. El #6D6D6D de la paleta da 2.77 de contraste sobre el
-  fondo y 1.80 sobre la superficie, contra los 4.5 que pide WCAG: sobre el header el texto
-  secundario quedaba casi del color del header. #9A9A9A llega a 5.11 sobre el fondo, que es
-  donde va a vivir la mayor parte del texto secundario (la lista de resultados). #6D6D6D queda
-  solo para bordes, que es donde el contraste bajo no molesta.
+  **El verde de la marca no es un color sino un par**, y de ahí sale todo lo verde de la
+  aplicación. En el tema oscuro va de `#b9fe70` a `#98df4b`; en el claro, de `#98df4b` a
+  `#569e08`. Los dos pares comparten el del medio a propósito: son el mismo verde visto con más
+  o menos luz alrededor, no dos marcas distintas.
 
-  --color-primary-strong es el verde apagado un paso: es el estado presionado, y la paleta trae
-  un solo verde. No lo usa nadie todavía.
+  Ese par se usa de dos maneras, y conviene tener clara la diferencia:
+
+  - Como RELLENO —un botón, el círculo de la navegación, la perilla del interruptor— va el
+    degradado entero, con la utilidad `brand-fill`. Es lo que pidió el diseño y es donde un
+    degradado se lee.
+  - Como TINTA —texto, íconos, bordes, anillos de foco— va un color solo, `--color-primary`, que
+    es la punta del par que se lee contra el fondo de ESE tema: la clara en el oscuro, la oscura
+    en el claro. Un degradado sobre un renglón de 12px no se ve, y la punta equivocada lo deja
+    ilegible.
+
+  `--color-on-primary` es la tinta que va ENCIMA del verde, y es oscura en los dos temas: las dos
+  puntas del par son verdes con luz de sobra, así que lo que se lee sobre ellas es lo oscuro. No
+  puede ser `--color-background` como antes, porque en el tema claro eso es casi blanco.
+
+  --color-danger es el rojo de los errores de formulario, y también cambia entre temas por el
+  mismo motivo que el verde: uno claro se lee sobre el fondo oscuro y se pierde sobre el claro.
+  Los dos están medidos contra el vidrio de las tarjetas, que es donde aparecen.
+
+  --color-text-muted es un gris agregado, no sale de la paleta: los grises de la paleta original
+  no llegaban a los 4.5 de contraste que pide WCAG contra el fondo. El de cada tema está elegido
+  contra SU fondo, y desde que hay un fondo animado detrás, contra la zona MENOS favorable de ese
+  fondo —la más oscura en el tema claro, la más clara en el oscuro— y no contra el color plano.
 */
 @theme {
-  --color-background: #2a2a2a;
-  --color-surface: #474747;
-  --color-border: #6d6d6d;
-  --color-text: #d9d9d9;
-  --color-text-muted: #9a9a9a;
+  --color-background: #0d111c;
+  --color-surface: #1a2130;
+  --color-border: #2b3446;
+  --color-text: #e9edf5;
+  --color-text-muted: #a8b2c4;
   --color-primary: #b9fe70;
-  --color-primary-strong: #a3e858;
+  --color-on-primary: #0d111c;
+  --color-danger: #fca5a5;
+}
+
+/*
+  Los resplandores del fondo (ver `.app-shell`). Van sueltos y no en `@theme` porque no son
+  colores de la interfaz: nadie los usa como `bg-` ni como `text-`, son las manchas del
+  degradado y solo las lee una regla.
+*/
+:root {
+  /*
+    El retoque de los mosaicos del mapa. El proveedor ya sirve dos juegos, uno claro y uno oscuro
+    (ver `mapConfig.ts`), así que esto NO es lo que hace oscuro al mapa: es el último paso para
+    que el gris del proveedor caiga en la misma familia que el gris de la interfaz.
+
+    `grayscale` va primero y no es redundante: el basemap conserva algún resto de color en parques
+    y rutas principales, y la paleta no tiene ni un tono.
+  */
+  --map-filter: grayscale(1) brightness(0.85) contrast(1.05);
+
+  /*
+    Las dos puntas del verde de la marca. Van sueltas y no en `@theme` porque no son un color de
+    la interfaz que alguien vaya a pedir por su nombre: son los extremos de un degradado, y quien
+    los lee es una sola utilidad.
+  */
+  --brand-from: #b9fe70;
+  --brand-to: #98df4b;
+
+  --shell-glow-a: rgb(78 96 214 / 0.34);
+  --shell-glow-b: rgb(150 100 250 / 0.26);
+  --shell-glow-c: rgb(120 200 90 / 0.12);
+}
+
+[data-theme="light"] {
+  --color-background: #e9eff8;
+  --color-surface: #ffffff;
+  --color-border: #d2dae9;
+  --color-text: #111827;
+  --color-text-muted: #454f61;
+  --color-primary: #569e08;
+  --color-danger: #b91c1c;
+
+  --brand-from: #98df4b;
+  --brand-to: #569e08;
+
+  /* Sobre los mosaicos claros no hay nada que oscurecer: apenas se les levanta un punto de luz. */
+  --map-filter: grayscale(1) brightness(1.03) contrast(0.96);
+
+  --shell-glow-a: rgb(150 185 240 / 0.55);
+  --shell-glow-b: rgb(196 178 240 / 0.45);
+  --shell-glow-c: rgb(255 255 255 / 0.75);
+}
+
+/*
+  El relleno verde de la marca: el degradado entre las dos puntas del par.
+
+  **Pone el fondo y nada más.** La tinta de encima la elige quien lo usa, con `text-on-primary`,
+  y no la pone esta regla: dos utilidades que escriben `color` se resuelven por el orden en que
+  Tailwind las emite, que no es algo que convenga adivinar. Escrito aparte, se ve en el componente
+  qué color tiene el texto.
+
+  **El degradado no se mueve nunca.** La primera versión lo corría al pasar el mouse, como
+  reemplazo del viejo `hover:bg-primary-strong`, y estaba mal por dos motivos. En el celular el
+  `:hover` se queda pegado después de tocar: la burbuja elegida quedaba con el verde corrido
+  hasta que se tocaba otra cosa, y ahí volvía sola. Y con mouse pasaba lo mismo al pasar por
+  encima. Las dos cosas se leen como que la marca cambia de dirección, que es exactamente lo
+  contrario de lo que un color de marca tiene que hacer.
+
+  El realce del mouse ahora es un aclarado, que no tiene dirección, y solo existe donde hay un
+  puntero de verdad: `(hover: hover)` deja afuera al celular, que es donde el estado se pegaba.
+
+  **Y el aclarado entra de golpe, sin transición.** Suavizarlo obligaba a declarar `transition`
+  acá, y esta regla vive fuera de las capas de Tailwind: le ganaba a la transición propia de cada
+  elemento. Le pasó a la perilla del interruptor de tema, que dejó de deslizarse, y a la barra de
+  progreso, que dejó de crecer. Un cambio de brillo al pasar el mouse no vale un efecto que
+  desactiva el de todos los demás.
+
+  Sobre un elemento deshabilitado hay que apagarlo con `disabled:bg-none`: un `bg-*` cambia el
+  color de fondo, pero el degradado es una IMAGEN y se sigue dibujando encima.
+*/
+@utility brand-fill {
+  background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+}
+
+@media (hover: hover) {
+  .brand-fill:hover {
+    filter: brightness(1.06);
+  }
+}
+
+/*
+  El fondo de la aplicación: tres manchas de color muy abiertas sobre el color base.
+
+  Es lo que evita que el tema oscuro sea un gris plano. Las manchas son enormes y de opacidad
+  muy baja a propósito —no se leen como formas, se leen como luz— y quedan fijas al contenedor,
+  así que el contenido scrollea por encima sin arrastrarlas.
+*/
+.app-shell {
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(70% 55% at 12% 0%, var(--shell-glow-a), transparent 70%),
+    radial-gradient(60% 60% at 92% 18%, var(--shell-glow-b), transparent 70%),
+    radial-gradient(85% 55% at 50% 112%, var(--shell-glow-c), transparent 70%);
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+/*
+  El vidrio: la superficie de la que están hechas las tarjetas, la franja de arriba y el riel.
+
+  Son tres cosas juntas y ninguna sobra. El fondo semitransparente deja pasar el color de lo que
+  hay abajo; el desenfoque lo vuelve una mancha, que es lo que permite leer texto encima; y la
+  saturación compensa lo que el desenfoque apaga —sin ella el vidrio se ve gris y sucio en vez
+  de translúcido—.
+*/
+.glass-panel {
+  /*
+    El 32% de cuerpo y los 6px de desenfoque están medidos, no elegidos a ojo. Son lo más
+    transparente y lo menos borroso que se puede pedir sin que el texto de las tarjetas baje del
+    4.5 de contraste que exige WCAG **en el peor punto del fondo animado** —la zona más oscura en
+    el tema claro, la más clara en el oscuro—. Con estos valores el claro queda en 6.0 y el
+    oscuro en 4.7.
+
+    El desenfoque no cambia el contraste —eso lo decide el cuerpo—, así que bajarlo es gratis
+    mientras haya algo de mancha que separe el texto del fondo. Bajar el CUERPO sí obliga a
+    compensar en otro lado: subir el gris apagado,
+    bajar el brillo especular del fondo, o las dos cosas, que es lo que hubo que hacer en el tema
+    oscuro para llegar hasta acá.
+  */
+  background-color: color-mix(in srgb, var(--color-surface) 32%, transparent);
+  /*
+    El borde se nota más ahora, y hace falta: cuanto menos cuerpo tiene el vidrio, menos se
+    distingue dónde termina la tarjeta y empieza el fondo.
+  */
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  -webkit-backdrop-filter: blur(6px) saturate(1.5);
+  backdrop-filter: blur(6px) saturate(1.5);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease;
+}
+
+/*
+  Sin soporte de `backdrop-filter` no queda un vidrio a medias: el fondo semitransparente sin
+  desenfoque deja leer el contenido de abajo a través del texto de encima. En ese caso se vuelve
+  opaco, que es menos lindo pero legible.
+*/
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel {
+    background-color: var(--color-surface);
+  }
 }
 
 /*
@@ -51,7 +222,7 @@
   verde de los anillos se tiñe con el mapa y los badges se dan vuelta.
 */
 .leaflet-tile-pane {
-  filter: grayscale(1) brightness(0.85) contrast(1.05);
+  filter: var(--map-filter);
 }
 
 /*
@@ -97,6 +268,322 @@
 */
 .leaflet-marker-icon:hover .station-pin__badge {
   opacity: 0;
+}
+
+/* ─────────────────────── Ubicación del dispositivo en el mapa ───────────────────────
+  El punto del "estás acá" y su halo, que late. Ver `devicePin.ts`.
+
+  El latido no es decoración: distingue el punto que el navegador está midiendo AHORA de un pin
+  cualquiera dibujado sobre el mapa. Es lento —2,4 s— y sale de adentro hacia afuera, que es el
+  gesto que ya usan todos los mapas para lo mismo.
+
+  Se desvanece del todo antes de terminar (70%) y se queda invisible el resto del ciclo: sin esa
+  pausa el halo vuelve a empezar apenas termina y late como un corazón acelerado, que sobre un
+  mapa quieto se lee como una alarma.
+*/
+@keyframes device-pin-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+
+/*
+  El halo va del verde de la marca, y de las dos puntas del par le toca la CLARA —`--brand-from`,
+  la misma que usa `::selection`— y no el degradado.
+
+  El disco de abajo sí lleva el degradado entero, con `brand-fill`. Acá no, y la diferencia no es
+  un descuido: un degradado sobre una forma que se está agrandando y desvaneciendo al mismo
+  tiempo no se lee como degradado, se lee como una mancha sucia de un lado. Un color plano se
+  expande parejo, que es lo único que este halo tiene que hacer.
+*/
+.device-pin__pulse {
+  background-color: var(--brand-from);
+  animation: device-pin-pulse 2400ms ease-out infinite;
+}
+
+/* Para quien pidió menos movimiento, el halo se queda quieto en vez de desaparecer: el punto
+   sigue leyéndose como ubicación en vivo, solo que sin latir. */
+@media (prefers-reduced-motion: reduce) {
+  .device-pin__pulse {
+    animation: none;
+    opacity: 0.3;
+  }
+}
+
+/* ─────────────────────── La línea del dispositivo a la estación ───────────────────────
+  Aparece al reservar, titila, y se va sola. Ver el `Polyline` de `StationMap`.
+
+  **Las duraciones de acá están atadas a TRACE_DURATION_MS, en `StationsMapPage`.** Son 2500 ms
+  repartidos así: tres parpadeos de 620 ms (1860), una pausa encendida, y el desvanecido de
+  300 ms arrancando a los 2200 para terminar justo cuando React desmonta la línea. Si allá se
+  cambia el plazo, hay que rehacer este reparto o la línea desaparece de golpe a mitad de
+  desvanecido —que es exactamente el corte seco que esto existe para evitar—.
+
+  El parpadeo NO lleva `forwards`: al terminar, la opacidad vuelve al valor del atributo que
+  escribe Leaflet, que es 1. Esa es la pausa encendida, y sale gratis. El desvanecido sí lo
+  lleva, porque su valor final —invisible— tiene que quedar fijo hasta el desmontaje.
+
+  Punteada y no llena: es dirección y distancia, no un recorrido por calles. Una línea llena
+  prometería un camino que nadie calculó.
+*/
+@keyframes station-trace-blink {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.15;
+  }
+}
+
+@keyframes station-trace-fade {
+  to {
+    stroke-opacity: 0;
+  }
+}
+
+.station-trace {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1 14;
+  animation:
+    station-trace-blink 620ms ease-in-out 3,
+    station-trace-fade 300ms ease-in 2200ms forwards;
+}
+
+/*
+  Sin movimiento la línea no titila, pero SIGUE yéndose sola: el titileo es el énfasis, la
+  desaparición es la función. Una línea que se queda para siempre sobre el mapa es otra cosa.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .station-trace {
+    animation: station-trace-fade 300ms ease-in 2200ms forwards;
+  }
+}
+
+/* ─────────────────────── La cinta de "próximamente" ───────────────────────
+  La faja cruzada sobre un recuadro que todavía no se puede usar, como la cinta de obra. La pone
+  `TapedCard.tsx`, que es quien explica el resto del tratamiento.
+
+  **Va en CSS y no como imagen.** Una PNG exportada tendría el verde quemado en los píxeles, así
+  que al cambiar de tema quedaría con el verde del otro; el texto no se podría corregir sin
+  volver a exportar; y en una pantalla retina habría que mantener dos archivos. Hecha con
+  gradientes sale del mismo par de la marca que todo lo demás y cambia de tema sola.
+
+  Se sale del recuadro por los dos costados a propósito —de ahí los `-2rem`—: una cinta que
+  termina justo en el borde se lee como un cartel pegado adentro, y una que se corta contra el
+  borde se lee como una cinta que sigue de largo, que es lo que es. El `overflow-hidden` de la
+  tarjeta es el que la recorta.
+
+  La rotación es negativa para que suba hacia la derecha. En sentido horario —positiva— la cinta
+  baja, y el conjunto se lee como algo que se cayó en vez de algo que alguien pegó.
+*/
+.taped-card__tape {
+  position: absolute;
+  left: -2rem;
+  right: -2rem;
+  top: 50%;
+  /*
+    El ángulo lo pone quien usa la tarjeta, con -11deg por omisión. Es variable porque dos
+    tarjetas tapadas pueden quedar una al lado de la otra, y con la misma inclinación las dos
+    cintas se alinean y se leen como una sola cruzando la fila entera.
+  */
+  transform: translateY(-50%) rotate(var(--tape-angle, -11deg));
+
+  /*
+    Dos capas: las franjas diagonales arriba y el degradado de la marca abajo. Las franjas son
+    la tinta oscura del verde a media opacidad, así que son el MISMO color que usaría un texto
+    encima; con un negro suelto la cinta se ensucia y deja de pertenecer a la paleta.
+  */
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--color-on-primary) 22%, transparent) 0 10px,
+      transparent 10px 26px
+    ),
+    linear-gradient(135deg, var(--brand-from), var(--brand-to));
+
+  /* Los bordes de arriba y abajo, apenas más oscuros: es lo que le da canto y la despega del
+     recuadro en vez de dejarla como una mancha impresa sobre el vidrio. */
+  border-top: 2px solid color-mix(in srgb, var(--color-on-primary) 28%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--color-on-primary) 28%, transparent);
+
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.3);
+
+  padding: 0.45rem 0;
+  overflow: hidden;
+}
+
+.taped-card__text {
+  display: block;
+  white-space: nowrap;
+  text-align: center;
+
+  color: var(--color-on-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* ─────────────────────── La cinta de estaciones de la portada ───────────────────────
+  Se desplaza sola en bucle y frena al pasarle el mouse. Ver `StationTicker.tsx`, que explica
+  por qué la lista se dibuja dos veces y por qué la separación va como margen y no como `gap`.
+
+  El ancho y el margen de la ficha viven ACÁ y no como utilidades en el componente porque son
+  las dos medidas de las que depende que el bucle no tenga costura: la cinta se corre hasta el
+  50% de su ancho, y eso solo cae en un punto idéntico si cada ficha mide exactamente lo mismo,
+  margen incluido. Separadas en dos archivos, cambiar una sin la otra rompe el bucle de una
+  forma que no salta hasta que uno se queda mirando la franja un rato largo.
+*/
+@keyframes station-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.station-ticker {
+  overflow: hidden;
+
+  /*
+    **El aire de arriba y abajo es para la SOMBRA, no para separar.**
+
+    Un contenedor con `overflow: hidden` recorta en los cuatro lados: el navegador no deja pedir
+    solo el horizontal. Sin lugar de sobra, la sombra de cada ficha se corta al ras contra el
+    borde de la cinta y dibuja dos líneas horizontales de punta a punta — que es exactamente la
+    separación rara que se veía alrededor de la franja. El margen negativo devuelve el lugar
+    prestado, así que la cinta sigue ocupando en la página lo mismo que antes.
+
+    Es el mismo arreglo que ya tiene la fila de filtros del mapa, por el mismo motivo y con el
+    mismo truco. Los 40px salen de la sombra de la ficha, con margen de sobra.
+  */
+  padding-block: 2.5rem;
+  margin-block: -2.5rem;
+
+  /*
+    Y ese lugar prestado no atrapa el mouse: la caja se estira 40px sobre la fila de tarjetas de
+    arriba, invisible, y sin esto se quedaría con los clics de esa franja. Las fichas lo vuelven
+    a encender para sí mismas.
+  */
+  pointer-events: none;
+
+  /* Enmascarado en las dos puntas: sin esto las fichas aparecen y desaparecen de golpe contra
+     el borde, que se lee como un recorte y no como una cinta que sigue de largo. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 4rem,
+    black calc(100% - 4rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 4rem,
+    black calc(100% - 4rem),
+    transparent
+  );
+}
+
+.station-ticker__track {
+  display: flex;
+  width: max-content;
+  animation: station-ticker-scroll var(--ticker-duration, 60s) linear infinite;
+
+  /*
+    El mouse se vuelve a encender ACÁ y no en la ficha, y la diferencia importa: la cinta lo apagó
+    para no quedarse con los clics de su relleno de 40px, y ese relleno es del contenedor. El
+    track ocupa exactamente el alto de las fichas, así que encendido acá recibe el mouse justo
+    sobre la franja visible y no sobre el aire prestado de arriba y abajo.
+
+    Encenderlo solo en la ficha no alcanzaba: el freno de abajo se dispara con `:hover`, y un
+    elemento con `pointer-events: none` NO recibe hover — el selector no coincidiría nunca y la
+    cinta no frenaría más.
+  */
+  pointer-events: auto;
+}
+
+/*
+  Frena con el mouse encima. Va sobre el track y no sobre `.station-ticker` por lo que explica el
+  comentario de arriba: el contenedor no recibe hover.
+
+  Y encima es lo correcto por otro motivo: sobre el contenedor, la cinta frenaría también al
+  pasar el mouse por los 40px de relleno invisible, o sea sin estar tocándola.
+*/
+.station-ticker__track:hover {
+  animation-play-state: paused;
+}
+
+/*
+  También frena con el foco del teclado. Las fichas son enlaces, así que se puede llegar a ellas
+  tabulando, y perseguir con el Tab un blanco en movimiento es imposible: sin esto la cinta es
+  navegable solo con mouse.
+
+  `:focus-within` y no `:focus`: el que recibe el foco es el enlace de adentro, no la cinta.
+*/
+.station-ticker:focus-within .station-ticker__track {
+  animation-play-state: paused;
+}
+
+/*
+  La ficha: ancho, separación y superficie.
+
+  **Es la única tarjeta de la aplicación que NO es de vidrio, y no se puede hacer de otra forma.**
+  `backdrop-filter` necesita ver el fondo de la página para desenfocarlo, y un ancestro con
+  `mask-image` o con un `transform` animado —la cinta tiene los dos— crea un "backdrop root" que
+  le corta esa vista: el desenfoque se queda sin nada que muestrear y las fichas salen planas y
+  lavadas, distintas del resto de la portada. Con una superficie opaca se dibujan siempre igual,
+  adentro o afuera de la cinta.
+
+  El cuerpo va al 88% y no al 100% para que el fondo animado de la aplicación se insinúe por
+  detrás, que es lo que las mantiene en la misma familia que las tarjetas de vidrio aunque no
+  compartan la técnica.
+
+  El mouse no se toca acá: lo enciende el track, que es su padre. Ver el comentario de allá.
+*/
+.station-ticker__card {
+  width: 17rem;
+  margin-right: 1rem;
+  flex: none;
+
+  background-color: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.1);
+}
+
+/*
+  Para quien pidió menos movimiento, la cinta se queda quieta y pasa a arrastrarse con el dedo o
+  la rueda. La información no se pierde —están todas las fichas—, cambia quién la mueve.
+
+  La segunda copia queda visible y es lo correcto: sacarla necesitaría que el componente supiera
+  de esta preferencia, y repetida no molesta cuando uno controla el desplazamiento.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .station-ticker {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .station-ticker::-webkit-scrollbar {
+    display: none;
+  }
+
+  .station-ticker__track {
+    animation: none;
+  }
 }
 
 /*
@@ -170,7 +657,203 @@ body,
   height: 100%;
 }
 
+/*
+  La tipografía de la interfaz. `font-feature-settings` apaga las ligaduras de las secuencias
+  tipo "ff" y activa las cifras tabulares: en las tarjetas hay números que cambian solos —kW,
+  kilos, porcentajes— y con cifras de ancho variable el valor se mueve de lugar al actualizarse.
+*/
+body {
+  font-family:
+    "Plus Jakarta Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-text);
+}
+
+/* ─────────────────────────── Navegación del celular ───────────────────────────
+  La barra de abajo con el círculo verde sobre la sección activa (ver MobileNav.tsx).
+
+  Toda la animación cuelga de UN número. `--active-index` dice qué sección está activa —lo
+  escribe React como estilo en línea— y de él sale `--notch-x`, el centro de esa sección. El
+  círculo lo usa acá para su `left`; el recorte de la muesca lo lee desde JavaScript y redibuja
+  su `path`. Lo que se anima es el índice y nada más, y eso es lo que garantiza que el círculo
+  y el hueco viajen pegados: no hay dos animaciones que puedan desfasarse porque hay una sola.
+
+  Eso es exactamente para lo que sirve `@property`: una variable sin registrar es texto para el
+  navegador y salta de un valor al otro; declarada como `<number>`, se interpola. En un
+  navegador que no lo soporte, el círculo y la muesca aparecen ya puestos en su lugar —sin el
+  viaje—, que es una degradación y no una rotura.
+
+  Las medidas (`--puck-size`, `--notch-lift`, `--track-inset`, `--section-count`) NO se definen
+  acá: las inyecta el componente desde `notchGeometry.ts`, que es el mismo archivo del que sale
+  la figura del SVG. Repetirlas sería tener dos fuentes para un solo número.
+*/
+@property --active-index {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.mobile-nav {
+  /*
+    El centro de la sección activa. Las secciones reparten en partes iguales lo que queda entre
+    los dos márgenes del carril, así que la enésima cae en `(i + 0.5) / cantidad`. Es la misma
+    cuenta que hace `sectionCenter()` para el recorte, escrita en porcentaje para que el ancho
+    lo resuelva el navegador.
+  */
+  --notch-x: calc(
+    var(--track-inset) + (var(--active-index) + 0.5) * (100% - 2 * var(--track-inset)) /
+      var(--section-count)
+  );
+
+  /* Lugar para que el círculo sobresalga por arriba, sin taparle nada al contenido. */
+  padding-top: calc(var(--puck-size) / 2 + var(--notch-lift));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transition: --active-index 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+  La sombra va como `drop-shadow` y no como `box-shadow`: `box-shadow` sigue la caja del
+  elemento, así que dibujaría la sombra de un rectángulo entero y se vería atravesando el
+  hueco. `drop-shadow` sigue el canal alfa, o sea la figura recortada de verdad.
+*/
+.mobile-nav__bar {
+  filter: drop-shadow(0 8px 24px rgb(0 0 0 / 0.45));
+}
+
+.mobile-nav__puck {
+  width: var(--puck-size);
+  height: var(--puck-size);
+  /*
+    El círculo se posiciona con la MISMA variable de la que sale el hueco, y por eso no lleva
+    transición propia: cuando `--active-index` se está animando, este `left` ya viene animado.
+  */
+  left: var(--notch-x);
+  /* El centro queda `--notch-lift` por encima del borde de la barra, igual que el del hueco. */
+  top: calc(-1 * (var(--notch-lift) + var(--puck-size) / 2));
+  transform: translateX(-50%);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+/* Para quien pidió menos movimiento, el círculo aparece en su lugar en vez de viajar. */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav {
+    transition: none;
+  }
+}
+
+/*
+  El texto seleccionado, en el verde de la marca.
+
+  Va la punta CLARA del par y no `--color-primary`, que es lo que uno esperaría: acá el verde es
+  el FONDO de la selección, y el token de la tinta en el tema claro es un verde oscuro, elegido
+  justamente para lo contrario. Un degradado tampoco sirve —`::selection` acepta un color y nada
+  más—, así que de las dos puntas va la que hace de fondo.
+
+  El texto de la selección va con la tinta de encima del verde, por el mismo motivo que en los
+  botones: sobre este verde, cualquier color claro se pierde.
+*/
+::selection {
+  background-color: var(--brand-from);
+  color: var(--color-on-primary);
+}
+
+/*
+  El rótulo de un campo de contacto, que se enciende con el verde de la marca mientras se escribe
+  en ese campo.
+
+  Es la misma señal que ya da el subrayado, repetida arriba: en un formulario de varias casillas
+  una línea fina al pie del campo es poco para decir dónde está parado el cursor.
+
+  El rótulo va ANTES del control, así que no hay hermano al que mirar: la pregunta se la hace el
+  contenedor con `:has`. Y va acá, fuera de las capas de Tailwind, para que le gane siempre al
+  color de reposo sin depender de en qué orden se emitan dos utilidades.
+*/
+.contact-field__label {
+  color: var(--color-text-muted);
+  transition: color 200ms ease;
+}
+
+.contact-field:has(:focus) .contact-field__label {
+  color: var(--color-primary);
+}
+
+/*
+  El relleno que Chrome le pone a un campo autocompletado.
+
+  Cuando el navegador completa un campo con un dato guardado, le pinta el fondo de un celeste
+  propio y le cambia el color al texto. Nuestros campos son transparentes sobre vidrio —de eso
+  vive el formulario— así que ese celeste aparecía como un recuadro blanco en medio de la
+  tarjeta, encendido justo en el campo que se estaba usando.
+
+  El fondo no se puede pisar: el navegador lo dibuja aparte y `background-color` no lo toca. Lo
+  que sí se puede es no dejarlo llegar nunca, dándole a la transición del fondo una duración
+  absurda; es el truco de siempre para esto, y es el único que funciona sin tapar el campo con
+  una sombra opaca —que acá arruinaría el vidrio de atrás—. El color del texto y el del cursor sí
+  se piden directo.
+*/
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+  transition: background-color 100000s ease-in-out 0s;
+}
+
+/*
+  La marca de la barra de arriba.
+
+  El logo se dibuja como MÁSCARA y no como una imagen normal, y eso es lo que le permite cambiar
+  de color con el tema: de un `mask-image` el navegador usa solo la silueta, y el color lo pone el
+  fondo del elemento. Con un `<img>` el logo quedaría siempre del verde claro con el que está
+  guardado, que sobre el tema claro casi no se ve.
+
+  Es el mismo archivo que el ícono de la pestaña. Ahí sí hace falta que tenga color propio —el
+  navegador lo dibuja tal cual—, así que el PNG está guardado en verde y acá se le ignora.
+*/
+.brand-mark {
+  -webkit-mask-image: url("/logo.png");
+  mask-image: url("/logo.png");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/*
+  El punto de la sección activa en la barra de escritorio.
+
+  Misma curva y misma duración que el círculo del celular: son el mismo gesto —una marca que viaja
+  hasta la sección nueva— y tienen que sentirse igual. `opacity` entra en la lista para que se
+  desvanezca al entrar en una sección que no está en la barra, en vez de desaparecer de golpe.
+*/
+.top-nav__dot {
+  transition:
+    transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 200ms ease;
+}
+
+/*
+  Arranca sin transición para que el primer salto —de "sin posición" a la sección activa— no se vea
+  como un punto entrando desde el borde. La clase la saca el componente apenas termina esa primera
+  medición.
+*/
+.top-nav__dot--idle {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-nav__dot {
+    transition: opacity 200ms ease;
+  }
 }

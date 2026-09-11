@@ -27,7 +27,7 @@ import { availableConnectorCount, isAvailable, maxPowerKw } from '../format'
 import type { StationResult } from '../types'
 
 /* Clases completas en cada rama, nunca concatenadas: ver el comentario de stationPin.ts. */
-const DOT_AVAILABLE = 'bg-primary'
+const DOT_AVAILABLE = 'brand-fill'
 const DOT_UNAVAILABLE = 'bg-text-muted'
 
 /*
