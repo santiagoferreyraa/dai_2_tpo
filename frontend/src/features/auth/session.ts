@@ -97,6 +97,23 @@ function hydrateFullName(): void {
 }
 
 /**
+ * Guarda en la sesión el nombre que acaba de quedar en la base.
+ *
+ * La usa la pantalla de perfil después de editarlo. **Es lo mismo que hace `hydrateFullName`,
+ * sin la llamada**: el nombre nuevo ya volvió en la respuesta del guardado, así que volver a
+ * preguntarlo sería un viaje de ida y vuelta para traer lo que está acá al lado.
+ *
+ * Sin esto, el nombre cambiado se vería solo en el perfil: la ficha de la franja de arriba y el
+ * saludo de la portada leen de la sesión, y seguirían mostrando el anterior hasta recargar.
+ */
+export function applyFullName(fullName: string): void {
+  if (session === null) return
+  session = { ...session, fullName }
+  persist()
+  notify()
+}
+
+/**
  * Lee la sesión guardada y la deja lista para usar. Se llama una sola vez, al arrancar.
  *
  * Se hace antes del primer render a propósito: si se hiciera dentro de un efecto, la primera

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { useProfile } from '../data/useProfile'
+import { useSession } from '@/features/auth/session'
+import { EditIcon } from '@/features/navigation/icons'
+
 import { HEADER_HEIGHT, HEADER_SHAPE, headerOutlinePath } from '../headerShape'
 import ProfileIdentity from './ProfileIdentity'
 
@@ -13,17 +15,18 @@ import ProfileIdentity from './ProfileIdentity'
  * quién son esos medios de pago.
  *
  * **El redondel queda vacío a propósito.** No es para una foto propia: lo que va ahí es un
- * avatar de una lista para elegir, y esos avatares todavía no están. Dibujado vacío, el lugar
- * ya está tomado y la figura no cambia de forma cuando lleguen.
+ * avatar de una lista para elegir, y esos avatares todavía no están. Dibujado vacío, el lugar ya
+ * está tomado y la figura no cambia de forma cuando lleguen.
  *
  * El porqué de que sea un `path` y no dos cajas está en `headerShape.ts`.
  *
- * **En el celular esta figura no aparece.** Ahí va la misma información en una tarjeta común:
- * un redondel de 124 píxeles más una barra al lado no entran en el ancho de un teléfono sin
- * que el correo quede en cuatro renglones.
+ * **En el celular esta figura no aparece.** Ahí va la misma información en una tarjeta común: un
+ * redondel más una barra al lado no entran en el ancho de un teléfono sin que el correo quede en
+ * cuatro renglones.
  */
 export default function ProfileHeader() {
-  const { profile, loading, error, save } = useProfile()
+  const session = useSession()
+  const [editing, setEditing] = useState(false)
 
   const shellRef = useRef<HTMLElement>(null)
   const [width, setWidth] = useState(0)
@@ -40,7 +43,28 @@ export default function ProfileHeader() {
     return () => observer.disconnect()
   }, [])
 
-  const { avatarRadius, slant } = HEADER_SHAPE
+  const { avatarRadius, barHeight, slant } = HEADER_SHAPE
+  const outline = width > 0 ? headerOutlinePath(width) : ''
+
+  /*
+    El lápiz, en el borde. Se dibuja acá y no adentro de `ProfileIdentity` porque su lugar lo
+    decide la FIGURA: va centrado sobre la diagonal, que a mitad de alto pasa por `ancho -
+    slant / 2`, así que queda medio adentro del vidrio y medio afuera. Adentro del contenido
+    tendría que enterarse de la silueta para colocarse.
+
+    Mientras se edita no está: ahí la barra tiene sus propios botones de guardar y cancelar, y
+    un lápiz al lado no abre nada que no esté ya abierto.
+  */
+  const editButton = session !== null && !editing && (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      aria-label="Editar el perfil"
+      className="brand-fill text-on-primary flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full"
+    >
+      <EditIcon className="h-4.5 w-4.5" />
+    </button>
+  )
 
   return (
     <>
@@ -58,7 +82,7 @@ export default function ProfileHeader() {
           <div className="profile-shape__shadow pointer-events-none absolute inset-0">
             <div
               className="profile-shape__glass h-full w-full"
-              style={{ clipPath: `path('${headerOutlinePath(width)}')` }}
+              style={{ clipPath: `path('${outline}')` }}
             />
             <svg
               className="absolute inset-0"
@@ -66,33 +90,44 @@ export default function ProfileHeader() {
               height={HEADER_HEIGHT}
               aria-hidden="true"
             >
-              <path
-                className="profile-shape__outline"
-                d={headerOutlinePath(width)}
-                fill="none"
-                strokeWidth={1}
-              />
+              <path className="profile-shape__outline" d={outline} fill="none" strokeWidth={1} />
             </svg>
           </div>
         )}
 
         {/*
-          Lo escrito, por encima de la figura. El relleno de la izquierda es el diámetro del
-          redondel más aire, y el de la derecha es la diagonal más aire: los dos salen de las
-          medidas de la silueta, así que si la figura cambia, el texto se corre con ella en vez
-          de quedar montado sobre una curva.
+          Lo escrito, por encima de la figura. Va contra la barra —que es más baja que la
+          figura— y no contra el alto entero, o el texto quedaría corrido hacia abajo respecto
+          del borde recto de arriba.
+
+          Los dos rellenos salen de las medidas de la silueta: a la izquierda el diámetro del
+          redondel más aire, a la derecha lo que ocupan la diagonal y el lápiz. Si la figura
+          cambia, el texto se corre con ella en vez de quedar montado sobre una curva.
         */}
         <div
-          className="relative flex h-full items-center"
-          style={{ paddingLeft: avatarRadius * 2 + 24, paddingRight: slant + 28 }}
+          className="relative flex items-center"
+          style={{
+            height: barHeight,
+            paddingLeft: avatarRadius * 2 + 20,
+            paddingRight: slant / 2 + 32,
+          }}
         >
-          <ProfileIdentity profile={profile} loading={loading} error={error} save={save} />
+          <ProfileIdentity editing={editing} onDone={() => setEditing(false)} />
+        </div>
+
+        {/* Centrado sobre la diagonal, a mitad de alto de la barra. */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2"
+          style={{ left: `calc(100% - ${String(slant / 2)}px)`, top: barHeight / 2 }}
+        >
+          {editButton}
         </div>
       </header>
 
       {/* La misma información en el celular, sin la figura. */}
-      <section className="glass-panel flex items-center rounded-3xl p-5 md:hidden">
-        <ProfileIdentity profile={profile} loading={loading} error={error} save={save} />
+      <section className="glass-panel flex items-center gap-4 rounded-3xl p-5 md:hidden">
+        <ProfileIdentity editing={editing} onDone={() => setEditing(false)} />
+        {editButton}
       </section>
     </>
   )
