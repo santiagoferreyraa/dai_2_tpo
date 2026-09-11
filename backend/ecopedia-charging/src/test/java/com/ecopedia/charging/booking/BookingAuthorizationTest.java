@@ -1,0 +1,179 @@
+package com.ecopedia.charging.booking;
+
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.ecopedia.charging.booking.domain.ConnectorCatalog;
+import com.ecopedia.charging.booking.domain.ConnectorSnapshot;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+/**
+ * Seguridad y contrato HTTP de la retención de slots (ECO-31), con el artefacto entero arriba.
+ *
+ * <p><b>Firma los tokens como los firma core</b> —mismo secreto, mismos claims— en vez de
+ * simular un usuario: así cada prueba recorre el filtro que valida la firma, que es la pieza que
+ * une los dos procesos y la que puede romperse en silencio si alguien cambia el secreto de un
+ * lado solo.
+ *
+ * <p>Terminales se reemplaza con un mock de {@link ConnectorCatalog}: la prueba es de este
+ * artefacto, y no tiene por qué necesitar a core corriendo.
+ *
+ * <p>De paso, que el contexto levante con el perfil {@code dev} prueba que la migración de
+ * Flyway y la entidad {@code Booking} coinciden: con {@code ddl-auto: validate}, cualquier
+ * diferencia aborta el arranque.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("dev")
+class BookingAuthorizationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private ConnectorCatalog connectorCatalog;
+
+    @Value("${ecopedia.jwt.secret}")
+    private String secret;
+
+    /** Cada prueba usa otra hora, para que las retenciones de una no choquen con las de otra. */
+    private static int nextSlot = 0;
+
+    @BeforeEach
+    void connectorExists() {
+        when(connectorCatalog.findConnector(anyLong()))
+                .thenAnswer(call -> Optional.of(new ConnectorSnapshot(call.getArgument(0), 1L, "AVAILABLE")));
+    }
+
+    /** Un token como el que emite el login de core, firmado con el secreto indicado. */
+    private static String bearer(String signingSecret, long userId, String role) {
+        Instant now = Instant.now();
+        String token = Jwts.builder()
+                .subject(Long.toString(userId))
+                .claim("email", role.toLowerCase() + "@ecopedia.test")
+                .claim("role", role)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(Duration.ofHours(1))))
+                .signWith(Keys.hmacShaKeyFor(signingSecret.getBytes(StandardCharsets.UTF_8)))
+                .compact();
+        return "Bearer " + token;
+    }
+
+    private String bearer(String role) {
+        return bearer(secret, 42L, role);
+    }
+
+    /** Un cuerpo de retención válido, sobre una ventana futura que ninguna otra prueba usa. */
+    private static String holdJson() {
+        Instant start = Instant.now().plus(Duration.ofDays(1)).plus(Duration.ofHours(2L * nextSlot++));
+        return """
+                {"connectorId":7,"start":"%s","end":"%s"}
+                """
+                .formatted(start, start.plus(Duration.ofHours(1)));
+    }
+
+    @Test
+    @DisplayName("Sin token, retener un slot se rechaza")
+    void rejectsAnonymousCallers() throws Exception {
+        mockMvc.perform(post("/api/bookings/holds")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(holdJson()))
+                .andExpect(status().isForbidden());
+    }
+
+    /* Reservar es cosa del conductor: un operador logueado no retiene slots. */
+    @Test
+    @DisplayName("Con token de CPO, retener un slot se rechaza")
+    void rejectsOperators() throws Exception {
+        mockMvc.perform(post("/api/bookings/holds")
+                        .header(HttpHeaders.AUTHORIZATION, bearer("CPO"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(holdJson()))
+                .andExpect(status().isForbidden());
+    }
+
+    /*
+     * El caso que justifica compartir el secreto por variable de entorno: un token con la forma
+     * correcta pero firmado con otra clave es un token falsificado, y tiene que valer lo mismo
+     * que ninguno.
+     */
+    @Test
+    @DisplayName("Un token firmado con otro secreto se trata como anónimo")
+    void rejectsTokensSignedWithAnotherSecret() throws Exception {
+        String forged = bearer("OtroSecretoQueNoEsElDeEcopediaPeroTieneLargoSuficiente!!", 42L, "CONDUCTOR");
+
+        mockMvc.perform(post("/api/bookings/holds")
+                        .header(HttpHeaders.AUTHORIZATION, forged)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(holdJson()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Con token de CONDUCTOR, la retención se crea y dice cuándo vence")
+    void createsHoldForDrivers() throws Exception {
+        mockMvc.perform(post("/api/bookings/holds")
+                        .header(HttpHeaders.AUTHORIZATION, bearer("CONDUCTOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(holdJson()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.connectorId").value(7))
+                .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("El mismo slot pedido dos veces: la segunda recibe 409")
+    void rejectsTheSameSlotTwice() throws Exception {
+        String body = holdJson();
+
+        mockMvc.perform(post("/api/bookings/holds")
+                        .header(HttpHeaders.AUTHORIZATION, bearer("CONDUCTOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/bookings/holds")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(secret, 43L, "CONDUCTOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("Una ventana con el fin antes que el inicio recibe 400")
+    void rejectsInvertedWindow() throws Exception {
+        Instant start = Instant.now().plus(Duration.ofDays(3));
+        String inverted = """
+                {"connectorId":7,"start":"%s","end":"%s"}
+                """
+                .formatted(start, start.minus(Duration.ofHours(1)));
+
+        mockMvc.perform(post("/api/bookings/holds")
+                        .header(HttpHeaders.AUTHORIZATION, bearer("CONDUCTOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(inverted))
+                .andExpect(status().isBadRequest());
+    }
+}

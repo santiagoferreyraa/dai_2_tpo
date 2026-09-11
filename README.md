@@ -56,21 +56,30 @@ Lo que más se usa: **reiniciar un solo proceso sin bajar el otro**. Tocaste una
 backend y querés relevantarlo sin perder el estado del navegador — lo reiniciás desde el
 panel y Vite ni se entera.
 
-El frontend queda en http://localhost:5173 y el backend en http://localhost:8081. **Se navega
-siempre por el 5173:** el proxy ya está configurado y redirige `/api` al backend.
+El frontend queda en http://localhost:5173, el backend en http://localhost:8081 y Reservas
+(`ecopedia-charging`) en http://localhost:8082. **Se navega siempre por el 5173:** el proxy ya
+está configurado y redirige `/api/bookings` a Reservas y el resto de `/api` al backend.
 
 | Comando | Qué hace |
 |---------|----------|
-| `pnpm dev` | Backend + frontend, cada uno en su panel |
-| `pnpm dev:back` | Solo el backend |
+| `pnpm dev` | Backend, Reservas y frontend, cada uno en su panel |
+| `pnpm dev:back` | Solo el backend (`ecopedia-core`) |
+| `pnpm dev:charging` | Solo Reservas (`ecopedia-charging`). Necesita el backend arriba |
 | `pnpm dev:front` | Solo el frontend |
-| `pnpm dev:plain` | Los dos en una sola tira de logs, con prefijos `[back]`/`[front]` |
-| `pnpm free-ports` | Libera el 8081 y el 5173 a mano |
+| `pnpm dev:plain` | Los tres en una sola tira de logs, con prefijos `[back]`/`[charging]`/`[front]` |
+| `pnpm free-ports` | Libera el 8081, el 8082 y el 5173 a mano |
 | `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
 | `pnpm start` | Corre ese JAR |
 
-`pnpm dev` levanta el backend con el perfil `dev`, o sea contra una base H2 en memoria y sin
-PostgreSQL instalado. Consola de H2: http://localhost:8081/h2-console
+`pnpm dev` levanta el backend y Reservas con el perfil `dev`, o sea contra bases H2 en memoria y
+sin PostgreSQL instalado. Consolas de H2: http://localhost:8081/h2-console y
+http://localhost:8082/h2-console
+
+Los dos procesos validan el mismo token, así que tienen que compartir el secreto de firma: sale de
+la variable `ECOPEDIA_JWT_SECRET`, y sin ella los dos usan el mismo valor de desarrollo.
+
+**`pnpm start` todavía no llega a Reservas:** sirve front y API desde el JAR de core, en el 8081,
+y ahí no hay nada escuchando `/api/bookings`. Para probar reservas se usa `pnpm dev`.
 
 ### Si el puerto quedó tomado
 

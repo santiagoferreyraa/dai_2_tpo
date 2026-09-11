@@ -18,7 +18,15 @@ export default defineConfig({
 
     // Todo lo que empiece con /api se redirige al backend.
     // Así el front llama a rutas relativas y no hay CORS que configurar en desarrollo.
+    //
+    // Reservas vive en otro proceso (ecopedia-charging, 8082), así que sus rutas se desvían
+    // antes. El orden importa: Vite usa la PRIMERA regla que coincide, y '/api' a secas también
+    // coincide con '/api/bookings'. Puesta después, se la comería la de core.
     proxy: {
+      '/api/bookings': {
+        target: 'http://localhost:8082',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:8081',
         changeOrigin: true,
