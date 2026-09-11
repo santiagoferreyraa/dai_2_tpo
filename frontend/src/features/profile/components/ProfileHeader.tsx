@@ -68,10 +68,20 @@ export default function ProfileHeader() {
 
   return (
     <>
+      {/*
+        **No llega hasta el borde derecho, y ese tope es la medida.** Los cuatro datos son cortos
+        —un nombre, un correo, dos palabras— y estirados sobre un monitor ancho quedaban a medio
+        metro unos de otros, con más vidrio vacío que texto en el medio. Con el ancho acotado, la
+        barra termina donde termina lo que dice.
+
+        Es un MÁXIMO y no una fracción: en un monitor ancho corta a poco menos de la mitad, y en
+        una pantalla más chica la barra usa lo que haya en vez de encogerse hasta cortar el
+        correo. La figura se redibuja sola con lo que mida, porque el ancho se mide.
+      */}
       <header
         ref={shellRef}
         style={{ height: HEADER_HEIGHT }}
-        className="relative hidden shrink-0 md:block"
+        className="relative hidden w-full max-w-[58rem] shrink-0 md:block"
       >
         {/*
           El vidrio y el contorno, los dos con la misma silueta. Mientras no se midió el ancho no

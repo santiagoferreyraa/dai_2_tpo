@@ -29,18 +29,18 @@ export const HEADER_SHAPE = {
    * De acá sale el ALTO de toda la figura, que es su diámetro: el redondel es lo más alto que
    * hay, apoyado contra el borde de arriba.
    */
-  avatarRadius: 36,
+  avatarRadius: 62,
   /**
    * Alto de la barra de datos.
    *
    * Menos que el diámetro, o el redondel no asomaría por abajo. La diferencia es lo único que se
    * ve de él fuera de la barra, así que de acá sale cuánta panza tiene.
    */
-  barHeight: 56,
+  barHeight: 96,
   /** Radio del labio donde el redondel vuelve a encontrarse con el borde de abajo. */
-  filletRadius: 12,
+  filletRadius: 18,
   /** Radio de las esquinas del remate en diagonal. */
-  cornerRadius: 12,
+  cornerRadius: 16,
   /**
    * Cuánto se corre hacia adentro el borde de abajo respecto del de arriba.
    *
@@ -52,7 +52,7 @@ export const HEADER_SHAPE = {
    * por `ancho - slant / 2`, y ahí se centra el botón para que quede medio adentro y medio
    * afuera. Ver `ProfileHeader`.
    */
-  slant: 40,
+  slant: 66,
 } as const
 
 /** El alto de la figura entera. No es un número aparte: es el diámetro del redondel. */
