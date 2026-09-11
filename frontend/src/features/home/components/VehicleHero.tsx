@@ -1,12 +1,12 @@
 import { Link } from 'react-router'
 
 import { useSession } from '@/features/auth/session'
-import { displayNameFrom } from '@/lib/displayName'
+import { displayNameOf } from '@/lib/displayName'
 
 import { BatteryIcon, BoltIcon, GaugeIcon, PlugIcon } from '@/features/navigation/icons'
 
 import { greetingFor } from '../greeting'
-import { DRIVER_VEHICLE, GUEST_IMAGE, VEHICLE_IMAGE, specsOf } from '../vehicle'
+import { DRIVER_VEHICLE, VEHICLE_IMAGE, specsOf } from '../vehicle'
 import type { SpecIcon } from '../vehicle'
 
 /**
@@ -43,7 +43,11 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
   const session = useSession()
   const greeting = greetingFor(new Date().getHours())
 
-  const image = session === null ? GUEST_IMAGE : VEHICLE_IMAGE
+  /*
+    Una sola imagen para las dos caras. Hubo un `/car-guest.png` aparte para la portada sin
+    sesión, pero era el mismo dibujo byte por byte. Ver `vehicle.ts`.
+  */
+  const image = VEHICLE_IMAGE
 
   /*
    * A qué altura se apoya el auto, y por qué son dos valores y no uno.
@@ -98,7 +102,7 @@ export default function VehicleHero({ className = '' }: { className?: string }) 
           distancia se lee como un error, no como un énfasis.
         */}
         <p className="text-text-muted hidden text-sm font-medium md:block">
-          {session === null ? greeting : `${greeting}, ${displayNameFrom(session.email)}`} 👋
+          {session === null ? greeting : `${greeting}, ${displayNameOf(session)}`} 👋
         </p>
 
         {session === null ? (

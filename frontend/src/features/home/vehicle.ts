@@ -102,6 +102,11 @@ export function specsOf(vehicle: Vehicle): VehicleSpec[] {
   ]
 }
 
-/** Dónde vive cada imagen. Si el archivo no está, el recuadro se dibuja igual, sin auto. */
+/**
+ * Dónde vive la imagen del auto. Si el archivo no está, el recuadro se dibuja igual, sin auto.
+ *
+ * Es una sola para todos. Hubo un `/car-guest.png` aparte para la portada sin sesión, pero era
+ * el mismo dibujo byte por byte: dos nombres para un archivo solo agregan una copia que se puede
+ * desincronizar.
+ */
 export const VEHICLE_IMAGE = '/car.png'
-export const GUEST_IMAGE = '/car-guest.png'

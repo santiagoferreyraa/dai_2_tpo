@@ -120,16 +120,6 @@ export function MoonIcon({ className }: IconProps) {
   )
 }
 
-/** Hoja: lo ambiental, en la home. */
-export function LeafIcon({ className }: IconProps) {
-  return (
-    <svg {...BASE} className={className}>
-      <path d="M4.5 19.5c-1.5-6 2-12 9.5-13 2 0 4 .4 5.5 1 0 8-4.5 13-11 13a6 6 0 0 1-4-1Z" />
-      <path d="M4 20c2-5 5.5-8.5 10-10.5" />
-    </svg>
-  )
-}
-
 /**
  * Conector: un enchufe con dos patas.
  *

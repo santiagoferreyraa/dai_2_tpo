@@ -22,8 +22,6 @@ spring:
     # las migraciones del otro como "aplicadas pero ausentes" y ninguno de los dos arrancaría.
     # Flyway crea el schema si no existe.
     schemas: charging
-    # Todavía no hay migraciones: sin esto, Flyway aborta al no encontrar ninguna.
-    fail-on-missing-locations: false
 
   jpa:
     hibernate:
@@ -41,6 +39,27 @@ spring:
 server:
   port: ${SERVER_PORT:8082}
 
+ecopedia:
+  jwt:
+    # El MISMO secreto que ecopedia-core. Core firma el token al hacer login y este artefacto
+    # lo valida: con secretos distintos, todo token llega con firma inválida y cada operación
+    # de Reservas responde 403 aunque el usuario esté logueado.
+    #
+    # El valor real entra por variable de entorno. El de acá es solo para desarrollo, y es el
+    # mismo que usa core por omisión, así que `pnpm dev` funciona sin configurar nada.
+    secret: ${ECOPEDIA_JWT_SECRET:EcopediaSecretKeyForJWTAuthentication2026SuperSecureKey!}
+
+  core:
+    # Dónde está ecopedia-core. Reservas le pregunta por el conector antes de retener un slot.
+    # Sale de una variable por lo mismo que la base y el broker: mudar de ambiente es cambiar
+    # valores, no código.
+    url: ${ECOPEDIA_CORE_URL:http://localhost:8081}
+
+  booking:
+    # Cuánto dura una retención de slot antes de vencer sola (ISO-8601: PT10M = 10 minutos).
+    # Es el tiempo que tiene el conductor para confirmar. Ver ARQUITECTURA_ECOPEDIA.md §2.3.
+    hold-ttl: ${ECOPEDIA_BOOKING_HOLD_TTL:PT10M}
+
 ---
 # Perfil de desarrollo: base en memoria, para levantar el módulo sin PostgreSQL instalado.
 # Las demos de las entregas corren sobre PostgreSQL, no sobre H2.
@@ -52,7 +71,12 @@ spring:
   datasource:
     # MODE=PostgreSQL hace que H2 acepte la sintaxis de PostgreSQL, así las mismas
     # migraciones corren en los dos motores y el esquema no se bifurca.
-    url: jdbc:h2:mem:ecopedia-charging;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    #
+    # DATABASE_TO_LOWER=TRUE es obligatorio, por lo mismo que en ecopedia-core: sin eso H2
+    # guarda en MAYÚSCULAS los identificadores que la migración no entrecomilla, Hibernate los
+    # busca en minúscula como PostgreSQL, y el arranque muere con
+    # "Schema-validation: missing table [bookings]".
+    url: jdbc:h2:mem:ecopedia-charging;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver

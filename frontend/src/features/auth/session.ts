@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 import { setToken } from '@/lib/api'
 
+import { fetchMyProfile } from './data/userRepository'
 import type { AuthResponse, Session } from './types'
 
 /**
@@ -36,6 +37,8 @@ function toSession(auth: AuthResponse): Session {
     email: auth.email,
     role: auth.role,
     expiresAt: Date.now() + auth.expiresInSeconds * 1000,
+    /* El login no manda el nombre. Lo trae `hydrateFullName` un instante después. */
+    fullName: null,
   }
 }
 
@@ -45,6 +48,52 @@ function isExpired(candidate: Session): boolean {
 
 function notify(): void {
   for (const listener of listeners) listener()
+}
+
+function persist(): void {
+  if (session === null) return
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+  } catch {
+    // Sin persistencia la sesión vive igual, solo que no sobrevive a un F5.
+  }
+}
+
+/**
+ * Pregunta el nombre real y lo guarda en la sesión.
+ *
+ * **Por qué hace falta.** `AuthResponse` trae token, id, correo y rol, pero no el nombre: ése
+ * vive en `UserProfileResponse`, que es otra llamada. Sin esto, las tres pantallas que saludan
+ * al usuario tienen que inventarlo a partir del correo, y `j.perez@…` da "J.perez".
+ *
+ * **Por qué no se espera.** Nada de lo que hay en pantalla depende del nombre: el saludo, la
+ * ficha y el perfil se dibujan igual con el provisorio. Bloquear el login contra una segunda
+ * llamada haría más lento entrar para cambiar un renglón de texto. Cuando la respuesta llega,
+ * la suscripción vuelve a renderizar y el nombre se corrige solo.
+ *
+ * **Si falla, no pasa nada.** Puede fallar por red o porque el token no sirve —y de lo segundo
+ * ya se ocupa `clearSessionIfExpired` desde el cliente HTTP—. Quedarse sin el nombre real no es
+ * motivo para cerrarle la sesión a nadie: se sigue con el provisorio.
+ */
+function hydrateFullName(): void {
+  const opened = session
+  if (opened === null) return
+
+  void fetchMyProfile()
+    .then((profile) => {
+      /*
+        La sesión pudo haberse cerrado o cambiado mientras viajaba la respuesta —alguien salió,
+        o entró con otra cuenta—. Escribirle el nombre a la sesión de al lado sería peor que no
+        tenerlo, así que se compara el token antes de tocar nada.
+      */
+      if (session === null || session.token !== opened.token) return
+      session = { ...session, fullName: profile.fullName }
+      persist()
+      notify()
+    })
+    .catch(() => {
+      // Se sigue con el nombre derivado del correo. Ver el comentario de arriba.
+    })
 }
 
 /**
@@ -74,6 +123,11 @@ export function restoreSession(): void {
     }
     session = candidate
     setToken(candidate.token)
+    /*
+      Se vuelve a pedir aunque lo guardado ya traiga nombre: el perfil pudo cambiar desde la
+      última vez, y una sesión de un formato viejo no lo tiene.
+    */
+    hydrateFullName()
   } catch {
     // Lo guardado no es una sesión válida (versión vieja del formato, o basura). Se descarta.
     clearSession()
@@ -84,12 +138,9 @@ export function restoreSession(): void {
 export function openSession(auth: AuthResponse): Session {
   session = toSession(auth)
   setToken(session.token)
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-  } catch {
-    // Sin persistencia la sesión vive igual, solo que no sobrevive a un F5.
-  }
+  persist()
   notify()
+  hydrateFullName()
   return session
 }
 

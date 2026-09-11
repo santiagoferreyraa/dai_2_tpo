@@ -41,6 +41,17 @@ spring:
 server:
   port: ${SERVER_PORT:8081}
 
+ecopedia:
+  jwt:
+    # El secreto con el que se firman los tokens. El valor real entra por variable de entorno,
+    # igual que la base y el broker; el de acá es solo para desarrollo.
+    #
+    # Lo comparte con ecopedia-charging, que valida los tokens que este artefacto emite: los
+    # dos tienen que leer la MISMA variable, o Reservas rechaza a todo el mundo.
+    #
+    # Cambiarlo invalida los tokens ya emitidos: en pantalla se ve como "me deslogueó solo".
+    secret: ${ECOPEDIA_JWT_SECRET:EcopediaSecretKeyForJWTAuthentication2026SuperSecureKey!}
+
 ---
 # Perfil de desarrollo: base en memoria, para levantar el módulo sin PostgreSQL instalado.
 # Las demos de las entregas corren sobre PostgreSQL, no sobre H2.

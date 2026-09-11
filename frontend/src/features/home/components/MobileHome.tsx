@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 import { useSession } from '@/features/auth/session'
 import SearchBox from '@/features/navigation/SearchBox'
-import { displayNameFrom } from '@/lib/displayName'
+import { displayNameOf } from '@/lib/displayName'
 
 import NearestStationStack from './NearestStationStack'
 import ReservationGuide from './ReservationGuide'
@@ -51,7 +51,7 @@ export default function MobileHome() {
       */}
       <header>
         <p className="text-text-muted text-sm">
-          {session === null ? greeting : `${greeting}, ${displayNameFrom(session.email)}`} 👋
+          {session === null ? greeting : `${greeting}, ${displayNameOf(session)}`} 👋
         </p>
         <h1 className="text-text mt-1 text-3xl leading-tight font-extrabold tracking-tight text-balance">
           ¿Dónde cargamos hoy?
