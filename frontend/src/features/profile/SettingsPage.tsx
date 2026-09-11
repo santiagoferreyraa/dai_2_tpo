@@ -24,7 +24,7 @@ export default function SettingsPage() {
 
   return (
     <div className="grid md:h-full">
-      <ProfileCard className="overflow-y-auto">
+      <ProfileCard className="md:overflow-y-auto">
         {open === null ? (
           <SettingsList onOpen={setOpenId} />
         ) : (
