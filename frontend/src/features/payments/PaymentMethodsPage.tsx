@@ -208,13 +208,25 @@ export default function PaymentMethodsPage() {
         celular no hay sitio, así que sube desde abajo como el detalle de una estación.
       */}
       {wide && adding ? (
-        <div className="border-border bg-surface rounded-2xl border p-6">
+        /*
+          El mismo vidrio y el mismo radio que las tarjetas de la portada: adentro del perfil esto
+          es una tarjeta más, y con el fondo opaco se leía como un recuadro pegado encima del
+          vidrio en vez de uno de la familia. Ver `home/HomeCard`.
+        */
+        <div className="glass-panel rounded-3xl p-6">
           <h2 className="mb-4 text-lg font-semibold">Nueva tarjeta</h2>
           {form}
         </div>
       ) : (
+        /*
+          El punteado va en el verde de la marca y no en el gris del borde. Es el único llamado a
+          la acción de la pantalla cuando no hay ninguna tarjeta —sin esto no se puede reservar ni
+          cargar—, y en gris sobre el vidrio apenas se distinguía del fondo. El relleno se enciende
+          recién al pasar por encima: lleno desde el principio competiría con las tarjetas que ya
+          están en la lista.
+        */
         <button
-          className="border-border hover:bg-background rounded-lg border border-dashed px-4 py-3 text-sm font-medium"
+          className="border-primary/60 text-primary hover:bg-primary/10 hover:border-primary rounded-2xl border-2 border-dashed px-4 py-3.5 text-sm font-semibold transition-colors"
           type="button"
           onClick={() => setAdding(true)}
         >

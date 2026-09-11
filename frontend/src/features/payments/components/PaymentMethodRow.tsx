@@ -20,8 +20,13 @@ interface PaymentMethodRowProps {
  */
 export default function PaymentMethodRow({ card, onRemove, removing }: PaymentMethodRowProps) {
   return (
+    /*
+      El mismo vidrio y el mismo radio que las tarjetas de la portada. Con el fondo opaco, esta
+      fila se leía como un recuadro pegado encima del vidrio del perfil en vez de una tarjeta más
+      de la misma familia. Ver `home/HomeCard`.
+    */
     <li
-      className={`border-border bg-surface flex items-center gap-4 rounded-xl border p-4 ${
+      className={`glass-panel flex items-center gap-4 rounded-3xl p-4 ${
         card.expired ? 'opacity-70' : ''
       }`}
     >

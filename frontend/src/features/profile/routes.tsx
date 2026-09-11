@@ -30,7 +30,7 @@ export const profileRoutes: RouteObject[] = [
     path: 'profile',
     element: <ProfileLayout />,
     children: [
-      { index: true, element: <Navigate to="notifications" replace /> },
+      { index: true, element: <Navigate to="reservations" replace /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'reservations', element: <ReservationsPage /> },
       {

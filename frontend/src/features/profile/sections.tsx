@@ -33,8 +33,8 @@ export interface ProfileSection {
 }
 
 export const PROFILE_SECTIONS: ProfileSection[] = [
-  { to: '/profile/notifications', label: 'Notificaciones', Icon: BellIcon },
   { to: '/profile/reservations', label: 'Reservas e historial', Icon: CalendarIcon },
+  { to: '/profile/notifications', label: 'Notificaciones', Icon: BellIcon },
   { to: '/profile/payment-methods', label: 'Medios de pago', Icon: CardIcon, roles: ['CONDUCTOR'] },
   { to: '/profile/settings', label: 'Configuración', Icon: SlidersIcon },
 ]
