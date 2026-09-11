@@ -5,6 +5,8 @@
 
 /* Tokens propios de la feature Terminales (prefijo `st-`). No pisan los de acá abajo. */
 @import "./features/terminals/terminals.css";
+/* El vidrio recortado del riel del perfil, que no puede salir de `.glass-panel`. Ver el archivo. */
+@import "./features/profile/profile.css";
 
 /*
   Tema de la aplicación (RNF07 y RNF08).

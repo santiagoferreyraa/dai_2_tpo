@@ -1,0 +1,41 @@
+/*
+  El vidrio de las figuras recortadas del perfil: hoy, la cabecera con su redondel. La silueta la
+  arma `headerShape.ts`.
+
+  Es el mismo vidrio de `.glass-panel` —el mismo cuerpo, el mismo desenfoque, la misma
+  saturación— y está repetido acá por una sola razón: aquella clase dibuja además el BORDE y la
+  SOMBRA, y las dos cosas siguen la caja rectangular del elemento. Sobre una figura con un
+  redondel saliéndole de un costado, el borde pasaría de largo por el medio.
+
+  Acá el reparto es otro: esta clase pone el relleno, el contorno lo dibuja un `path` de SVG
+  encima, y la sombra la pone el envoltorio con `drop-shadow`, que es el único filtro que sigue
+  la forma recortada en vez del rectángulo.
+*/
+.profile-shape__glass {
+  background-color: color-mix(in srgb, var(--color-surface) 32%, transparent);
+  -webkit-backdrop-filter: blur(6px) saturate(1.5);
+  backdrop-filter: blur(6px) saturate(1.5);
+  transition: background-color 300ms ease;
+}
+
+/* Sin soporte de `backdrop-filter`, opaco. El mismo criterio que `.glass-panel`. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .profile-shape__glass {
+    background-color: var(--color-surface);
+  }
+}
+
+/*
+  La sombra. Va en un envoltorio y no sobre el vidrio mismo porque `filter` y `backdrop-filter`
+  en el mismo elemento se estorban: el desenfoque del fondo se calcula y después el filtro lo
+  vuelve a procesar, y el vidrio sale sucio.
+*/
+.profile-shape__shadow {
+  filter: drop-shadow(0 8px 14px rgb(0 0 0 / 0.14));
+}
+
+/* El contorno, del mismo color y la misma transparencia que el borde de `.glass-panel`. */
+.profile-shape__outline {
+  stroke: color-mix(in srgb, var(--color-border) 78%, transparent);
+  transition: stroke 300ms ease;
+}

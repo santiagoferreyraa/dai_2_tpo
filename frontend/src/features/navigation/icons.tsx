@@ -221,3 +221,95 @@ export function SteeringWheelIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Campana: las notificaciones del perfil.
+ *
+ * Sin badge ni punto rojo. El dibujo dice de qué sección se trata; cuántos avisos hay sin leer
+ * es un DATO, y ese lo pone quien lo tenga, encima del ícono y no adentro de él.
+ */
+export function BellIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M6 9a6 6 0 0 1 12 0c0 3.2.7 5 1.6 6.1.4.5 0 1.4-.7 1.4H5.1c-.7 0-1.1-.9-.7-1.4C5.3 14 6 12.2 6 9Z" />
+      <path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  )
+}
+
+/** Calendario: las reservas y su historial. Un turno es una fecha antes que cualquier otra cosa. */
+export function CalendarIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+      <path d="M3.5 9.75h17" />
+      <path d="M8 3.5v3M16 3.5v3" />
+    </svg>
+  )
+}
+
+/**
+ * Tarjeta: los medios de pago.
+ *
+ * La franja de arriba es lo que la separa de un rectángulo cualquiera, y por eso va llena: es
+ * la banda magnética, y sin ella el dibujo es el mismo que el de una ventana.
+ */
+export function CardIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+      <path d="M2.5 9.5h19" />
+      <path d="M6 14.5h3.5" />
+    </svg>
+  )
+}
+
+/**
+ * Deslizadores: la configuración.
+ *
+ * Es un panel de ajustes y no el engranaje de siempre. El engranaje dice "máquina" y esta
+ * sección no configura el sistema: son preferencias de quien mira, cada una con su posición.
+ */
+export function SlidersIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+      <circle cx="16" cy="7" r="2.25" />
+      <circle cx="8" cy="17" r="2.25" />
+    </svg>
+  )
+}
+
+/**
+ * El doble galón del tirador del riel del perfil.
+ *
+ * Apunta a la izquierda, que es lo que hace el riel abierto: cerrarse. Para el otro estado se
+ * lo da vuelta media vuelta desde el componente, en vez de dibujar un segundo ícono espejado.
+ *
+ * **Reemplaza a los tres puntos que estaban acá.** Los puntos son el símbolo de "hay más para
+ * ver", no el de una dirección: decían que el tirador se podía tocar, pero no hacia dónde iba
+ * a moverse el panel. El galón sí, y además es el mismo gesto en los dos sentidos.
+ */
+export function ChevronsLeftIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M11 6.5 5.5 12 11 17.5" />
+      <path d="M17.5 6.5 12 12l5.5 5.5" />
+    </svg>
+  )
+}
+
+/**
+ * Lápiz sobre una hoja: editar el perfil.
+ *
+ * El cuadrado abierto por la esquina es lo que lo separa de un lápiz suelto —que se lee como
+ * "escribir"— y lo convierte en "editar esto de acá".
+ */
+export function EditIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5" />
+      <path d="M17.6 3.4a1.9 1.9 0 0 1 2.7 2.7L13 13.4l-3.4.7.7-3.4Z" />
+    </svg>
+  )
+}

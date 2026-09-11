@@ -1,8 +1,10 @@
 package com.ecopedia.core.user;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -208,6 +210,63 @@ class UserAuthorizationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.role").value(role.name()));
         }
+    }
+
+    /*
+     * La edición del perfil tiene la misma regla que la consulta —estar logueado, con
+     * cualquier rol— y una propiedad más fuerte: alcanza SOLO al dueño del token. No hay id en
+     * la URL que se pueda cambiar, así que lo que se prueba es que con dos usuarios en la base
+     * el que se modifica es el que pidió, y que el otro queda intacto.
+     */
+    @Test
+    @DisplayName("Editar el perfil exige token y solo alcanza al dueño del token")
+    void updatesOnlyTheTokenOwnerProfile() throws Exception {
+        String body = """
+                {"fullName":"Nombre Editado"}
+                """;
+
+        mockMvc.perform(put("/api/users/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+
+        User other = givenUser("otro@ecopedia.test", Role.CONDUCTOR);
+        User owner = givenUser("duenio@ecopedia.test", Role.CONDUCTOR);
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer "
+                                        + tokenProvider.generateToken(owner.getId(), owner.getEmail(), owner.getRole()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Nombre Editado"))
+                .andExpect(jsonPath("$.email").value("duenio@ecopedia.test"));
+
+        /* El de al lado no se tocó: es lo que separa "editó su perfil" de "editó un perfil". */
+        User untouched = userService.getProfile(other.getId());
+        assertEquals("Usuario CONDUCTOR", untouched.getFullName());
+    }
+
+    /*
+     * Un nombre en blanco no es una edición: es borrar el nombre. La validación del DTO lo
+     * rechaza con su mensaje, que es lo que el formulario muestra.
+     */
+    @Test
+    @DisplayName("El nombre vacío se rechaza con 400 y con mensaje")
+    void rejectsBlankNameOnProfileUpdate() throws Exception {
+        User owner = givenUser("vacio@ecopedia.test", Role.CONDUCTOR);
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer "
+                                        + tokenProvider.generateToken(owner.getId(), owner.getEmail(), owner.getRole()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("El nombre completo es obligatorio"));
     }
 
     /*
