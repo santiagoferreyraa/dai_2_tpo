@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router'
 
-import { PROFILE_SECTIONS } from '../sections'
+import { useSession } from '@/features/auth/session'
+
+import { visibleProfileSections } from '../sections'
 
 /**
  * El riel de secciones del perfil: escritorio y tablet.
@@ -19,6 +21,9 @@ import { PROFILE_SECTIONS } from '../sections'
  * línea debajo de un ícono suelto mide lo que el ícono y se lee como un subrayado roto.
  */
 export default function ProfileRail() {
+  /* Solo las que le corresponden a quien mira. Ver `visibleProfileSections`. */
+  const sections = visibleProfileSections(useSession()?.role ?? null)
+
   return (
     /*
       `hidden md:flex`: en el celular las secciones van en una cinta arriba del contenido. Ver
@@ -33,7 +38,7 @@ export default function ProfileRail() {
       aria-label="Secciones del perfil"
       className="glass-panel hidden shrink-0 flex-col gap-0.5 self-start rounded-full p-2.5 md:flex"
     >
-      {PROFILE_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <NavLink
           key={section.to}
           to={section.to}

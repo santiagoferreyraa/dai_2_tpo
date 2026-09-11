@@ -6,9 +6,10 @@
     "dev": "mprocs",
     "dev:back": "node scripts/free-port.mjs 8081 && mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev",
     "dev:charging": "node scripts/free-port.mjs 8082 && mvn -pl backend/ecopedia-charging spring-boot:run -Dspring-boot.run.profiles=dev",
+    "dev:pay": "node scripts/free-port.mjs 8083 && mvn -pl backend/ecopedia-integration spring-boot:run -Dspring-boot.run.profiles=dev",
     "dev:front": "node scripts/free-port.mjs 5173 && pnpm --dir frontend dev",
-    "dev:plain": "concurrently --names back,charging,front --prefix-colors cyan,yellow,magenta --kill-others-on-fail \"pnpm dev:back\" \"pnpm dev:charging\" \"pnpm dev:front\"",
-    "free-ports": "node scripts/free-port.mjs 8081 8082 5173",
+    "dev:plain": "concurrently --names back,charging,pay,front --prefix-colors cyan,yellow,blue,magenta --kill-others-on-fail \"pnpm dev:back\" \"pnpm dev:charging\" \"pnpm dev:pay\" \"pnpm dev:front\"",
+    "free-ports": "node scripts/free-port.mjs 8081 8082 8083 5173",
     "build": "mvn -Pweb clean package",
     "start": "java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar"
   },

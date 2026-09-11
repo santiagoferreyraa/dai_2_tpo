@@ -1,3 +1,4 @@
+import type { Role } from '@/features/auth/types'
 import { BellIcon, CalendarIcon, CardIcon, SlidersIcon } from '@/features/navigation/icons'
 
 /**
@@ -19,11 +20,28 @@ export interface ProfileSection {
   to: string
   label: string
   Icon: (props: { className?: string }) => React.ReactElement
+  /**
+   * Qué roles ven esta sección. Sin esto, la ve cualquiera.
+   *
+   * Es la contracara del guard de la ruta: las tarjetas son del conductor y el backend contesta
+   * 403 a cualquier otro rol, así que mostrarle el ícono a un operador es ofrecerle un camino
+   * que termina en acceso denegado. **Esconder un enlace no es seguridad** y no pretende serlo:
+   * quien escriba la dirección a mano llega igual, y ahí lo frena el guard. Es el mismo criterio
+   * que el de la navegación principal; ver `navSections`.
+   */
+  roles?: Role[]
 }
 
 export const PROFILE_SECTIONS: ProfileSection[] = [
   { to: '/profile/notifications', label: 'Notificaciones', Icon: BellIcon },
   { to: '/profile/reservations', label: 'Reservas e historial', Icon: CalendarIcon },
-  { to: '/profile/payment-methods', label: 'Medios de pago', Icon: CardIcon },
+  { to: '/profile/payment-methods', label: 'Medios de pago', Icon: CardIcon, roles: ['CONDUCTOR'] },
   { to: '/profile/settings', label: 'Configuración', Icon: SlidersIcon },
 ]
+
+/** Las secciones que le corresponden a quien está mirando. Las dos barras leen de acá. */
+export function visibleProfileSections(role: Role | null): ProfileSection[] {
+  return PROFILE_SECTIONS.filter(
+    (section) => section.roles === undefined || (role !== null && section.roles.includes(role)),
+  )
+}

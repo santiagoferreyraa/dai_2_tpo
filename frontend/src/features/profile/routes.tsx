@@ -1,5 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router'
 
+import RequireSession from '@/features/auth/RequireSession'
+
 import NotificationsPage from './NotificationsPage'
 import PaymentMethodsPage from './PaymentMethodsPage'
 import ProfileLayout from './ProfileLayout'
@@ -31,7 +33,14 @@ export const profileRoutes: RouteObject[] = [
       { index: true, element: <Navigate to="notifications" replace /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'reservations', element: <ReservationsPage /> },
-      { path: 'payment-methods', element: <PaymentMethodsPage /> },
+      {
+        path: 'payment-methods',
+        element: (
+          <RequireSession roles={['CONDUCTOR']}>
+            <PaymentMethodsPage />
+          </RequireSession>
+        ),
+      },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },

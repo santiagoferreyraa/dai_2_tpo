@@ -16,15 +16,25 @@ export default defineConfig({
   server: {
     port: 5173,
 
-    // Todo lo que empiece con /api se redirige al backend.
-    // Así el front llama a rutas relativas y no hay CORS que configurar en desarrollo.
-    //
-    // Reservas vive en otro proceso (ecopedia-charging, 8082), así que sus rutas se desvían
-    // antes. El orden importa: Vite usa la PRIMERA regla que coincide, y '/api' a secas también
-    // coincide con '/api/bookings'. Puesta después, se la comería la de core.
+    /*
+      Todo lo que empiece con /api se redirige al backend, así el front llama a rutas relativas
+      y no hay CORS que configurar en desarrollo.
+
+      Los backends son TRES procesos, no uno: Reservas vive en ecopedia-charging (8082), Pagos
+      en ecopedia-integration (8083) y el resto en ecopedia-core (8081). Cada uno es un
+      artefacto desplegable distinto. Ver ARQUITECTURA §6.4.
+
+      El orden de estas claves importa: Vite se queda con la PRIMERA que coincida con la ruta, y
+      '/api' coincide con todo. Las dos reglas específicas tienen que ir arriba o las llamadas a
+      reservas y a medios de pago terminan en core, que no las conoce y contesta 404.
+    */
     proxy: {
       '/api/bookings': {
         target: 'http://localhost:8082',
+        changeOrigin: true,
+      },
+      '/api/payment-methods': {
+        target: 'http://localhost:8083',
         changeOrigin: true,
       },
       '/api': {

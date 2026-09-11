@@ -881,3 +881,45 @@ textarea:-webkit-autofill {
 .swipe-track::-webkit-scrollbar {
   display: none;
 }
+/*
+  El temblor de las tarjetas cuando se entra al modo de eliminar, en el celular.
+
+  Es el gesto que usa iOS al mantener pulsado un ícono, y se copia porque ya está aprendido:
+  algo que tiembla está esperando que lo borres o lo muevas. Sin esto, la única señal de que
+  se entró a un modo distinto serían unas cruces chicas en una esquina, que es fácil no ver.
+
+  El ángulo es un compromiso entre dos cosas que tiran para lados opuestos. Con muy poco no se
+  aprecia —una tarjeta de 380px girando medio grado mueve las esquinas menos de dos píxeles—; con
+  mucho, el número deja de leerse mientras se mueve, y es lo único que distingue una tarjeta de
+  otra justo cuando hay que decidir cuál se borra.
+
+  Acá está definida la FORMA del movimiento, no su ritmo: la duración, la fase y el sentido los
+  pone cada tarjeta por separado desde `CardStack`, distintos para cada una. Es lo que evita que
+  la pila se lea como una sola pieza sacudiéndose. La duración de abajo es solo el valor por
+  omisión, para el caso de que alguien use la clase sin darle uno propio.
+*/
+@keyframes card-jiggle {
+  0%,
+  100% {
+    transform: rotate(-0.55deg) translate(-0.5px, -0.5px);
+  }
+  50% {
+    transform: rotate(0.55deg) translate(0.5px, 0.5px);
+  }
+}
+
+.card-jiggle {
+  animation: card-jiggle 0.26s ease-in-out infinite;
+}
+
+/*
+  Movimiento repetido y sin fin, que es exactamente lo que la preferencia de accesibilidad
+  pide desactivar: para alguien con sensibilidad vestibular, una pantalla entera vibrando es
+  motivo de mareo. El modo de eliminar se sigue distinguiendo por las cruces rojas, así que
+  apagarlo no deja a nadie sin saber qué está pasando.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .card-jiggle {
+    animation: none;
+  }
+}

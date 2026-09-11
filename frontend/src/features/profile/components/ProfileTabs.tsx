@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router'
 
-import { PROFILE_SECTIONS } from '../sections'
+import { useSession } from '@/features/auth/session'
+
+import { visibleProfileSections } from '../sections'
 
 /**
  * Las mismas secciones del perfil, en el celular: una cinta que se arrastra, arriba del
@@ -15,6 +17,9 @@ import { PROFILE_SECTIONS } from '../sections'
  * lista que se quedó sin lugar, y tocando los bordes se lee como una fila que sigue.
  */
 export default function ProfileTabs() {
+  /* Solo las que le corresponden a quien mira. Ver `visibleProfileSections`. */
+  const sections = visibleProfileSections(useSession()?.role ?? null)
+
   return (
     <nav
       aria-label="Secciones del perfil"
@@ -24,7 +29,7 @@ export default function ProfileTabs() {
       */
       className="-ml-5 flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 pl-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden"
     >
-      {PROFILE_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <NavLink
           key={section.to}
           to={section.to}
