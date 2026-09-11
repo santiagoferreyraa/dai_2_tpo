@@ -857,3 +857,25 @@ textarea:-webkit-autofill {
     transition: opacity 200ms ease;
   }
 }
+
+/*
+  La cinta que se arrastra de a una pantalla: el carrusel didáctico de la portada del celular.
+
+  El desplazamiento y el freno en cada paso los hace el navegador. Lo que sí hay que sacar es la
+  barra: la cinta ocupa el ancho entero del teléfono y una barra clara debajo de las tarjetas se
+  lee como una raya suelta en el medio de la portada. Cuál es el paso ya lo dicen los puntos.
+
+  `overscroll-behavior-x: contain` es lo que evita que el arrastre horizontal se escape al
+  navegador —en el celular, seguir tirando en la última tarjeta dispara el gesto de "volver
+  atrás" y se sale de la aplicación sin haber pedido nada.
+*/
+.swipe-track {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.swipe-track::-webkit-scrollbar {
+  display: none;
+}

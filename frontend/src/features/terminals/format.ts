@@ -97,6 +97,22 @@ export function formatPower(kw: number): string {
 }
 
 /**
+ * Distancia: metros abajo del kilómetro, kilómetros con una decimal arriba.
+ *
+ * "0,4 km" se lee peor que "400 m" para algo que está a la vuelta, y "1.437 m" se lee peor que
+ * "1,4 km" para algo que está lejos. El corte está donde cambia la unidad con la que uno piensa
+ * una distancia caminando.
+ *
+ * Vive acá, al lado de la potencia y de las coordenadas, porque la usan las dos versiones del
+ * recuadro de la estación más cercana —la de escritorio y la del celular— y dos copias de esta
+ * regla se separarían en cuanto alguien corrija una.
+ */
+export function formatDistance(km: number): string {
+  if (km < 1) return `${String(Math.round(km * 1000))} m`
+  return `${km.toFixed(1).replace('.', ',')} km`
+}
+
+/**
  * Coordenada recortada a seis decimales.
  *
  * Se muestra con punto y no con coma: es notación de coordenadas, no un número de la

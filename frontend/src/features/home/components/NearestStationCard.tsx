@@ -17,6 +17,7 @@
 import { Link } from 'react-router'
 
 import StationMiniMap from '@/features/terminals/components/StationMiniMap'
+import { formatDistance } from '@/features/terminals/format'
 import type { DeviceLocation } from '@/features/terminals/useDeviceLocation'
 import type { StationDetail } from '@/features/terminals/types'
 
@@ -144,16 +145,4 @@ export default function NearestStationCard({
       </Shell>
     </Link>
   )
-}
-
-/**
- * Metros abajo del kilómetro y kilómetros con una decimal arriba.
- *
- * "0,4 km" se lee peor que "400 m" para algo que está a la vuelta, y "1.437 m" se lee peor que
- * "1,4 km" para algo que está lejos. El corte está donde cambia la unidad con la que uno piensa
- * una distancia caminando.
- */
-function formatDistance(km: number): string {
-  if (km < 1) return `${String(Math.round(km * 1000))} m`
-  return `${km.toFixed(1).replace('.', ',')} km`
 }
