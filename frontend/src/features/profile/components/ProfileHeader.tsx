@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSession } from '@/features/auth/session'
 import { EditIcon } from '@/features/navigation/icons'
 
-import { HEADER_HEIGHT, HEADER_SHAPE, headerOutlinePath } from '../headerShape'
+import { editAnchor, HEADER_HEIGHT, HEADER_SHAPE, headerOutlinePath } from '../headerShape'
 import ProfileIdentity from './ProfileIdentity'
 
 /**
@@ -47,10 +47,13 @@ export default function ProfileHeader() {
   const outline = width > 0 ? headerOutlinePath(width) : ''
 
   /*
-    El lápiz, en el borde. Se dibuja acá y no adentro de `ProfileIdentity` porque su lugar lo
-    decide la FIGURA: va centrado sobre la diagonal, que a mitad de alto pasa por `ancho -
-    slant / 2`, así que queda medio adentro del vidrio y medio afuera. Adentro del contenido
-    tendría que enterarse de la silueta para colocarse.
+    El lápiz, colgado de la esquina de abajo a la derecha. Se dibuja acá y no adentro de
+    `ProfileIdentity` porque su lugar lo decide la FIGURA: va centrado sobre el punto más
+    saliente de esa esquina, así que queda mitad adentro del vidrio y mitad afuera. El punto lo
+    calcula `editAnchor`, que lo saca del mismo contorno que se dibuja.
+
+    **Es la esquina y no el medio del costado.** Ahí el botón se apoya sobre el vértice de la
+    diagonal, que es el remate de la figura, en vez de partir el borde derecho por la mitad.
 
     Mientras se edita no está: ahí la barra tiene sus propios botones de guardar y cancelar, y
     un lápiz al lado no abre nada que no esté ya abierto.
@@ -60,7 +63,7 @@ export default function ProfileHeader() {
       type="button"
       onClick={() => setEditing(true)}
       aria-label="Editar el perfil"
-      className="brand-fill text-on-primary flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full"
+      className="profile-edit brand-fill flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full"
     >
       <EditIcon className="h-4.5 w-4.5" />
     </button>
@@ -119,19 +122,21 @@ export default function ProfileHeader() {
           style={{
             height: barHeight,
             paddingLeft: avatarRadius * 2 + 20,
-            paddingRight: slant / 2 + 32,
+            paddingRight: slant + 24,
           }}
         >
           <ProfileIdentity editing={editing} onDone={() => setEditing(false)} />
         </div>
 
-        {/* Centrado sobre la diagonal, a mitad de alto de la barra. */}
-        <div
-          className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: `calc(100% - ${String(slant / 2)}px)`, top: barHeight / 2 }}
-        >
-          {editButton}
-        </div>
+        {/* Centrado sobre la esquina de abajo a la derecha del contorno. Ver `editAnchor`. */}
+        {width > 0 && (
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ left: editAnchor(width).x, top: editAnchor(width).y }}
+          >
+            {editButton}
+          </div>
+        )}
       </header>
 
       {/* La misma información en el celular, sin la figura. */}

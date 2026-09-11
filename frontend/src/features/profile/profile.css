@@ -39,3 +39,22 @@
   stroke: color-mix(in srgb, var(--color-border) 78%, transparent);
   transition: stroke 300ms ease;
 }
+
+/*
+  El lápiz de editar, sobre el verde de la marca.
+
+  **En el tema claro va blanco y en el oscuro va con el color del fondo.** No es un capricho de
+  paleta: el verde claro es un par de tonos distinto en cada tema —ver `--brand-from` y
+  `--brand-to`—, y el mismo azul oscuro que se lee recortado sobre el verde encendido del tema
+  oscuro, sobre el verde apagado del claro se empasta y el dibujo se pierde.
+
+  Solo el botón del perfil, y no `--color-on-primary`: ese token lo usan todos los botones verdes
+  de la aplicación, y cambiarlo repintaría el texto de cada uno.
+*/
+.profile-edit {
+  color: var(--color-on-primary);
+}
+
+[data-theme="light"] .profile-edit {
+  color: #ffffff;
+}

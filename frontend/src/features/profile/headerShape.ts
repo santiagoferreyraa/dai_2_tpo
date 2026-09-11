@@ -75,10 +75,49 @@ function cornerCut(vertex: Point, incoming: Point, outgoing: Point, radius: numb
   const angle = Math.acos(Math.min(1, Math.max(-1, dot)))
   const cut = radius / Math.tan(angle / 2)
 
+  /*
+    La bisectriz hacia adentro: la suma de las dos direcciones que SALEN del vértice. Con los dos
+    vectores unitarios, esa suma apunta justo al medio del ángulo.
+
+    De ella sale `middle`, el punto de la curva que queda más afuera —el que reemplaza al vértice
+    cuando la esquina se redondea—. Es donde se cuelga el botón de editar: centrado ahí, la mitad
+    del botón queda de cada lado del contorno. En una esquina recta, ese punto cae a `0,414 r` del
+    vértice, que es exactamente lo que "se come" un `border-radius`.
+  */
+  const bisector: Point = [-incoming[0] + outgoing[0], -incoming[1] + outgoing[1]]
+  const bisectorLength = Math.hypot(bisector[0], bisector[1])
+  const toMiddle = radius / Math.sin(angle / 2) - radius
+
   return {
     from: [vertex[0] - incoming[0] * cut, vertex[1] - incoming[1] * cut] as Point,
     to: [vertex[0] + outgoing[0] * cut, vertex[1] + outgoing[1] * cut] as Point,
+    middle: [
+      vertex[0] + (bisector[0] / bisectorLength) * toMiddle,
+      vertex[1] + (bisector[1] / bisectorLength) * toMiddle,
+    ] as Point,
   }
+}
+
+/** La diagonal como dirección unitaria: baja hacia la izquierda. La usan las dos funciones. */
+function slantDirection(): Point {
+  const { barHeight: h, slant } = HEADER_SHAPE
+  const length = Math.hypot(slant, h)
+  return [-slant / length, h / length]
+}
+
+/**
+ * Dónde se cuelga el botón de editar: la esquina de abajo a la derecha de la figura.
+ *
+ * **Es un punto del CONTORNO, no una distancia al borde de la caja.** Esa esquina no está donde
+ * la caja termina —la diagonal ya corrió el borde de abajo hacia adentro, y encima está
+ * redondeada—, así que la única forma de que el botón quede mitad adentro y mitad afuera es
+ * preguntárselo a la misma figura que se dibuja. Si cambian la diagonal o el radio, el botón se
+ * mueve con ellos.
+ */
+export function editAnchor(width: number): { x: number; y: number } {
+  const { barHeight: h, cornerRadius: rr, slant } = HEADER_SHAPE
+  const corner = cornerCut([width - slant, h], slantDirection(), [-1, 0], rr)
+  return { x: corner.middle[0], y: corner.middle[1] }
 }
 
 /**
@@ -107,9 +146,7 @@ export function headerOutlinePath(width: number): string {
   const tangentX = Rc + (Rc * lipDistance) / (Rc + rf)
   const tangentY = Rc + (Rc * lipDrop) / (Rc + rf)
 
-  /* La diagonal, como dirección unitaria: baja hacia la izquierda. */
-  const slantLength = Math.hypot(slant, h)
-  const slantDir: Point = [-slant / slantLength, h / slantLength]
+  const slantDir = slantDirection()
 
   const topRight = cornerCut([width, 0], [1, 0], slantDir, rr)
   const bottomRight = cornerCut([width - slant, h], slantDir, [-1, 0], rr)
