@@ -1,7 +1,13 @@
 import { useId, type ReactNode } from 'react'
 
 /**
- * Un campo del formulario de contacto: rótulo, control y error.
+ * Un campo de una sola línea: rótulo que se enciende con el foco, control subrayado y error.
+ *
+ * **Vivía dentro de la feature Contacto hasta que la edición del perfil lo necesitó.** La regla
+ * del README es esa: un componente se promueve a compartido recién cuando lo usa una segunda
+ * feature. Lo que lo hace valer la pena es el rótulo encendido: sobre un formulario de vidrio,
+ * un campo sin caja necesita algo que diga dónde está parado el cursor, y el color del rótulo lo
+ * dice sin agregar un recuadro más.
  *
  * **Es un envoltorio y no un input.** Recibe el control como hijo en vez de dibujarlo, porque el
  * formulario tiene dos clases —una línea de texto y un área de varias— y lo que comparten es todo
@@ -17,7 +23,7 @@ import { useId, type ReactNode } from 'react'
  * Además es la misma forma que usan las tarjetas de la home —rótulo chico y apagado arriba, el
  * contenido abajo—, así que el formulario se lee como parte de lo mismo.
  */
-interface ContactFieldProps {
+interface UnderlineFieldProps {
   label: string
   error?: string
   /** Texto de ayuda permanente, debajo del control. El error lo reemplaza mientras exista. */
@@ -39,7 +45,7 @@ interface ContactFieldProps {
 const CONTROL =
   'border-border/70 focus:border-primary text-text placeholder:text-text-muted/70 w-full border-0 border-b bg-transparent px-0 py-2.5 text-sm transition-colors outline-none'
 
-export default function ContactField({ label, error, hint, children }: ContactFieldProps) {
+export default function UnderlineField({ label, error, hint, children }: UnderlineFieldProps) {
   const id = useId()
   const messageId = `${id}-message`
   const message = error ?? hint
@@ -52,8 +58,8 @@ export default function ContactField({ label, error, hint, children }: ContactFi
       contenedor; esa regla compite con la del color de reposo y conviene que gane siempre, sin
       depender del orden en que Tailwind emita sus utilidades.
     */
-    <div className="contact-field flex flex-col gap-1.5">
-      <label htmlFor={id} className="contact-field__label text-xs font-medium">
+    <div className="underline-field flex flex-col gap-1.5">
+      <label htmlFor={id} className="underline-field__label text-xs font-medium">
         {label}
       </label>
 

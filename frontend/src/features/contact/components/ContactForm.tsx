@@ -7,7 +7,7 @@ import {
   type ContactDraft,
   type ContactErrors,
 } from '../validation'
-import ContactField from './ContactField'
+import UnderlineField from '@/components/UnderlineField'
 
 /**
  * El formulario de contacto.
@@ -79,7 +79,7 @@ export default function ContactForm() {
       vacíos se entera de uno por vez.
     */
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      <ContactField label="Tu nombre" error={errors.name}>
+      <UnderlineField label="Tu nombre" error={errors.name}>
         {(props) => (
           <input
             {...props}
@@ -91,9 +91,9 @@ export default function ContactForm() {
             onChange={(event) => update('name', event.target.value)}
           />
         )}
-      </ContactField>
+      </UnderlineField>
 
-      <ContactField label="Tu correo" error={errors.email}>
+      <UnderlineField label="Tu correo" error={errors.email}>
         {(props) => (
           <input
             {...props}
@@ -105,9 +105,9 @@ export default function ContactForm() {
             onChange={(event) => update('email', event.target.value)}
           />
         )}
-      </ContactField>
+      </UnderlineField>
 
-      <ContactField
+      <UnderlineField
         label="Tu mensaje"
         error={errors.message}
         /* El resto solo se muestra cuando empieza a importar, no desde el primer momento. */
@@ -124,7 +124,7 @@ export default function ContactForm() {
             className={`${props.className} resize-none`}
           />
         )}
-      </ContactField>
+      </UnderlineField>
 
       <div className="flex flex-col gap-3">
         <button

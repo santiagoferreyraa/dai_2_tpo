@@ -3,6 +3,7 @@ package com.ecopedia.core.user.web;
 import com.ecopedia.core.user.domain.Role;
 import com.ecopedia.core.user.domain.User;
 import com.ecopedia.core.user.domain.UserService;
+import com.ecopedia.core.user.web.dto.ChangePasswordRequest;
 import com.ecopedia.core.user.web.dto.UpdateProfileRequest;
 import com.ecopedia.core.user.web.dto.UserProfileResponse;
 import jakarta.validation.Valid;
@@ -62,6 +63,26 @@ public class UserController {
         User user = userService.getProfileByEmail(authentication.getName());
         User updated = userService.updateProfile(user.getId(), request.toDomainData());
         return ResponseEntity.ok(UserProfileResponse.fromDomain(updated));
+    }
+
+    /**
+     * Cambio de la propia contraseña (RF01).
+     *
+     * <p>Mismo criterio que la edición del perfil: el usuario sale del token y no de la URL, así
+     * que la operación solo puede alcanzar a quien la pide. Acá pesa más todavía, porque un
+     * {@code PUT} con id ajeno sería quedarse con la cuenta de otro.
+     *
+     * <p>Devuelve 204 y no el perfil: no hay nada que mostrar después de cambiarla, y el hash
+     * nuevo no es algo que deba salir del servidor. La sesión abierta sigue valiendo —el token
+     * ya emitido no depende de la contraseña—, así que no hay que volver a entrar.
+     */
+    @PutMapping("/profile/password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> changeMyPassword(
+            Authentication authentication, @Valid @RequestBody ChangePasswordRequest request) {
+        User user = userService.getProfileByEmail(authentication.getName());
+        userService.changePassword(user.getId(), request.currentPassword(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     /** Consulta de usuario por ID (Solo ADMIN - ECO-25). */

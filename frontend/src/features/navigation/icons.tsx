@@ -337,3 +337,36 @@ export function ChevronRightIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Ojo abierto: la contraseña se está viendo.
+ *
+ * El par con `EyeOffIcon` es el símbolo universal de "mostrar y ocultar", y por eso reemplazó al
+ * botón que decía "Mostrar": un rótulo de texto al lado de un campo de contraseña se lee como
+ * otra cosa más para leer, mientras que el ojo se reconoce sin leerlo.
+ */
+export function EyeIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+/**
+ * Ojo tachado: la contraseña está oculta, que es el estado de arranque.
+ *
+ * La barra va en el MISMO ángulo que la que cruza cualquier símbolo de prohibido, y es lo único
+ * que distingue a los dos dibujos de un vistazo: sin ella, un ojo y otro ojo son el mismo ícono.
+ */
+export function EyeOffIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4 4.5l16 15" />
+      <path d="M9.9 5.2A9.6 9.6 0 0 1 12 5c5.9 0 9.5 6 9.5 6a16 16 0 0 1-3.2 3.7" />
+      <path d="M15.2 14.6A3 3 0 0 1 9.9 10" />
+      <path d="M6.6 7.3A15.8 15.8 0 0 0 2.5 11s3.6 6 9.5 6c1.4 0 2.6-.3 3.7-.8" />
+    </svg>
+  )
+}

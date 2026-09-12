@@ -797,12 +797,12 @@ body {
   contenedor con `:has`. Y va acá, fuera de las capas de Tailwind, para que le gane siempre al
   color de reposo sin depender de en qué orden se emitan dos utilidades.
 */
-.contact-field__label {
+.underline-field__label {
   color: var(--color-text-muted);
   transition: color 200ms ease;
 }
 
-.contact-field:has(:focus) .contact-field__label {
+.underline-field:has(:focus) .underline-field__label {
   color: var(--color-primary);
 }
 

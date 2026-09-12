@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
 
-import { updateMyProfile } from '@/features/auth/data/userRepository'
 import { roleLabel } from '@/features/auth/roles'
-import { applyFullName, useSession } from '@/features/auth/session'
+import { useSession } from '@/features/auth/session'
 import { displayNameOf } from '@/lib/displayName'
 
 /**
@@ -12,6 +10,10 @@ import { displayNameOf } from '@/lib/displayName'
  * **Vive aparte de la figura que lo contiene** porque son dos cosas distintas: la silueta con el
  * redondel es de escritorio y la dibuja `ProfileHeader`; esto es lo que va escrito adentro, y es
  * lo mismo en el celular, donde por ahora va en una tarjeta común.
+ *
+ * **Solo muestra: editar vive en otra ruta.** El lápiz de la cabecera lleva a `/profile/edit`,
+ * que ocupa la tarjeta grande. Antes el formulario reemplazaba a estos cuatro datos adentro de
+ * la barra, que son cincuenta y seis píxeles de alto: entraba un campo y nada más.
  *
  * **No pide nada al backend para mostrarse.** Los cuatro datos ya están en la sesión: el correo
  * y el rol viajan en el token, y el nombre lo trae `hydrateFullName` apenas se entra. Pedirlo de
@@ -23,13 +25,7 @@ import { displayNameOf } from '@/lib/displayName'
  * separación: la columna mide un cuarto de lo que haya.
  */
 
-interface ProfileIdentityProps {
-  /** Si está abierto el campo para editar el nombre. Lo maneja quien dibuja el botón. */
-  editing: boolean
-  onDone: () => void
-}
-
-export default function ProfileIdentity({ editing, onDone }: ProfileIdentityProps) {
+export default function ProfileIdentity() {
   const session = useSession()
 
   if (session === null) {
@@ -47,8 +43,6 @@ export default function ProfileIdentity({ editing, onDone }: ProfileIdentityProp
       </div>
     )
   }
-
-  if (editing) return <NameForm current={session.fullName ?? ''} onDone={onDone} />
 
   const fields = [
     { label: 'Nombre', value: displayNameOf(session) },
@@ -79,79 +73,5 @@ export default function ProfileIdentity({ editing, onDone }: ProfileIdentityProp
         </div>
       ))}
     </dl>
-  )
-}
-
-/**
- * El formulario de edición, que ocupa la barra entera mientras dura.
- *
- * **Reemplaza a los cuatro datos en vez de convertir uno en campo.** De los cuatro, el único
- * que se puede cambiar es el nombre —el correo identifica la cuenta y viaja en el token, el rol
- * es una decisión administrativa y el auto no existe—, así que dejarlos al lado de un campo
- * editable invita a tocarlos. Mostrando solo lo que se puede cambiar, la pregunta no aparece.
- *
- * **Lo guardado se escribe en la sesión**, no en un estado de esta pantalla: el nombre lo leen
- * también la ficha de la franja de arriba y el saludo de la portada, y sin eso seguirían
- * mostrando el anterior hasta recargar.
- */
-function NameForm({ current, onDone }: { current: string; onDone: () => void }) {
-  const [value, setValue] = useState(current)
-  const [saving, setSaving] = useState(false)
-  const [failure, setFailure] = useState<string | null>(null)
-
-  async function handleSubmit(event: React.FormEvent): Promise<void> {
-    event.preventDefault()
-    setSaving(true)
-
-    try {
-      const profile = await updateMyProfile(value.trim())
-      applyFullName(profile.fullName)
-      onDone()
-    } catch (cause: unknown) {
-      setSaving(false)
-      setFailure(cause instanceof Error ? cause.message : 'No se pudo guardar el nombre')
-    }
-  }
-
-  return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="flex w-full items-end gap-3">
-      <label className="min-w-0 flex-1">
-        <span className="text-text-muted text-[10px] font-medium tracking-wide uppercase">
-          Nombre
-        </span>
-        {/*
-          `autoFocus` acá no es un atajo de teclado más: al abrirse, este campo es lo único que
-          hay para hacer en la barra, y quien tocó el lápiz ya dijo que quiere escribir.
-        */}
-        <input
-          autoFocus
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          maxLength={120}
-          className="text-text border-border/70 focus:border-primary w-full border-b bg-transparent text-sm font-extrabold tracking-tight outline-none"
-        />
-      </label>
-
-      {failure !== null && (
-        <p className="text-danger min-w-0 flex-1 truncate text-xs" role="alert">
-          {failure}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={saving || value.trim() === ''}
-        className="brand-fill text-on-primary shrink-0 cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-      >
-        {saving ? 'Guardando…' : 'Guardar'}
-      </button>
-      <button
-        type="button"
-        onClick={onDone}
-        className="text-text-muted hover:text-text shrink-0 cursor-pointer text-xs font-semibold"
-      >
-        Cancelar
-      </button>
-    </form>
   )
 }

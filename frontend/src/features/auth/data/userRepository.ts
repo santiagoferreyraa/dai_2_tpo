@@ -38,3 +38,18 @@ export function fetchMyProfile(): Promise<UserProfile> {
 export function updateMyProfile(fullName: string): Promise<UserProfile> {
   return api.put<UserProfile>('/users/profile', { fullName })
 }
+
+/**
+ * Cambia la contraseña del usuario del token. No devuelve nada: el backend contesta 204.
+ *
+ * **Pide la actual además de la nueva, y eso es una regla de negocio, no un campo de más.** Un
+ * token robado o una sesión abierta en una máquina ajena alcanzan para llegar hasta acá; la
+ * contraseña vigente es lo único que distingue al dueño de quien pasaba por ahí. Ver
+ * `ChangePasswordRequest` en el backend.
+ *
+ * La sesión abierta sigue valiendo después del cambio: el token ya emitido no depende de la
+ * contraseña, así que no hay que volver a entrar.
+ */
+export function updateMyPassword(currentPassword: string, newPassword: string): Promise<void> {
+  return api.put<void>('/users/profile/password', { currentPassword, newPassword })
+}

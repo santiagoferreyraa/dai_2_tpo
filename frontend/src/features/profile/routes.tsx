@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router'
 
 import RequireSession from '@/features/auth/RequireSession'
 
+import EditProfilePage from './EditProfilePage'
 import NotificationsPage from './NotificationsPage'
 import PaymentMethodsPage from './PaymentMethodsPage'
 import ProfileLayout from './ProfileLayout'
@@ -19,6 +20,10 @@ import SettingsPage from './SettingsPage'
  * los medios de pago, el botón de atrás saldría del perfil en vez de volver a la sección
  * anterior, y el riel tendría que llevar la cuenta de quién está activo. Anidadas, todo eso lo
  * resuelve el ruteo.
+ *
+ * **Editar no está en el riel y sí acá.** El lápiz vive arriba, en la barra de datos, y el
+ * formulario sale abajo, en la tarjeta: son dos lugares de la pantalla que no se conocen, y
+ * una ruta los une sin pasarse estado entre medio. De paso, el botón de atrás cancela.
  *
  * **`/profile` redirige en vez de tener contenido propio.** Los datos del usuario están en la
  * cabecera, que se ve en las cuatro secciones, así que la ruta de entrada no tiene nada que
@@ -42,6 +47,7 @@ export const profileRoutes: RouteObject[] = [
         ),
       },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'edit', element: <EditProfilePage /> },
     ],
   },
 ]

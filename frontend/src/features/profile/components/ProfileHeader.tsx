@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 
 import { useSession } from '@/features/auth/session'
 import { EditIcon } from '@/features/navigation/icons'
@@ -26,7 +27,6 @@ import ProfileIdentity from './ProfileIdentity'
  */
 export default function ProfileHeader() {
   const session = useSession()
-  const [editing, setEditing] = useState(false)
 
   const shellRef = useRef<HTMLElement>(null)
   const [width, setWidth] = useState(0)
@@ -55,18 +55,19 @@ export default function ProfileHeader() {
     **Es la esquina y no el medio del costado.** Ahí el botón se apoya sobre el vértice de la
     diagonal, que es el remate de la figura, en vez de partir el borde derecho por la mitad.
 
-    Mientras se edita no está: ahí la barra tiene sus propios botones de guardar y cancelar, y
-    un lápiz al lado no abre nada que no esté ya abierto.
+    **Es un enlace y no un botón** porque lleva a otro lado: el formulario ocupa la tarjeta
+    grande, en `/profile/edit`. Con un botón habría que pasarle estado a un componente que no lo
+    conoce; con una ruta, la tarjeta la elige el ruteo.
   */
-  const editButton = session !== null && !editing && (
-    <button
-      type="button"
-      onClick={() => setEditing(true)}
+  const editButton = session !== null && (
+    <Link
+      to="/profile/edit"
       aria-label="Editar el perfil"
-      className="text-on-brand brand-fill flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full"
+      title="Editar el perfil"
+      className="text-on-brand brand-fill flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
     >
       <EditIcon className="h-4.5 w-4.5" />
-    </button>
+    </Link>
   )
 
   return (
@@ -125,7 +126,7 @@ export default function ProfileHeader() {
             paddingRight: slant + 24,
           }}
         >
-          <ProfileIdentity editing={editing} onDone={() => setEditing(false)} />
+          <ProfileIdentity />
         </div>
 
         {/* Centrado sobre la esquina de abajo a la derecha del contorno. Ver `editAnchor`. */}
@@ -141,7 +142,7 @@ export default function ProfileHeader() {
 
       {/* La misma información en el celular, sin la figura. */}
       <section className="glass-panel flex items-center gap-4 rounded-3xl p-5 md:hidden">
-        <ProfileIdentity editing={editing} onDone={() => setEditing(false)} />
+        <ProfileIdentity />
         {editButton}
       </section>
     </>
