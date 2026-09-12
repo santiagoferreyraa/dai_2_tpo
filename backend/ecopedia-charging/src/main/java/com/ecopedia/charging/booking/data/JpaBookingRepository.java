@@ -3,8 +3,11 @@ package com.ecopedia.charging.booking.data;
 import com.ecopedia.charging.booking.domain.Booking;
 import com.ecopedia.charging.booking.domain.BookingRepository;
 import com.ecopedia.charging.booking.domain.BookingStatus;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -12,4 +15,34 @@ public interface JpaBookingRepository extends JpaRepository<Booking, Long>, Book
 
     @Override
     List<Booking> findByConnectorIdAndStatus(Long connectorId, BookingStatus status);
+
+    @Override
+    List<Booking> findByDriverIdOrderByWindowStartAsc(Long driverId);
+
+    /**
+     * El cruce de ventanas, resuelto en la base.
+     *
+     * <p>Es la misma regla que {@code TimeWindow.overlaps} y está escrita igual —{@code inicio
+     * guardado < fin pedido} y {@code fin guardado > inicio pedido}—, así que dos turnos pegados
+     * no se pisan. Si alguna vez cambia el criterio, tienen que cambiar los dos: por eso la
+     * consulta está acá y no dispersa en el servicio.
+     *
+     * <p>Se resuelve en la base y no trayendo las reservas del conector a memoria porque el
+     * índice {@code idx_bookings_connector_window} está hecho para esto; filtrar en Java
+     * obligaría a leer todas las reservas históricas del conector para responder que sí o que no.
+     */
+    @Override
+    @Query(
+            """
+            select count(b) > 0 from Booking b
+            where b.connectorId = :connectorId
+              and b.status = :status
+              and b.windowStart < :end
+              and b.windowEnd > :start
+            """)
+    boolean existsOverlapping(
+            @Param("connectorId") Long connectorId,
+            @Param("status") BookingStatus status,
+            @Param("start") Instant start,
+            @Param("end") Instant end);
 }

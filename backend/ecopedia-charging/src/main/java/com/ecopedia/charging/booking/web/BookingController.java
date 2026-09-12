@@ -1,15 +1,22 @@
 package com.ecopedia.charging.booking.web;
 
+import com.ecopedia.charging.booking.domain.Booking;
 import com.ecopedia.charging.booking.domain.BookingService;
 import com.ecopedia.charging.booking.domain.Hold;
+import com.ecopedia.charging.booking.web.dto.BookingResponse;
+import com.ecopedia.charging.booking.web.dto.ConfirmBookingRequest;
 import com.ecopedia.charging.booking.web.dto.HoldRequest;
 import com.ecopedia.charging.booking.web.dto.HoldResponse;
 import com.ecopedia.charging.security.AuthenticatedUser;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>{@code 'CONDUCTOR'} y no {@code 'DRIVER'}: es el nombre del rol en el enum de core, que es
  * el que viaja en el token. El documento dice {@code DRIVER} y la divergencia es deliberada.
  *
- * <p>Por ahora expone la retención (ECO-31). Confirmar y cancelar las suma ECO-32 acá mismo.
+ * <p><b>De quién es cada reserva lo decide el token, nunca la URL.</b> El rol autoriza a operar,
+ * no a operar sobre lo ajeno: el id del conductor sale siempre del principal y el servicio
+ * verifica que la reserva le pertenezca. Por eso no hay ninguna ruta con el conductor adentro.
  */
 @RestController
 @RequestMapping("/api/bookings")
@@ -44,5 +53,45 @@ public class BookingController {
             @AuthenticationPrincipal AuthenticatedUser driver, @Valid @RequestBody HoldRequest request) {
         Hold hold = bookingService.startHold(request.connectorId(), request.toWindow(), driver.id());
         return ResponseEntity.status(HttpStatus.CREATED).body(HoldResponse.fromDomain(hold));
+    }
+
+    /**
+     * RF08: confirmar la retención y dejar la reserva guardada.
+     *
+     * <p>Es {@code POST /api/bookings} y no {@code POST /api/bookings/holds/{id}/confirm} porque
+     * lo que nace acá es una reserva: el recurso creado es el que nombra la ruta, y por eso la
+     * respuesta es 201 con la reserva en el cuerpo.
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('CONDUCTOR')")
+    public ResponseEntity<BookingResponse> confirm(
+            @AuthenticationPrincipal AuthenticatedUser driver, @Valid @RequestBody ConfirmBookingRequest request) {
+        Booking booking = bookingService.confirmBooking(request.holdId(), driver.id());
+        return ResponseEntity.status(HttpStatus.CREATED).body(BookingResponse.fromDomain(booking));
+    }
+
+    /** Las reservas del conductor que pregunta. */
+    @GetMapping("/mine")
+    @PreAuthorize("hasRole('CONDUCTOR')")
+    public List<BookingResponse> myBookings(@AuthenticationPrincipal AuthenticatedUser driver) {
+        return bookingService.getDriverBookings(driver.id()).stream()
+                .map(BookingResponse::fromDomain)
+                .toList();
+    }
+
+    /**
+     * Cancelar una reserva propia y liberar su ventana.
+     *
+     * <p>{@code DELETE} sobre la reserva y 204 sin cuerpo, aunque por dentro la fila no se borre
+     * sino que pase a {@code CANCELLED}: para el conductor la reserva deja de existir, y cómo se
+     * guarda es asunto nuestro. Que el registro quede es lo que después deja explicar qué pasó
+     * con ese slot.
+     */
+    @DeleteMapping("/{bookingId}")
+    @PreAuthorize("hasRole('CONDUCTOR')")
+    public ResponseEntity<Void> cancel(
+            @AuthenticationPrincipal AuthenticatedUser driver, @PathVariable Long bookingId) {
+        bookingService.cancelBooking(bookingId, driver.id());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -16,9 +16,15 @@ import java.util.UUID;
  * callbacks de {@code BookingServiceImpl}.
  *
  * <p><b>Contrato publicado antes que la implementación completa, a propósito.</b> Igual que el
- * commit semilla de Terminales: las firmas quedan fijas para que ECO-32 (confirmar y cancelar)
- * y ECO-33 (solapamiento contra reservas guardadas) avancen en paralelo contra el mismo
- * contrato. ECO-31 implementa la retención y su ciclo de vida.
+ * commit semilla de Terminales: las firmas quedan fijas para que los tickets avancen en paralelo
+ * contra el mismo contrato. ECO-31 implementó la retención y su ciclo de vida; ECO-32, confirmar
+ * y cancelar.
+ *
+ * <p><b>El cruce contra las reservas guardadas lo trajo ECO-32 y no ECO-33</b>, que es donde lo
+ * había dejado anotado ECO-31: es el criterio de aceptación de RF08 —confirmada la reserva, el
+ * conector queda bloqueado para el resto durante esa ventana— y sin él confirmar no significaría
+ * nada. A ECO-33 le queda {@link #getAvailability}, que es el problema distinto de calcular los
+ * huecos libres.
  *
  * <p>Las operaciones internas que consume SesionesDeCarga —la ventana disponible de un walk-in,
  * consumir y liberar una reserva— se suman con ese componente.
@@ -31,12 +37,13 @@ public interface BookingService {
      * Retiene un slot para un conductor mientras confirma (ECO-31).
      *
      * <p>Verifica que el conector exista y no esté fuera de servicio, y que nadie más tenga
-     * retenida una ventana que se cruce con esta. La retención vence sola pasado el plazo
-     * configurado ({@code ecopedia.booking.hold-ttl}).
+     * comprometida una ventana que se cruce con esta —ni retenida ni ya reservada—. La retención
+     * vence sola pasado el plazo configurado ({@code ecopedia.booking.hold-ttl}).
      *
      * @throws ConnectorNotFoundException si el conector no existe
      * @throws ConnectorNotBookableException si el conector está fuera de servicio
-     * @throws SlotUnavailableException si la ventana se cruza con otra retención vigente
+     * @throws SlotUnavailableException si la ventana se cruza con otra retención vigente o con
+     *     una reserva confirmada
      * @throws InvalidBookingRequestException si la ventana ya empezó
      */
     Hold startHold(Long connectorId, TimeWindow window, Long driverId);
@@ -44,14 +51,45 @@ public interface BookingService {
     /**
      * Convierte una retención vigente en una reserva guardada (ECO-32).
      *
+     * <p>Es el momento en que el slot pasa de retenido a vendido: desde acá el conector queda
+     * bloqueado para el resto durante esa ventana (RF08), y la reserva sobrevive a un reinicio
+     * del proceso porque ya es un compromiso del conductor.
+     *
      * <p>Recibe el conductor y no la tarjeta, que es lo que dice el documento: en esta entrega
      * no se cobra la seña, así que la tarjeta todavía no tiene para qué viajar. El conductor sí,
      * porque solo quien retuvo el slot lo puede confirmar.
+     *
+     * @throws HoldNotFoundException si no hay ninguna retención con ese id
+     * @throws HoldExpiredException si la retención venció antes de confirmarse
+     * @throws BookingAccessDeniedException si la retención es de otro conductor
+     * @throws SlotUnavailableException si mientras tanto se guardó otra reserva que se cruza
      */
     Booking confirmBooking(UUID holdId, Long driverId);
 
-    /** Cancela una reserva del propio conductor y libera su ventana (ECO-32). */
+    /**
+     * Cancela una reserva del propio conductor y libera su ventana (ECO-32).
+     *
+     * <p>Es idempotente: cancelar dos veces la misma reserva no es un error, porque el resultado
+     * que el conductor pidió —que la reserva no valga— ya se cumplió. Importa para el front, que
+     * puede reintentar un pedido que se cortó sin tener que preguntar antes cómo quedó.
+     *
+     * @throws BookingNotFoundException si no hay ninguna reserva con ese id
+     * @throws BookingAccessDeniedException si la reserva es de otro conductor
+     * @throws InvalidBookingRequestException si la ventana ya terminó: no hay nada que liberar
+     */
     void cancelBooking(Long bookingId, Long driverId);
+
+    /**
+     * Las reservas de un conductor, de la más próxima a la más lejana (ECO-32).
+     *
+     * <p>No estaba en el contrato de ECO-31 y se suma acá porque sin esto la cancelación no se
+     * puede usar: el conductor necesita ver sus reservas para elegir cuál cancelar, y la portada
+     * necesita la próxima para la tarjeta de "tu próxima carga".
+     *
+     * <p>Incluye las canceladas. Filtrar es decisión de quien muestra, y una lista que esconde
+     * lo que el conductor canceló le impide verificar que efectivamente se canceló.
+     */
+    List<Booking> getDriverBookings(Long driverId);
 
     /** Las ventanas libres de un conector dentro de un rango (ECO-33). */
     List<TimeWindow> getAvailability(Long connectorId, Instant from, Instant to);
