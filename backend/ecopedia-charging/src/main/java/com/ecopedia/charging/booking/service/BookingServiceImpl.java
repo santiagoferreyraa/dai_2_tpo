@@ -1,12 +1,18 @@
 package com.ecopedia.charging.booking.service;
 
 import com.ecopedia.charging.booking.domain.Booking;
+import com.ecopedia.charging.booking.domain.BookingAccessDeniedException;
+import com.ecopedia.charging.booking.domain.BookingNotFoundException;
+import com.ecopedia.charging.booking.domain.BookingRepository;
 import com.ecopedia.charging.booking.domain.BookingService;
+import com.ecopedia.charging.booking.domain.BookingStatus;
 import com.ecopedia.charging.booking.domain.ConnectorCatalog;
 import com.ecopedia.charging.booking.domain.ConnectorNotBookableException;
 import com.ecopedia.charging.booking.domain.ConnectorNotFoundException;
 import com.ecopedia.charging.booking.domain.ConnectorSnapshot;
 import com.ecopedia.charging.booking.domain.Hold;
+import com.ecopedia.charging.booking.domain.HoldExpiredException;
+import com.ecopedia.charging.booking.domain.HoldNotFoundException;
 import com.ecopedia.charging.booking.domain.InvalidBookingRequestException;
 import com.ecopedia.charging.booking.domain.SlotUnavailableException;
 import com.ecopedia.charging.booking.domain.TimeWindow;
@@ -45,10 +51,22 @@ import org.springframework.stereotype.Service;
  *       el componente apaga el reloj y suelta las retenciones que nadie confirmó.
  * </ul>
  *
+ * <p><b>Las dos mitades de un slot comprometido.</b> Una ventana puede estar tomada por dos
+ * motivos distintos y el componente consulta los dos, siempre juntos:
+ *
+ * <ul>
+ *   <li>una <b>retención</b> vigente, en memoria, de alguien que está por confirmar;
+ *   <li>una <b>reserva</b> confirmada, en la base, de alguien que ya se comprometió.
+ * </ul>
+ *
+ * Lo primero dura minutos y se pierde con el proceso; lo segundo dura hasta su ventana y
+ * sobrevive a un reinicio, porque el conductor ya cuenta con él. Ese par es lo que hace cumplir
+ * RF08: confirmada la reserva, el conector queda bloqueado para el resto durante esa ventana.
+ *
  * <p><b>Por qué las retenciones no van a la base.</b> Duran minutos, vencen solas y no son un
  * compromiso de nadie todavía. Guardarlas sería llenar la base de reservas fantasma y obligar a
  * un proceso aparte a limpiarlas. Si el proceso se reinicia, se pierden, y está bien: el
- * conductor vuelve a elegir el slot. Lo que sí se guarda es la reserva confirmada (ECO-32).
+ * conductor vuelve a elegir el slot. Lo que sí se guarda es la reserva confirmada.
  */
 @Service
 public class BookingServiceImpl implements BookingService {
@@ -56,18 +74,32 @@ public class BookingServiceImpl implements BookingService {
     private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     private final ConnectorCatalog connectorCatalog;
+    private final BookingRepository bookingRepository;
     private final Clock clock;
     private final Duration holdTtl;
+    private final Duration maxWindow;
+    private final Duration maxHorizon;
 
     /** El estado conversacional del componente: las retenciones vigentes, por id. */
     private final Map<UUID, Hold> holds = new ConcurrentHashMap<>();
 
     /**
-     * Candado para "revisar si el slot está libre y retenerlo".
+     * Candado para "revisar si el slot está libre y comprometerlo".
      *
      * <p>El mapa ya tolera accesos concurrentes, pero eso no alcanza: son DOS pasos, y si dos
      * conductores piden el mismo slot en el mismo instante, los dos pueden revisar, ver el slot
-     * libre y retenerlo. Es exactamente el caso que §2.1 dice que este componente evita.
+     * libre y tomarlo. Es exactamente el caso que §2.1 dice que este componente evita.
+     *
+     * <p>Lo toman las dos operaciones que comprometen una ventana —retener y confirmar—, y es el
+     * mismo candado a propósito: si fueran dos, una confirmación y una retención podrían cruzarse
+     * sobre la misma ventana sin verse.
+     *
+     * <p><b>Alcanza mientras Reservas corra en un solo proceso</b>, que es como se despliega y
+     * como se demuestra. Con dos instancias detrás de un balanceador cada una tendría su candado
+     * y sus retenciones, y la garantía tendría que bajar a la base —una restricción de exclusión
+     * sobre {@code (connector_id, tstzrange(window_start, window_end))} en PostgreSQL—. No se
+     * hizo ahora porque H2, que es el motor del perfil {@code dev}, no la soporta y las
+     * migraciones son las mismas para los dos.
      */
     private final Object holdLock = new Object();
 
@@ -75,10 +107,18 @@ public class BookingServiceImpl implements BookingService {
     private ScheduledExecutorService expirations;
 
     public BookingServiceImpl(
-            ConnectorCatalog connectorCatalog, Clock clock, @Value("${ecopedia.booking.hold-ttl}") Duration holdTtl) {
+            ConnectorCatalog connectorCatalog,
+            BookingRepository bookingRepository,
+            Clock clock,
+            @Value("${ecopedia.booking.hold-ttl}") Duration holdTtl,
+            @Value("${ecopedia.booking.max-window}") Duration maxWindow,
+            @Value("${ecopedia.booking.max-horizon}") Duration maxHorizon) {
         this.connectorCatalog = connectorCatalog;
+        this.bookingRepository = bookingRepository;
         this.clock = clock;
         this.holdTtl = holdTtl;
+        this.maxWindow = maxWindow;
+        this.maxHorizon = maxHorizon;
     }
 
     /**
@@ -104,7 +144,8 @@ public class BookingServiceImpl implements BookingService {
      * Callback de destrucción: lo invoca el contenedor al cerrarse, antes de soltar el bean.
      *
      * <p>Sin esto el hilo del reloj quedaría huérfano. Y el log deja constancia de cuántas
-     * retenciones se perdieron con el reinicio, que es información útil y no un error.
+     * retenciones se perdieron con el reinicio, que es información útil y no un error. Las
+     * reservas confirmadas no aparecen acá porque no se pierden: están en la base.
      */
     @PreDestroy
     void stop() {
@@ -119,14 +160,16 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Hold startHold(Long connectorId, TimeWindow window, Long driverId) {
         Instant now = clock.instant();
-        if (window.start().isBefore(now)) {
-            throw new InvalidBookingRequestException("La ventana ya empezó: las reservas son a futuro");
-        }
+        requireSensibleWindow(window, now);
 
         /*
          * El conector se consulta ANTES de tomar el candado: es un pedido de red a core y puede
          * tardar hasta el plazo del cliente. Con el candado tomado, un core lento frenaría las
          * retenciones de todos los conectores, no solo las de este.
+         *
+         * El cruce contra las reservas guardadas, en cambio, sí va adentro: es una consulta
+         * indexada a la base local, y sacarla del candado abriría la ventana de tiempo que el
+         * candado existe para cerrar.
          */
         ConnectorSnapshot connector = connectorCatalog
                 .findConnector(connectorId)
@@ -137,18 +180,7 @@ public class BookingServiceImpl implements BookingService {
 
         Hold hold;
         synchronized (holdLock) {
-            /*
-             * Una retención vencida no bloquea aunque el reloj todavía no la haya sacado del mapa:
-             * el reloj es la limpieza, y la regla es la hora. ECO-33 suma acá la verificación
-             * contra las reservas ya guardadas.
-             */
-            boolean taken = holds.values().stream()
-                    .anyMatch(other -> other.connectorId().equals(connectorId)
-                            && !other.isExpiredAt(now)
-                            && other.window().overlaps(window));
-            if (taken) {
-                throw new SlotUnavailableException(connectorId);
-            }
+            requireFreeSlot(connectorId, window, now);
 
             hold = new Hold(UUID.randomUUID(), connectorId, driverId, window, now.plus(holdTtl));
             holds.put(hold.id(), hold);
@@ -162,6 +194,72 @@ public class BookingServiceImpl implements BookingService {
                 driverId,
                 hold.expiresAt());
         return hold;
+    }
+
+    /**
+     * Que la ventana pedida sea una ventana que tenga sentido reservar.
+     *
+     * <p>Sin techo, un solo pedido bloquea un conector por años: la regla de cruce haría su
+     * trabajo perfectamente —el conector queda bloqueado para el resto, tal cual dice RF08— y el
+     * resultado sería igualmente un conector inutilizable. No hace falta mala intención: un front
+     * con un error de fechas manda lo mismo.
+     *
+     * <p>Los dos topes salen de configuración y no están escritos acá porque son una decisión de
+     * negocio, no de código: cuánto puede durar una carga y con cuánta anticipación se reserva
+     * dependen del operador. Ver {@code ecopedia.booking} en {@code application.yml}.
+     *
+     * @throws InvalidBookingRequestException si la ventana ya empezó, dura de más o está de más lejos
+     */
+    private void requireSensibleWindow(TimeWindow window, Instant now) {
+        if (window.start().isBefore(now)) {
+            throw new InvalidBookingRequestException("La ventana ya empezó: las reservas son a futuro");
+        }
+        if (Duration.between(window.start(), window.end()).compareTo(maxWindow) > 0) {
+            throw new InvalidBookingRequestException("Una reserva no puede durar más de " + maxWindow.toHours()
+                    + " horas. Para una ventana más larga hay que encadenar reservas.");
+        }
+        if (window.start().isAfter(now.plus(maxHorizon))) {
+            throw new InvalidBookingRequestException(
+                    "No se puede reservar con más de " + maxHorizon.toDays() + " días de anticipación");
+        }
+    }
+
+    /** Para retener: no hay ninguna retención propia todavía de la que excluirse. */
+    private void requireFreeSlot(Long connectorId, TimeWindow window, Instant now) {
+        requireFreeSlot(connectorId, window, now, null);
+    }
+
+    /**
+     * Que nadie tenga comprometida una ventana que se cruce con esta, ni reteniéndola ni
+     * habiéndola reservado. <b>Se invoca siempre con {@link #holdLock} tomado.</b>
+     *
+     * <p>{@code ownHoldId} es la retención que el propio pedido ya tiene sobre esa ventana, y que
+     * por eso no cuenta como conflicto: al confirmar, la retención sigue en el mapa —se suelta
+     * recién cuando la reserva está guardada— y sin excluirla el conductor chocaría contra sí
+     * mismo. Es {@code null} cuando todavía no hay ninguna.
+     *
+     * @throws SlotUnavailableException si el slot está tomado
+     */
+    private void requireFreeSlot(Long connectorId, TimeWindow window, Instant now, UUID ownHoldId) {
+        /*
+         * Una retención vencida no bloquea aunque el reloj todavía no la haya sacado del mapa:
+         * el reloj es la limpieza, y la regla es la hora.
+         */
+        boolean held = holds.values().stream()
+                .filter(other -> !other.id().equals(ownHoldId))
+                .anyMatch(other -> other.connectorId().equals(connectorId)
+                        && !other.isExpiredAt(now)
+                        && other.window().overlaps(window));
+        if (held) {
+            throw new SlotUnavailableException(connectorId);
+        }
+
+        // Y lo que hace cumplir RF08: una reserva confirmada bloquea el conector por su ventana.
+        boolean booked =
+                bookingRepository.existsOverlapping(connectorId, BookingStatus.CONFIRMED, window.start(), window.end());
+        if (booked) {
+            throw new SlotUnavailableException(connectorId);
+        }
     }
 
     /** Lo ejecuta el reloj al cumplirse el plazo. Si ya se confirmó, no queda nada que sacar. */
@@ -182,12 +280,90 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public Booking confirmBooking(UUID holdId, Long driverId) {
-        throw new UnsupportedOperationException("Pendiente de ECO-32: confirmar una retención");
+        Instant now = clock.instant();
+        Booking booking;
+
+        /*
+         * Todo el paso adentro del candado, y en este orden: verificar, guardar, y recién después
+         * soltar la retención. Si la retención se sacara primero, entre eso y el guardado la
+         * ventana quedaría sin dueño y otro conductor podría colarse.
+         *
+         * Nótese que NO hay @Transactional acá. Lo hay, y es lo que se necesita, dentro de
+         * save(): así la reserva queda confirmada en la base ANTES de que este hilo suelte el
+         * candado. Con una transacción abierta en este método, el commit ocurriría al salir —ya
+         * sin candado—, y el siguiente conductor podría consultar la base y no ver todavía la
+         * reserva recién guardada. Sería exactamente la doble reserva que el candado evita.
+         */
+        synchronized (holdLock) {
+            Hold hold = holds.get(holdId);
+            if (hold == null) {
+                throw new HoldNotFoundException(holdId);
+            }
+            if (!hold.driverId().equals(driverId)) {
+                // Sin sacarla del mapa: la retención sigue siendo válida para su dueño.
+                throw BookingAccessDeniedException.forHold(holdId);
+            }
+            if (hold.isExpiredAt(now)) {
+                holds.remove(holdId);
+                throw new HoldExpiredException(holdId);
+            }
+
+            /*
+             * Verificar de nuevo, aunque startHold ya lo hizo. Entre una cosa y la otra pasaron
+             * minutos, y el estado que se consultó entonces es de la base, que este proceso no es
+             * el único que puede escribir: una reserva cargada a mano o un segundo proceso
+             * alcanzan. Es una consulta indexada contra un tiempo de espera humano.
+             */
+            requireFreeSlot(hold.connectorId(), hold.window(), now, holdId);
+
+            booking = bookingRepository.save(new Booking(hold.connectorId(), driverId, hold.window(), now));
+            holds.remove(holdId);
+        }
+
+        log.info(
+                "Reserva {} confirmada: el conector {} queda bloqueado para el conductor {} entre {} y {}",
+                booking.getId(),
+                booking.getConnectorId(),
+                driverId,
+                booking.getWindow().start(),
+                booking.getWindow().end());
+        return booking;
     }
 
     @Override
     public void cancelBooking(Long bookingId, Long driverId) {
-        throw new UnsupportedOperationException("Pendiente de ECO-32: cancelar una reserva");
+        Booking booking =
+                bookingRepository.findById(bookingId).orElseThrow(() -> new BookingNotFoundException(bookingId));
+        if (!booking.belongsTo(driverId)) {
+            throw BookingAccessDeniedException.forBooking(bookingId);
+        }
+        if (booking.isCancelled()) {
+            // Idempotente: lo que el conductor pidió ya está hecho, así que no es un error.
+            return;
+        }
+        /*
+         * Una ventana que ya terminó no se cancela: no hay nada que liberar, y dejar reescribirla
+         * sería permitir borrar el historial de una reserva que el conductor usó o a la que no se
+         * presentó. Lo segundo es RF09 y tiene su propio estado.
+         */
+        if (!booking.getWindow().end().isAfter(clock.instant())) {
+            throw new InvalidBookingRequestException("La reserva " + bookingId + " ya terminó y no se puede cancelar");
+        }
+
+        booking.cancel();
+        bookingRepository.save(booking);
+        log.info(
+                "Reserva {} cancelada por el conductor {}: el conector {} vuelve a estar libre entre {} y {}",
+                bookingId,
+                driverId,
+                booking.getConnectorId(),
+                booking.getWindow().start(),
+                booking.getWindow().end());
+    }
+
+    @Override
+    public List<Booking> getDriverBookings(Long driverId) {
+        return bookingRepository.findByDriverIdOrderByWindowStartAsc(driverId);
     }
 
     @Override
