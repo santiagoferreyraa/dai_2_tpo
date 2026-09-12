@@ -2,19 +2,18 @@ package com.ecopedia.charging.booking;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ecopedia.charging.booking.domain.ConnectorCatalog;
 import com.ecopedia.charging.booking.domain.ConnectorSnapshot;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,10 +30,10 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * Seguridad y contrato HTTP de la retención de slots (ECO-31), con el artefacto entero arriba.
  *
- * <p><b>Firma los tokens como los firma core</b> —mismo secreto, mismos claims— en vez de
- * simular un usuario: así cada prueba recorre el filtro que valida la firma, que es la pieza que
- * une los dos procesos y la que puede romperse en silencio si alguien cambia el secreto de un
- * lado solo.
+ * <p>Los tokens se firman como los firma core, con {@link TestTokens}.
+ *
+ * <p>Acá va quién puede llamar a cada operación; el flujo completo de reservar —retener,
+ * confirmar, listar, cancelar— y lo que devuelve cada paso están en {@code BookingApiTest}.
  *
  * <p>Terminales se reemplaza con un mock de {@link ConnectorCatalog}: la prueba es de este
  * artefacto, y no tiene por qué necesitar a core corriendo.
@@ -66,22 +65,8 @@ class BookingAuthorizationTest {
                 .thenAnswer(call -> Optional.of(new ConnectorSnapshot(call.getArgument(0), 1L, "AVAILABLE")));
     }
 
-    /** Un token como el que emite el login de core, firmado con el secreto indicado. */
-    private static String bearer(String signingSecret, long userId, String role) {
-        Instant now = Instant.now();
-        String token = Jwts.builder()
-                .subject(Long.toString(userId))
-                .claim("email", role.toLowerCase() + "@ecopedia.test")
-                .claim("role", role)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(Duration.ofHours(1))))
-                .signWith(Keys.hmacShaKeyFor(signingSecret.getBytes(StandardCharsets.UTF_8)))
-                .compact();
-        return "Bearer " + token;
-    }
-
     private String bearer(String role) {
-        return bearer(secret, 42L, role);
+        return TestTokens.bearer(secret, 42L, role);
     }
 
     /** Un cuerpo de retención válido, sobre una ventana futura que ninguna otra prueba usa. */
@@ -121,7 +106,7 @@ class BookingAuthorizationTest {
     @Test
     @DisplayName("Un token firmado con otro secreto se trata como anónimo")
     void rejectsTokensSignedWithAnotherSecret() throws Exception {
-        String forged = bearer("OtroSecretoQueNoEsElDeEcopediaPeroTieneLargoSuficiente!!", 42L, "CONDUCTOR");
+        String forged = TestTokens.bearer("OtroSecretoQueNoEsElDeEcopediaPeroTieneLargoSuficiente!!", 42L, "CONDUCTOR");
 
         mockMvc.perform(post("/api/bookings/holds")
                         .header(HttpHeaders.AUTHORIZATION, forged)
@@ -155,7 +140,7 @@ class BookingAuthorizationTest {
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/bookings/holds")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(secret, 43L, "CONDUCTOR"))
+                        .header(HttpHeaders.AUTHORIZATION, TestTokens.bearer(secret, 43L, "CONDUCTOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isConflict());
@@ -175,5 +160,56 @@ class BookingAuthorizationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(inverted))
                 .andExpect(status().isBadRequest());
+    }
+
+    /*
+     * Las operaciones que ECO-32 sumó, con la misma regla que retener: son del conductor. Se
+     * prueban con ids que no existen a propósito —lo que se verifica es que el pedido ni siquiera
+     * llegue al servicio, así que tiene que dar 403 y no 404—.
+     */
+
+    @Test
+    @DisplayName("Sin token, confirmar una reserva se rechaza")
+    void rejectsAnonymousConfirm() throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"holdId":"%s"}
+                                """
+                                .formatted(UUID.randomUUID())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Con token de CPO, confirmar una reserva se rechaza")
+    void rejectsOperatorConfirm() throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .header(HttpHeaders.AUTHORIZATION, bearer("CPO"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"holdId":"%s"}
+                                """
+                                .formatted(UUID.randomUUID())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Con token de CPO, listar reservas de conductor se rechaza")
+    void rejectsOperatorListing() throws Exception {
+        mockMvc.perform(get("/api/bookings/mine").header(HttpHeaders.AUTHORIZATION, bearer("CPO")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Sin token, cancelar una reserva se rechaza")
+    void rejectsAnonymousCancel() throws Exception {
+        mockMvc.perform(delete("/api/bookings/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Con token de CPO, cancelar una reserva se rechaza")
+    void rejectsOperatorCancel() throws Exception {
+        mockMvc.perform(delete("/api/bookings/1").header(HttpHeaders.AUTHORIZATION, bearer("CPO")))
+                .andExpect(status().isForbidden());
     }
 }

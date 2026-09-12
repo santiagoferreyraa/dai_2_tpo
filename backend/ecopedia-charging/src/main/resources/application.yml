@@ -60,6 +60,15 @@ ecopedia:
     # Es el tiempo que tiene el conductor para confirmar. Ver ARQUITECTURA_ECOPEDIA.md §2.3.
     hold-ttl: ${ECOPEDIA_BOOKING_HOLD_TTL:PT10M}
 
+    # Cuánto puede durar una reserva y con cuánta anticipación se puede pedir.
+    #
+    # Son topes de negocio, no detalles técnicos: sin ellos un solo pedido —o un front con un
+    # error de fechas— deja un conector bloqueado por años, y la regla de RF08 lo haría cumplir
+    # al pie de la letra. Los valores de acá son los que usamos para la demo; el operador real
+    # los fija por variable de entorno sin tocar código.
+    max-window: ${ECOPEDIA_BOOKING_MAX_WINDOW:PT4H}
+    max-horizon: ${ECOPEDIA_BOOKING_MAX_HORIZON:P30D}
+
 ---
 # Perfil de desarrollo: base en memoria, para levantar el módulo sin PostgreSQL instalado.
 # Las demos de las entregas corren sobre PostgreSQL, no sobre H2.
@@ -77,6 +86,45 @@ spring:
     # busca en minúscula como PostgreSQL, y el arranque muere con
     # "Schema-validation: missing table [bookings]".
     url: jdbc:h2:mem:ecopedia-charging;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: true         # http://localhost:8082/h2-console
+
+---
+# Perfil local: la base de este integrante, en un archivo de su propio disco.
+#
+# El gemelo del perfil `local` de ecopedia-core, y por los mismos motivos: es el perfil que
+# levanta `pnpm dev` y los datos sobreviven a bajar y volver a levantar. Las reservas que
+# retenés siguen estando en el arranque siguiente.
+#
+# **Archivo propio, no el de core.** Cada módulo gobierna su esquema y su propia tabla
+# flyway_schema_history, igual que en PostgreSQL cada uno tiene su schema. Compartir archivo
+# sería el mismo error que compartir el historial de Flyway: cada módulo vería las
+# migraciones del otro como aplicadas pero ausentes y ninguno arrancaría.
+#
+# **Por qué no es `dev` con otra URL:** los tests de este módulo también declaran
+# @ActiveProfiles("dev") y necesitan una base vacía por corrida.
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    # h2:file, no h2:mem. Queda en backend/ecopedia-charging/data/, que está en el .gitignore.
+    #
+    # DATABASE_TO_LOWER=TRUE es obligatorio, por lo mismo que en el perfil `dev`: sin eso el
+    # arranque muere con "Schema-validation: missing table [bookings]".
+    #
+    # Una migración ya aplicada no se puede editar: Flyway aborta por checksum. El reset de
+    # este ambiente es borrar la carpeta data/ del módulo. Está en el README.
+    url: jdbc:h2:file:${ECOPEDIA_CHARGING_LOCAL_DB:./data/ecopedia-charging};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
     username: sa
     password:
     driver-class-name: org.h2.Driver

@@ -45,16 +45,22 @@ public class Booking {
     private BookingStatus status = BookingStatus.CONFIRMED;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     /** Lo pide JPA. */
     protected Booking() {}
 
-    public Booking(Long connectorId, Long driverId, TimeWindow window) {
+    /**
+     * El instante de creación entra por parámetro y no sale de {@code Instant.now()}: el resto
+     * del componente decide todo contra el {@code Clock} que le inyecta el contenedor, y una
+     * fecha que se toma por su cuenta es la única que un test no puede fijar.
+     */
+    public Booking(Long connectorId, Long driverId, TimeWindow window, Instant createdAt) {
         this.connectorId = connectorId;
         this.driverId = driverId;
         this.windowStart = window.start();
         this.windowEnd = window.end();
+        this.createdAt = createdAt;
     }
 
     public Long getId() {
@@ -77,8 +83,24 @@ public class Booking {
         return status;
     }
 
-    public void setStatus(BookingStatus status) {
-        this.status = status;
+    /**
+     * Cancela la reserva y con eso libera la ventana: el cruce solo mira las {@code CONFIRMED},
+     * así que a partir de acá el slot se puede volver a reservar.
+     *
+     * <p>Es un método con nombre y no un {@code setStatus} abierto porque no todo cambio de
+     * estado es válido desde cualquier otro: la incomparecencia y el consumo de la reserva (RF09,
+     * RF11) van a entrar como métodos propios, cada uno con su condición.
+     */
+    public void cancel() {
+        this.status = BookingStatus.CANCELLED;
+    }
+
+    public boolean isCancelled() {
+        return status == BookingStatus.CANCELLED;
+    }
+
+    public boolean belongsTo(Long driverId) {
+        return this.driverId.equals(driverId);
     }
 
     public Instant getCreatedAt() {

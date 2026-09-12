@@ -1,13 +1,13 @@
 # Procesos de desarrollo. Los levanta `pnpm dev`.
 #
-# mprocs muestra los dos en la misma terminal pero SEPARADOS: la lista de procesos queda a
+# mprocs muestra los cuatro en la misma terminal pero SEPARADOS: la lista de procesos queda a
 # la izquierda y el log del que esté seleccionado ocupa el resto. Cada uno conserva su
 # propio scroll, así que el log del backend no se mezcla con el de Vite. Las teclas están
 # siempre a la vista, en el recuadro de ayuda de abajo a la izquierda.
 #
-# La ventaja sobre correr los dos con prefijos en la misma consola no es solo visual: desde
+# La ventaja sobre correr los cuatro con prefijos en la misma consola no es solo visual: desde
 # el TUI se reinicia UNO SOLO —el backend después de tocar una clase, por ejemplo— sin
-# bajar el otro ni perder el estado del navegador.
+# bajar los demás ni perder el estado del navegador.
 #
 # Los comandos son los mismos scripts del package.json, no comandos sueltos: así `pnpm dev`
 # y `pnpm dev:back` levantan exactamente lo mismo y no hay dos definiciones que mantener
@@ -19,6 +19,18 @@
 #
 # Para trabajar solo en el mapa o en el ABM alcanza con `back` y `front`; los otros dos hacen
 # falta para reservas y para la pantalla de medios de pago.
+#
+# ---
+#
+# Éste es el ambiente PROPIO Y PERSISTENTE: perfil `local`, H2 en archivo. Tus datos
+# sobreviven a bajar y volver a levantar, y no necesitás Docker ni instalar nada.
+#
+# Hay dos hermanos de este archivo, para los otros dos ambientes:
+#
+#   mprocs-mem.yaml   ->  `pnpm dev:mem`   H2 en memoria, se borra al bajar
+#   mprocs-demo.yaml  ->  `pnpm demo`      PostgreSQL, el ambiente de la demo
+#
+# Cuándo usar cada uno está en el README, sección "Cómo levantar el proyecto".
 procs:
   back:
     shell: pnpm dev:back

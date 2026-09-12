@@ -25,7 +25,7 @@ TP Integrador — **Desarrollo de Aplicaciones II** (3.4.218, Comisión Lunes TM
 - Maven 3.9+
 - Node 20+
 - pnpm 11+ *(`npm install -g pnpm`)*
-- Docker Desktop *(pendiente de instalar — ver "Correr sin Docker")*
+- Docker Desktop *(opcional — solo para el ambiente de la demo; ver "Los tres ambientes")*
 
 ---
 
@@ -73,19 +73,78 @@ sola API.
 | `pnpm dev:pay` | Solo Pagos (`ecopedia-integration`, 8083), que sirve los medios de pago |
 | `pnpm dev:front` | Solo el frontend |
 | `pnpm dev:plain` | Los cuatro en una sola tira de logs, con prefijos `[back]`/`[charging]`/`[pay]`/`[front]` |
+| `pnpm dev:mem` | Los cuatro, pero con las bases **en memoria**: se borra todo al bajar |
+| `pnpm demo` | Los cuatro contra **PostgreSQL**. Necesita la infraestructura arriba |
 | `pnpm free-ports` | Libera el 8081, el 8082, el 8083 y el 5173 a mano |
 | `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
 | `pnpm start` | Corre ese JAR |
 
-`pnpm dev` levanta el backend y Reservas con el perfil `dev`, o sea contra bases H2 en memoria y
-sin PostgreSQL instalado. Consolas de H2: http://localhost:8081/h2-console y
-http://localhost:8082/h2-console
+`pnpm dev` levanta los tres backends con el perfil `local`: **bases H2 en un archivo de tu
+disco, sin PostgreSQL instalado y sin Docker.** Lo que cargues sobrevive a bajar y volver a
+levantar. Consolas de H2: http://localhost:8081/h2-console, http://localhost:8082/h2-console y
+http://localhost:8083/h2-console
 
-Los dos procesos validan el mismo token, así que tienen que compartir el secreto de firma: sale de
-la variable `ECOPEDIA_JWT_SECRET`, y sin ella los dos usan el mismo valor de desarrollo.
+Los tres procesos validan el mismo token, así que tienen que compartir el secreto de firma: sale
+de la variable `ECOPEDIA_JWT_SECRET`, y sin ella los tres usan el mismo valor de desarrollo.
 
 **`pnpm start` todavía no llega a Reservas:** sirve front y API desde el JAR de core, en el 8081,
 y ahí no hay nada escuchando `/api/bookings`. Para probar reservas se usa `pnpm dev`.
+
+### Los tres ambientes
+
+El proyecto corre contra tres bases distintas, y la diferencia entre ellas es **quién ve los datos
+y cuánto duran**. El esquema es siempre el mismo: lo construyen las mismas migraciones de Flyway,
+así que no hay forma de que se bifurque.
+
+| Ambiente | Comando | Motor | Los datos | ¿Docker? |
+|---|---|---|---|---|
+| **Propio** | `pnpm dev` | H2 en archivo | tuyos, **sobreviven** al reinicio | no |
+| **Descartable** | `pnpm dev:mem` | H2 en memoria | se borran al bajar | no |
+| **Compartido** | `pnpm demo` | PostgreSQL | únicos, los ve todo el que apunte ahí | sí (o PostgreSQL instalado) |
+
+**El de todos los días es `pnpm dev`.** Te registrás una vez, promovés tu usuario a `CPO` una vez,
+y eso queda. Las bases viven en `backend/ecopedia-core/data/`, `backend/ecopedia-charging/data/` y
+`backend/ecopedia-integration/data/`, que están en el `.gitignore`: **cada integrante tiene sus
+propios datos** y nadie ve los del otro. Un módulo por archivo, porque cada uno gobierna su
+esquema y su propio historial de Flyway.
+
+**`pnpm dev:mem` es para empezar de cero.** Es el perfil `dev`, el mismo que usan los tests. Sirve
+sobre todo cuando estás tocando una migración: ver abajo.
+
+**`pnpm demo` es el ambiente de las entregas**, y el único que puede compartirse entre dos
+máquinas. Es sobre el que hay que ensayar la demo, aunque el desarrollo no lo use.
+
+#### Empezar de cero
+
+Cada ambiente se resetea distinto:
+
+```bash
+rm -rf backend/*/data              # propio: borra las bases H2 de los dos módulos
+                                   # descartable: no hace falta, se borra solo al bajar
+docker compose down -v             # compartido: borra el volumen de PostgreSQL
+```
+
+**Cuándo lo vas a necesitar:** una migración que ya se aplicó **no se puede editar**. Flyway le
+guarda el checksum y, si el archivo cambia, aborta el arranque con `Migration checksum mismatch`.
+Es la contracara de que los datos persistan, y es la misma regla que rige en PostgreSQL — por eso
+conviene acostumbrarse acá y no descubrirla la semana de la entrega. Mientras estés iterando sobre
+una migración, `pnpm dev:mem` te evita el borrado en cada vuelta.
+
+#### Promover un usuario a `CPO`
+
+Registrarse deja el rol `CONDUCTOR`, así que `/stations` rebota a `/forbidden`. El ABM pide `CPO`,
+y el rol se cambia a mano. La consulta es la misma en los tres; cambia por dónde entrás:
+
+```sql
+update core.users set role = 'CPO' where email = 'el-tuyo@ejemplo.com';
+```
+
+- **Propio y descartable:** http://localhost:8081/h2-console, con la URL que el log del arranque
+  imprime en la línea `Database available at`, usuario `sa` y la contraseña vacía.
+- **Compartido:** `docker exec -it ecopedia-postgres psql -U ecopedia -d ecopedia`
+
+En el ambiente propio se hace **una sola vez**. En el descartable, en cada arranque — y ése es
+justo el momento en que algo sale mal delante del docente, así que la demo no se hace ahí.
 
 ### Si el puerto quedó tomado
 
@@ -118,11 +177,64 @@ docker compose up -d
 ```
 
 Deja arriba PostgreSQL (`localhost:5432`) y ActiveMQ Artemis (`localhost:61616`, consola web en
-http://localhost:8161/console). Y después el backend **sin** el perfil `dev`:
+http://localhost:8161/console). Y después los cuatro procesos:
 
 ```bash
-mvn -pl backend/ecopedia-core spring-boot:run
+pnpm demo
 ```
+
+Levanta backend, Reservas, Pagos y frontend **sin perfil**, que es el que ya apunta a PostgreSQL.
+Si preferís uno solo, `pnpm demo:back`, `pnpm demo:charging` y `pnpm demo:pay`.
+
+**Si la base no está arriba, el backend no arranca.** Es el error más común de este ambiente, y
+casi siempre falta el `docker compose up -d`. Se ve en dos lugares distintos y conviene reconocer
+los dos:
+
+- **En el panel `back`**, al final de la traza: `java.net.ConnectException: Connection refused`,
+  y el proceso termina con `BUILD FAILURE`.
+- **En el navegador**, algo menos obvio: **el front levanta igual y cada llamada a `/api`
+  devuelve 502.** El proxy de Vite sigue en pie, pero no tiene a quién reenviarle. Un 502 acá no
+  es un problema del frontend: dice que el backend no está.
+
+**Los dos módulos comparten la base pero no el schema.** `core` y `charging` entran a la misma
+base `ecopedia` y cada uno crea el suyo, con su propia `flyway_schema_history`. Es lo que hace
+que puedan migrar por separado sin pisarse.
+
+#### Si el seed de estaciones choca
+
+El síntoma es el arranque abortando con esto, y sin la aplicación levantada:
+
+```
+SQL State  : 23505
+Message    : ERROR: duplicate key value violates unique constraint "stations_pkey"
+Location   : db/migration/V202609071900__seed_stations.sql
+```
+
+**Por qué pasa.** El seed inserta las 15 estaciones con ids explícitos del 1 al 15. Si la base ya
+tiene una fila con alguno de esos ids, la migración choca. Solo puede ocurrirle a un volumen
+anterior al seed en el que alguien cargó estaciones a mano: en una base nueva el seed corre
+primero y nadie puede adelantársele.
+
+**Qué NO es.** No es que el seed rompa la secuencia de ids: la migración termina con
+`ALTER TABLE ... RESTART WITH 16`, así que la primera estación que crees por la aplicación toma
+el 16. Comprobado corriendo.
+
+**Cómo se sale.** Borrando la fila que estorba, o con `docker compose down -v` si la base no tenía
+nada que valiera la pena. **No hace falta `flyway repair`:** PostgreSQL revierte la migración
+entera, así que en el historial no queda ninguna fila fallada.
+
+#### Sin Docker
+
+Docker es el camino cómodo, no un requisito del proyecto. La alternativa es **instalar PostgreSQL**
+en la máquina y crear la base con los mismos valores que declara `docker-compose.yml` —base
+`ecopedia`, usuario `ecopedia`, contraseña `ecopedia`, puerto 5432—. Con eso `pnpm demo` funciona
+igual, porque lo único que le importa es qué hay escuchando en el 5432.
+
+Si preferís otros valores, no hay que tocar código: salen de `ECOPEDIA_DB_URL`, `ECOPEDIA_DB_USER`
+y `ECOPEDIA_DB_PASSWORD`. Ver "Direcciones y configuración".
+
+Y para el ambiente compartido de la Entrega Final vale lo mismo: alcanza con que **una** máquina
+del equipo tenga PostgreSQL, con o sin Docker, y que las demás apunten ahí.
 
 ### Producción: un solo artefacto
 
@@ -173,7 +285,9 @@ Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a l
 | `ecopedia-integration` | 8083 | `mvn -pl backend/ecopedia-integration spring-boot:run` |
 | `ecopedia-async` | — | `mvn -pl backend/ecopedia-async spring-boot:run` *(sin web: consume del broker)* |
 
-Agregarles el perfil `dev` es `-Dspring-boot.run.profiles=dev`.
+Sin perfil apuntan a PostgreSQL. Para el ambiente propio y persistente va
+`-Dspring-boot.run.profiles=local`, y para el descartable en memoria,
+`-Dspring-boot.run.profiles=dev`.
 
 `mvn verify` además **chequea el formato** con Spotless y falla si algo quedó sin formatear.
 Para arreglarlo: `mvn spotless:apply`.
@@ -407,10 +521,14 @@ escriben `V3__` la misma tarde y chocan; con timestamp el choque es imposible.
 - **Una migración ya mergeada no se edita nunca.** Flyway guarda un checksum: si cambiás el
   archivo, el arranque falla en la máquina de todos los que ya la corrieron. Para corregir
   algo, va una migración nueva.
-- **SQL de PostgreSQL.** El perfil `dev` corre H2 en `MODE=PostgreSQL` justamente para que
-  las mismas migraciones funcionen en los dos motores y el esquema no se bifurque.
-- Si la base de desarrollo quedó en un estado raro: `docker compose down -v && docker compose up -d`
-  la borra y la reconstruye desde cero.
+- **SQL de PostgreSQL.** Los perfiles `local` y `dev` corren H2 en `MODE=PostgreSQL` justamente
+  para que las mismas migraciones funcionen en los dos motores y el esquema no se bifurque. Es lo
+  que hace que los tres ambientes tengan el mismo esquema sin mantener nada en paralelo.
+- **Mientras iterás sobre una migración, trabajá con `pnpm dev:mem`.** Como la base se borra al
+  bajar, no hay checksum viejo con el que pelearse. Con `pnpm dev` cada cambio al archivo te pide
+  borrar `backend/*/data` antes de volver a levantar.
+- Si una base quedó en un estado raro, ver "Empezar de cero": se resetea distinto según el
+  ambiente.
 
 ---
 
