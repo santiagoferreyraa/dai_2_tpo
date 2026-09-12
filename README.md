@@ -68,6 +68,7 @@ está configurado y redirige `/api/bookings` a Reservas y el resto de `/api` al 
 | `pnpm dev:front` | Solo el frontend |
 | `pnpm dev:plain` | Los tres en una sola tira de logs, con prefijos `[back]`/`[charging]`/`[front]` |
 | `pnpm dev:mem` | Los tres, pero con las bases **en memoria**: se borra todo al bajar |
+| `pnpm demo` | Los tres contra **PostgreSQL**. Necesita la infraestructura arriba |
 | `pnpm free-ports` | Libera el 8081, el 8082 y el 5173 a mano |
 | `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
 | `pnpm start` | Corre ese JAR |
@@ -92,7 +93,7 @@ así que no hay forma de que se bifurque.
 |---|---|---|---|---|
 | **Propio** | `pnpm dev` | H2 en archivo | tuyos, **sobreviven** al reinicio | no |
 | **Descartable** | `pnpm dev:mem` | H2 en memoria | se borran al bajar | no |
-| **Compartido** | ver "Con PostgreSQL" | PostgreSQL | únicos, los ve todo el que apunte ahí | sí |
+| **Compartido** | `pnpm demo` | PostgreSQL | únicos, los ve todo el que apunte ahí | sí (o PostgreSQL instalado) |
 
 **El de todos los días es `pnpm dev`.** Te registrás una vez, promovés tu usuario a `CPO` una vez,
 y eso queda. Las bases viven en `backend/ecopedia-core/data/` y `backend/ecopedia-charging/data/`,
@@ -102,8 +103,8 @@ Un módulo por archivo, porque cada uno gobierna su esquema y su propio historia
 **`pnpm dev:mem` es para empezar de cero.** Es el perfil `dev`, el mismo que usan los tests. Sirve
 sobre todo cuando estás tocando una migración: ver abajo.
 
-**El compartido es el ambiente de las entregas**, y el único que puede usarse desde dos máquinas
-a la vez. Es sobre el que hay que ensayar la demo, aunque el desarrollo no lo use.
+**`pnpm demo` es el ambiente de las entregas**, y el único que puede compartirse entre dos
+máquinas. Es sobre el que hay que ensayar la demo, aunque el desarrollo no lo use.
 
 #### Empezar de cero
 
@@ -168,11 +169,64 @@ docker compose up -d
 ```
 
 Deja arriba PostgreSQL (`localhost:5432`) y ActiveMQ Artemis (`localhost:61616`, consola web en
-http://localhost:8161/console). Y después el backend **sin** perfil:
+http://localhost:8161/console). Y después los tres procesos:
 
 ```bash
-mvn -pl backend/ecopedia-core spring-boot:run
+pnpm demo
 ```
+
+Levanta backend, Reservas y frontend **sin perfil**, que es el que ya apunta a PostgreSQL. Si
+preferís uno solo, `pnpm demo:back` y `pnpm demo:charging`.
+
+**Si la base no está arriba, el backend no arranca.** Es el error más común de este ambiente, y
+casi siempre falta el `docker compose up -d`. Se ve en dos lugares distintos y conviene reconocer
+los dos:
+
+- **En el panel `back`**, al final de la traza: `java.net.ConnectException: Connection refused`,
+  y el proceso termina con `BUILD FAILURE`.
+- **En el navegador**, algo menos obvio: **el front levanta igual y cada llamada a `/api`
+  devuelve 502.** El proxy de Vite sigue en pie, pero no tiene a quién reenviarle. Un 502 acá no
+  es un problema del frontend: dice que el backend no está.
+
+**Los dos módulos comparten la base pero no el schema.** `core` y `charging` entran a la misma
+base `ecopedia` y cada uno crea el suyo, con su propia `flyway_schema_history`. Es lo que hace
+que puedan migrar por separado sin pisarse.
+
+#### Si el seed de estaciones choca
+
+El síntoma es el arranque abortando con esto, y sin la aplicación levantada:
+
+```
+SQL State  : 23505
+Message    : ERROR: duplicate key value violates unique constraint "stations_pkey"
+Location   : db/migration/V202609071900__seed_stations.sql
+```
+
+**Por qué pasa.** El seed inserta las 15 estaciones con ids explícitos del 1 al 15. Si la base ya
+tiene una fila con alguno de esos ids, la migración choca. Solo puede ocurrirle a un volumen
+anterior al seed en el que alguien cargó estaciones a mano: en una base nueva el seed corre
+primero y nadie puede adelantársele.
+
+**Qué NO es.** No es que el seed rompa la secuencia de ids: la migración termina con
+`ALTER TABLE ... RESTART WITH 16`, así que la primera estación que crees por la aplicación toma
+el 16. Comprobado corriendo.
+
+**Cómo se sale.** Borrando la fila que estorba, o con `docker compose down -v` si la base no tenía
+nada que valiera la pena. **No hace falta `flyway repair`:** PostgreSQL revierte la migración
+entera, así que en el historial no queda ninguna fila fallada.
+
+#### Sin Docker
+
+Docker es el camino cómodo, no un requisito del proyecto. La alternativa es **instalar PostgreSQL**
+en la máquina y crear la base con los mismos valores que declara `docker-compose.yml` —base
+`ecopedia`, usuario `ecopedia`, contraseña `ecopedia`, puerto 5432—. Con eso `pnpm demo` funciona
+igual, porque lo único que le importa es qué hay escuchando en el 5432.
+
+Si preferís otros valores, no hay que tocar código: salen de `ECOPEDIA_DB_URL`, `ECOPEDIA_DB_USER`
+y `ECOPEDIA_DB_PASSWORD`. Ver "Direcciones y configuración".
+
+Y para el ambiente compartido de la Entrega Final vale lo mismo: alcanza con que **una** máquina
+del equipo tenga PostgreSQL, con o sin Docker, y que las demás apunten ahí.
 
 ### Producción: un solo artefacto
 
