@@ -21,9 +21,10 @@
 # Éste es el ambiente PROPIO Y PERSISTENTE: perfil `local`, H2 en archivo. Tus datos
 # sobreviven a bajar y volver a levantar, y no necesitás Docker ni instalar nada.
 #
-# Hay un hermano de este archivo, para el ambiente descartable:
+# Hay dos hermanos de este archivo, para los otros dos ambientes:
 #
 #   mprocs-mem.yaml   ->  `pnpm dev:mem`   H2 en memoria, se borra al bajar
+#   mprocs-demo.yaml  ->  `pnpm demo`      PostgreSQL, el ambiente de la demo
 #
 # Cuándo usar cada uno está en el README, sección "Cómo levantar el proyecto".
 procs:

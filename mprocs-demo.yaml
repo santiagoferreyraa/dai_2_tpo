@@ -1,0 +1,21 @@
+# Los mismos tres procesos, pero contra PostgreSQL. Los levanta `pnpm demo`.
+#
+# Es el ambiente sobre el que se defienden las entregas, y el único de los tres que puede
+# ser COMPARTIDO: una sola base que ven todos los que apunten a esa máquina.
+#
+# ANTES de levantar esto tiene que estar arriba la infraestructura:
+#
+#   docker compose up -d
+#
+# Si no, el backend no arranca y falla con "Connection refused". La alternativa sin Docker
+# es un PostgreSQL instalado en la máquina, escuchando en el 5432 con la base, el usuario y
+# la contraseña que declara docker-compose.yml. Ver el README.
+#
+# No lleva perfil: el perfil por defecto de los dos módulos ya apunta a PostgreSQL.
+procs:
+  back:
+    shell: pnpm demo:back
+  charging:
+    shell: pnpm demo:charging
+  front:
+    shell: pnpm dev:front
