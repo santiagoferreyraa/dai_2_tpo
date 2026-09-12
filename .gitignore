@@ -20,6 +20,15 @@ build/
 .env.local
 *.log
 
+# Las bases H2 del perfil `local`: la copia propia de cada integrante. Los datos son de cada
+# uno, el esquema lo construye Flyway con las mismas migraciones que el repo versiona.
+#
+# Los patrones van ANCLADOS a propósito. Un "data/" suelto casa a cualquier profundidad y
+# este repo tiene paquetes Java que se llaman así —booking/data, terminal/data, payment/data—:
+# dejaría fuera del control de versiones código de la aplicación, en silencio.
+/data/
+/backend/*/data/
+
 # --- IDE ---
 .idea/
 *.iml
