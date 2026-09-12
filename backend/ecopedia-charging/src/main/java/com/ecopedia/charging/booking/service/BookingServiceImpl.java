@@ -10,6 +10,7 @@ import com.ecopedia.charging.booking.domain.ConnectorCatalog;
 import com.ecopedia.charging.booking.domain.ConnectorNotBookableException;
 import com.ecopedia.charging.booking.domain.ConnectorNotFoundException;
 import com.ecopedia.charging.booking.domain.ConnectorSnapshot;
+import com.ecopedia.charging.booking.domain.FreeWindows;
 import com.ecopedia.charging.booking.domain.Hold;
 import com.ecopedia.charging.booking.domain.HoldExpiredException;
 import com.ecopedia.charging.booking.domain.HoldNotFoundException;
@@ -21,6 +22,7 @@ import jakarta.annotation.PreDestroy;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -171,12 +173,7 @@ public class BookingServiceImpl implements BookingService {
          * indexada a la base local, y sacarla del candado abriría la ventana de tiempo que el
          * candado existe para cerrar.
          */
-        ConnectorSnapshot connector = connectorCatalog
-                .findConnector(connectorId)
-                .orElseThrow(() -> new ConnectorNotFoundException(connectorId));
-        if (connector.isOutOfService()) {
-            throw new ConnectorNotBookableException(connectorId);
-        }
+        requireBookableConnector(connectorId);
 
         Hold hold;
         synchronized (holdLock) {
@@ -221,6 +218,22 @@ public class BookingServiceImpl implements BookingService {
         if (window.start().isAfter(now.plus(maxHorizon))) {
             throw new InvalidBookingRequestException(
                     "No se puede reservar con más de " + maxHorizon.toDays() + " días de anticipación");
+        }
+    }
+
+    /**
+     * Que el conector exista y no esté fuera de servicio. Es un pedido de red a core: nunca con
+     * {@link #holdLock} tomado.
+     *
+     * @throws ConnectorNotFoundException si el conector no existe
+     * @throws ConnectorNotBookableException si el conector está fuera de servicio
+     */
+    private void requireBookableConnector(Long connectorId) {
+        ConnectorSnapshot connector = connectorCatalog
+                .findConnector(connectorId)
+                .orElseThrow(() -> new ConnectorNotFoundException(connectorId));
+        if (connector.isOutOfService()) {
+            throw new ConnectorNotBookableException(connectorId);
         }
     }
 
@@ -368,6 +381,47 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<TimeWindow> getAvailability(Long connectorId, Instant from, Instant to) {
-        throw new UnsupportedOperationException("Pendiente de ECO-33: ventanas libres de un conector");
+        Instant now = clock.instant();
+        TimeWindow range = reservableRange(new TimeWindow(from, to), now);
+        requireBookableConnector(connectorId);
+
+        /*
+         * Sin candado, a propósito: es una lectura y su resultado es una foto. Si otro conductor
+         * retiene un hueco un instante después, el que lo quiera tomar recibe 409 en startHold,
+         * que es donde vive la garantía. Tomar el candado acá frenaría todas las retenciones de
+         * todos los conectores por cada vistazo a la agenda, sin volver la foto más cierta.
+         */
+        List<TimeWindow> occupied = new ArrayList<>();
+        bookingRepository
+                .findOverlapping(connectorId, BookingStatus.CONFIRMED, range.start(), range.end())
+                .forEach(booking -> occupied.add(booking.getWindow()));
+        // La misma regla que requireFreeSlot: una retención vencida no ocupa aunque siga en el mapa.
+        holds.values().stream()
+                .filter(hold -> hold.connectorId().equals(connectorId) && !hold.isExpiredAt(now))
+                .forEach(hold -> occupied.add(hold.window()));
+
+        return FreeWindows.within(range, occupied);
+    }
+
+    /**
+     * El rango pedido, recortado a lo que se puede reservar: desde ahora y hasta el horizonte.
+     *
+     * <p>Se recorta en vez de rechazar porque "de hoy a fin de mes" es un pedido razonable aunque
+     * hoy ya haya empezado. Lo que no tiene sentido es un rango que después del recorte no deja
+     * nada: ese sí es un error de quien pregunta, y contestarle con una lista vacía le haría creer
+     * que el conector está todo reservado.
+     */
+    private TimeWindow reservableRange(TimeWindow requested, Instant now) {
+        Instant horizon = now.plus(maxHorizon);
+        if (!requested.end().isAfter(now)) {
+            throw new InvalidBookingRequestException("El rango ya terminó: la disponibilidad es a futuro");
+        }
+        if (!requested.start().isBefore(horizon)) {
+            throw new InvalidBookingRequestException(
+                    "No se puede consultar con más de " + maxHorizon.toDays() + " días de anticipación");
+        }
+        Instant start = requested.start().isBefore(now) ? now : requested.start();
+        Instant end = requested.end().isAfter(horizon) ? horizon : requested.end();
+        return new TimeWindow(start, end);
     }
 }

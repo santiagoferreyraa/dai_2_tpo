@@ -34,6 +34,17 @@ public interface BookingRepository {
      */
     boolean existsOverlapping(Long connectorId, BookingStatus status, Instant start, Instant end);
 
+    /**
+     * Las reservas del conector en ese estado que se cruzan con la ventana, de la más temprana a la
+     * más tarde (ECO-33).
+     *
+     * <p>Es la hermana de {@link #existsOverlapping}, con el mismo criterio de cruce: aquella
+     * responde si choca, esta dice con cuáles. La usa la disponibilidad, que necesita las ventanas
+     * para restarlas, y se acota al rango en la base para no leer el historial entero del
+     * conector.
+     */
+    List<Booking> findOverlapping(Long connectorId, BookingStatus status, Instant start, Instant end);
+
     /** Las reservas de un conductor, de la más próxima a la más lejana (ECO-32). */
     List<Booking> findByDriverIdOrderByWindowStartAsc(Long driverId);
 }
