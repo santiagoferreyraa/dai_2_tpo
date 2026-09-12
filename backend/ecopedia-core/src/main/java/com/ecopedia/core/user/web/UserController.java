@@ -5,7 +5,6 @@ import com.ecopedia.core.user.domain.User;
 import com.ecopedia.core.user.domain.UserService;
 import com.ecopedia.core.user.web.dto.ChangePasswordRequest;
 import com.ecopedia.core.user.web.dto.UpdateProfileRequest;
-import com.ecopedia.core.user.web.dto.UpdateRoleRequest;
 import com.ecopedia.core.user.web.dto.UserProfileResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -101,15 +100,6 @@ public class UserController {
         List<User> users = userService.listUsers(role);
         return ResponseEntity.ok(
                 users.stream().map(UserProfileResponse::fromDomain).toList());
-    }
-
-    /** Cambiar rol de usuario (Solo ADMIN - ECO-27). */
-    @PatchMapping("/{id}/role")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserProfileResponse> updateUserRole(
-            @PathVariable Long id, @Valid @RequestBody UpdateRoleRequest request) {
-        User updated = userService.updateRole(id, request.role());
-        return ResponseEntity.ok(UserProfileResponse.fromDomain(updated));
     }
 
     /** Baja lógica de usuario (Solo ADMIN - ECO-25 / ECO-27). */
