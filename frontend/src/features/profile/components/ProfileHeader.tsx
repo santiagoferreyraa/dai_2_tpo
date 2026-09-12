@@ -13,6 +13,7 @@ import {
 } from '../headerShape'
 import ProfileAvatar from './ProfileAvatar'
 import ProfileIdentity from './ProfileIdentity'
+import ProfileMobileCard from './ProfileMobileCard'
 
 /**
  * La cabecera del perfil: el redondel del avatar a la izquierda y la barra de datos a la
@@ -36,9 +37,8 @@ import ProfileIdentity from './ProfileIdentity'
  *
  * El porqué de que sea un `path` y no dos cajas está en `headerShape.ts`.
  *
- * **En el celular esta figura no aparece.** Ahí va la misma información en una tarjeta común: un
- * redondel más una barra al lado no entran en el ancho de un teléfono sin que el correo quede en
- * cuatro renglones.
+ * **En el celular esta figura no aparece.** Un redondel más una barra al lado no entran en el ancho
+ * de un teléfono sin que el correo quede en cuatro renglones. Ahí va `ProfileMobileCard`.
  */
 export default function ProfileHeader() {
   const session = useSession()
@@ -168,21 +168,10 @@ export default function ProfileHeader() {
       </header>
 
       {/*
-        La misma información en el celular, sin la figura.
-
-        El avatar va acá adentro como un redondel más de la fila y solo con sesión: sin cuenta
-        esta tarjeta muestra la invitación a entrar, y un volante al lado de "todavía no iniciaste
-        sesión" ocuparía el ancho que necesita esa frase para entrar en un teléfono.
-
-        56 píxeles y no los 124 de la figura: es el alto de dos renglones de texto, que es lo que
-        mide la tarjeta. El de escritorio puede ser grande porque la silueta se dibuja alrededor
-        de él.
+        En el celular, otra figura con la misma información: el avatar grande con la tarjeta de
+        vidrio apoyada encima. Ver `ProfileMobileCard`.
       */}
-      <section className="glass-panel flex items-center gap-4 rounded-3xl p-5 md:hidden">
-        {session !== null && <ProfileAvatar size={56} />}
-        <ProfileIdentity />
-        {editButton}
-      </section>
+      <ProfileMobileCard />
     </>
   )
 }

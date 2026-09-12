@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router'
 
 import IridescentBackdrop from '@/features/backdrop/IridescentBackdrop'
+import ActiveBookingBanner from '@/features/bookings/ActiveBookingBanner'
 import Navbar from '@/features/navigation/Navbar'
 
 /**
@@ -60,6 +61,12 @@ export default function App() {
         y la barra de abajo flota sobre el contenido a propósito.
       */}
       <main className="relative flex min-h-0 flex-1 flex-col md:pt-20">
+        {/*
+          La reserva activa, arriba del contenido de cualquier pantalla y DENTRO del flujo: empuja
+          la pantalla hacia abajo en vez de taparle el borde de arriba. Solo en PC y tablet, y solo
+          si hay una reserva. Ver `ActiveBookingBanner`.
+        */}
+        <ActiveBookingBanner />
         <Outlet />
       </main>
     </div>

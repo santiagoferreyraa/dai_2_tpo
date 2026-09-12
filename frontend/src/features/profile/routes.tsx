@@ -1,8 +1,9 @@
-import { Navigate, type RouteObject } from 'react-router'
+import { type RouteObject } from 'react-router'
 
 import RequireSession from '@/features/auth/RequireSession'
 
 import EditProfilePage from './EditProfilePage'
+import ProfileIndex from './ProfileIndex'
 import NotificationsPage from './NotificationsPage'
 import PaymentMethodsPage from './PaymentMethodsPage'
 import ProfileLayout from './ProfileLayout'
@@ -25,17 +26,18 @@ import SettingsPage from './SettingsPage'
  * formulario sale abajo, en la tarjeta: son dos lugares de la pantalla que no se conocen, y
  * una ruta los une sin pasarse estado entre medio. De paso, el botón de atrás cancela.
  *
- * **`/profile` redirige en vez de tener contenido propio.** Los datos del usuario están en la
- * cabecera, que se ve en las cuatro secciones, así que la ruta de entrada no tiene nada que
- * mostrar por su cuenta: lleva a la primera de la lista. Es `replace` para que el botón de
- * atrás no caiga de nuevo en la redirección y rebote.
+ * **En escritorio `/profile` redirige; en el celular no.** En escritorio la cabecera y el riel ya
+ * están a la vista, así que la ruta de entrada no tiene nada propio que mostrar y lleva a la
+ * primera sección, con `replace` para que el botón de atrás no rebote. En el celular `/profile`
+ * ES la lista de secciones —la dibuja `ProfileLayout`—, y redirigir la salteaba. Ver
+ * `ProfileIndex`.
  */
 export const profileRoutes: RouteObject[] = [
   {
     path: 'profile',
     element: <ProfileLayout />,
     children: [
-      { index: true, element: <Navigate to="reservations" replace /> },
+      { index: true, element: <ProfileIndex /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'reservations', element: <ReservationsPage /> },
       {

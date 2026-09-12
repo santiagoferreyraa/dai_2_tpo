@@ -7,6 +7,8 @@
 @import "./features/terminals/terminals.css";
 /* El vidrio recortado del riel del perfil, que no puede salir de `.glass-panel`. Ver el archivo. */
 @import "./features/profile/profile.css";
+/* La burbuja de la reserva del celular y las animaciones de achicarla y agrandarla. */
+@import "./features/bookings/bookings.css";
 
 /*
   Tema de la aplicación (RNF07 y RNF08).

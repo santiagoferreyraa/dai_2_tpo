@@ -1,4 +1,5 @@
 import type { Role } from '@/features/auth/types'
+import ActiveBookingDot from '@/features/bookings/ActiveBookingDot'
 import { BellIcon, CalendarIcon, CardIcon, SlidersIcon } from '@/features/navigation/icons'
 
 /**
@@ -30,10 +31,22 @@ export interface ProfileSection {
    * que el de la navegación principal; ver `navSections`.
    */
   roles?: Role[]
+  /**
+   * Un aviso sobre el ícono, o nada. Lo dibuja el riel y la cinta en la esquina del ícono, y decide
+   * solo si se muestra: el de reservas titila únicamente con una reserva activa.
+   *
+   * Va acá y no escrito en el riel para que el riel no tenga que saber qué es una reserva.
+   */
+  Badge?: () => React.ReactElement | null
 }
 
 export const PROFILE_SECTIONS: ProfileSection[] = [
-  { to: '/profile/reservations', label: 'Reservas e historial', Icon: CalendarIcon },
+  {
+    to: '/profile/reservations',
+    label: 'Reservas e historial',
+    Icon: CalendarIcon,
+    Badge: ActiveBookingDot,
+  },
   { to: '/profile/notifications', label: 'Notificaciones', Icon: BellIcon },
   { to: '/profile/payment-methods', label: 'Medios de pago', Icon: CardIcon, roles: ['CONDUCTOR'] },
   { to: '/profile/settings', label: 'Configuración', Icon: SlidersIcon },

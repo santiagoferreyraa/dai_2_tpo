@@ -149,6 +149,17 @@ export default function StationDetailPanel({
               Iniciar sesión
             </Link>
           </div>
+        ) : session.role !== 'CONDUCTOR' ? (
+          /*
+            Con sesión pero sin rol de conductor, que es el único que el backend deja reservar. El
+            mismo recuadro que el de sin sesión y por el mismo motivo: no es el conector el que
+            impide reservar sino la cuenta, y un botón gris diría lo contrario.
+          */
+          <div className="border-border bg-surface/60 flex w-full items-center justify-center rounded-2xl border px-4 py-3.5 text-center">
+            <p className="text-text-muted text-sm font-semibold text-balance">
+              Las reservas son para cuentas de conductor.
+            </p>
+          </div>
         ) : (
           <>
             <button

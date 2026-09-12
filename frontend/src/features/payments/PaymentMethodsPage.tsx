@@ -227,13 +227,14 @@ export default function PaymentMethodsPage() {
         */
         <button
           /*
-            `self-start` para que mida lo que dice y no el ancho de la tarjeta de la sección.
+            `self-center` para que mida lo que dice y no el ancho de la tarjeta de la sección, y
+            quede centrado en ella en las dos resoluciones.
             En un monitor ancho el punteado cruzaba la pantalla entera para contener dos palabras
             centradas, y un recuadro vacío de ese tamaño se lee como un lugar donde falta algo,
             no como un botón. Con el ancho del contenido, el punteado vuelve a ser el borde de una
             acción.
           */
-          className="border-primary/60 text-primary hover:bg-primary/10 hover:border-primary self-start rounded-2xl border-2 border-dashed px-6 py-3.5 text-sm font-semibold transition-colors"
+          className="border-primary/60 text-primary hover:bg-primary/10 hover:border-primary self-center rounded-2xl border-2 border-dashed px-6 py-3.5 text-sm font-semibold transition-colors"
           type="button"
           onClick={() => setAdding(true)}
         >

@@ -30,6 +30,9 @@ import { useSearchParams } from 'react-router'
 import type { LatLngTuple } from 'leaflet'
 
 import BottomSheet from '@/components/BottomSheet'
+import BookingDialog from '@/features/bookings/components/BookingDialog'
+import BookingPanel from '@/features/bookings/components/BookingPanel'
+import type { Booking } from '@/features/bookings/types'
 import MapScrim from './components/MapScrim'
 import StationCarousel from './components/StationCarousel'
 import StationDetailPanel from './components/StationDetailPanel'
@@ -54,6 +57,16 @@ const center = DEFAULT_CENTER as LatLngTuple
  * para pasar a dos columnas: las dos pantallas de la feature entienden lo mismo por "ancha".
  */
 const WIDE_QUERY = '(min-width: 1024px)'
+
+/**
+ * A partir de acá reservar abre un diálogo centrado; por debajo, el mismo contenido va adentro del
+ * panel que sube desde abajo.
+ *
+ * **No es el mismo corte que `WIDE_QUERY`, a propósito.** La tablet todavía usa el panel de abajo
+ * para el detalle de la estación, pero tiene lugar de sobra para una ventana: es el `md` de
+ * Tailwind, el mismo en que aparece la franja de navegación de arriba.
+ */
+const DIALOG_QUERY = '(min-width: 768px)'
 
 /**
  * Cuánto le tapa el panel al mapa en celular, aproximado.
@@ -184,6 +197,19 @@ export default function StationsMapPage() {
   const traceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wide = useMediaQuery(WIDE_QUERY)
+  const dialog = useMediaQuery(DIALOG_QUERY)
+
+  /*
+   * La estación y el conector que se están reservando, o `null` si no se está reservando.
+   *
+   * Se guardan los dos al tocar Reservar y no se leen de la selección, porque la selección puede
+   * cambiar por debajo —llega una recarga de estaciones, se mueve un filtro— y el diálogo no tiene
+   * que pasar a reservar otra cosa a mitad de camino.
+   */
+  const [reserving, setReserving] = useState<{
+    station: StationResult
+    connector: ConnectorSummary
+  } | null>(null)
 
   useEffect(() => {
     /*
@@ -304,11 +330,14 @@ export default function StationsMapPage() {
     setSelectedStationId(stationId)
     /* El conector arranca de nuevo en cada estación: lo resuelve `defaultConnector`. */
     setSelectedConnectorId(null)
+    /* En el celular, elegir otro pin a mitad de una reserva vuelve al detalle de la nueva. */
+    setReserving(null)
   }
 
   function closePanel() {
     setSelectedStationId(null)
     setSelectedConnectorId(null)
+    setReserving(null)
   }
 
   function clearTraceTimer() {
@@ -319,21 +348,9 @@ export default function StationsMapPage() {
 
   /*
    * Si la pantalla se desmonta con el trazo corriendo, el setState posterior cae sobre un
-   * componente que ya no existe — y encima saltaría el cartel de la reserva sobre otra pantalla.
+   * componente que ya no existe.
    */
   useEffect(() => clearTraceTimer, [])
-
-  /**
-   * El aviso de que RF08 —reserva de slot con seña— todavía no existe: no hay BookingService ni
-   * pantalla de reserva. El botón se deja activo igual para que la regla que sí está
-   * implementada —un conector fuera de servicio no se reserva— se pueda probar de verdad contra
-   * el estado habilitado. Cuando entre RF08, esto pasa a ser la navegación al alta.
-   */
-  function notifyReservationPending() {
-    window.alert(
-      'La reserva todavía no está disponible: llega con RF08, que incluye el cobro de la seña.',
-    )
-  }
 
   /**
    * Dibuja la línea hasta la estación y la apaga sola. Ver TRACE_DURATION_MS.
@@ -349,34 +366,30 @@ export default function StationsMapPage() {
     traceTimer.current = setTimeout(() => {
       traceTimer.current = null
       setTracedStationId(null)
-      notifyReservationPending()
     }, TRACE_DURATION_MS)
   }
 
   function handleReserve() {
-    if (selectedStation === null) return
+    if (selectedStation === null || selectedConnector === null) return
+    setReserving({ station: selectedStation, connector: selectedConnector })
+  }
 
-    /*
-     * Sin ubicación no hay línea que trazar —no hay punto de partida—, así que el botón hace lo
-     * único que sabe hacer hoy: avisar que la reserva no está.
-     */
-    if (device.location === null) {
-      notifyReservationPending()
-      return
+  /**
+   * Termina la reserva, confirmada o no.
+   *
+   * **Confirmada, dibuja la línea hasta la estación.** Es el trazo que antes disparaba el botón
+   * Reservar mientras la reserva no existía; ahora llega al final, que es cuando dice algo: la
+   * estación a la que el conductor acaba de comprometerse a ir. Se dibuja al cerrar y no antes
+   * porque con el diálogo abierto el fondo está oscurecido y la línea no se vería.
+   *
+   * Sin ubicación no hay punto de partida y no se traza nada; la reserva vale igual.
+   */
+  function finishReserving(booking: Booking | null) {
+    const station = reserving?.station ?? null
+    setReserving(null)
+    if (booking !== null && station !== null && device.location !== null) {
+      startTrace(station.stationId)
     }
-
-    /*
-     * Con ubicación, primero el trazo y el aviso DESPUÉS, cuando la línea terminó.
-     *
-     * No es una preferencia de ritmo: `window.alert` congela el hilo de la página, animaciones
-     * incluidas. Lanzado acá, el mapa se queda clavado en el cuadro anterior y ni el encuadre ni
-     * el titileo llegan a verse hasta que alguien cierre el cartel — y para entonces ya pasaron.
-     *
-     * El día que RF08 exista este orden deja de importar, porque lo que va a haber acá es una
-     * navegación y no un cartel modal. Mientras tanto, el aviso al final es lo que deja convivir
-     * las dos cosas.
-     */
-    startTrace(selectedStation.stationId)
   }
 
   /*
@@ -389,15 +402,29 @@ export default function StationsMapPage() {
    */
   const notice = loading ? 'Cargando estaciones…' : loadError
 
-  /* El panel, escrito una sola vez para las dos formas de la pantalla. */
-  const detail = selectedStation && (
-    <StationDetailPanel
-      station={selectedStation}
-      selectedConnector={selectedConnector}
-      onSelectConnector={setSelectedConnectorId}
-      onReserve={handleReserve}
-    />
-  )
+  /*
+   * El panel, escrito una sola vez para las dos formas de la pantalla.
+   *
+   * En el celular, reservando, el detalle deja lugar al formulario de reserva adentro del mismo
+   * panel. De tablet para arriba el detalle se queda donde está y la reserva va en un diálogo.
+   */
+  const detail =
+    selectedStation &&
+    (reserving !== null && !dialog ? (
+      <BookingPanel
+        station={reserving.station}
+        connector={reserving.connector}
+        onBack={() => setReserving(null)}
+        onDone={finishReserving}
+      />
+    ) : (
+      <StationDetailPanel
+        station={selectedStation}
+        selectedConnector={selectedConnector}
+        onSelectConnector={setSelectedConnectorId}
+        onReserve={handleReserve}
+      />
+    ))
 
   return (
     /*
@@ -631,6 +658,14 @@ export default function StationsMapPage() {
           </BottomSheet>
         )}
       </div>
+
+      {reserving !== null && dialog && (
+        <BookingDialog
+          station={reserving.station}
+          connector={reserving.connector}
+          onClose={finishReserving}
+        />
+      )}
     </section>
   )
 }

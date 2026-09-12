@@ -26,8 +26,8 @@ export default function ProfileRail() {
 
   return (
     /*
-      `hidden md:flex`: en el celular las secciones van en una cinta arriba del contenido. Ver
-      `ProfileTabs`. `self-start` es lo que deja que el riel mida su contenido en vez de
+      `hidden md:flex`: en el celular las secciones van en una lista de renglones. Ver
+      `ProfileSectionList`. `self-start` es lo que deja que el riel mida su contenido en vez de
       estirarse hasta el alto de la tarjeta.
 
       `rounded-full` sobre una columna de 64 píxeles da las puntas completamente redondeadas,
@@ -49,7 +49,10 @@ export default function ProfileRail() {
             }`
           }
         >
-          <section.Icon className="h-5 w-5 shrink-0" />
+          <span className="relative flex">
+            <section.Icon className="h-5 w-5 shrink-0" />
+            {section.Badge && <section.Badge />}
+          </span>
           <span className="sr-only">{section.label}</span>
         </NavLink>
       ))}

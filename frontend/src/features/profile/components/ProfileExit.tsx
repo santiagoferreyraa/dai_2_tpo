@@ -18,12 +18,36 @@ import { CrossIcon } from '@/features/navigation/icons'
  * navegación no puede costar eso.
  *
  * Sin sesión no se dibuja: no hay nada que cerrar.
+ *
+ * **En el celular es un renglón**, al final de la lista de secciones (`variant="row"`): ahí las
+ * secciones son renglones con nombre, y un redondel suelto debajo se leería como un botón perdido.
+ * Pregunta igual que el redondel, con la misma ventana.
  */
-export default function ProfileExit() {
+export default function ProfileExit({ variant = 'round' }: { variant?: 'round' | 'row' }) {
   const session = useSession()
   const [asking, setAsking] = useState(false)
 
   if (session === null) return null
+
+  if (variant === 'row') {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setAsking(true)}
+          /* Del mismo largo y con el mismo vidrio que los renglones de las secciones. */
+          className="glass-panel text-text-muted hover:text-danger flex min-h-17 w-full cursor-pointer items-center gap-4 rounded-3xl px-3 py-3 text-left transition-colors"
+        >
+          <span className="ml-2 flex shrink-0 items-center justify-center">
+            <CrossIcon className="h-6 w-6" />
+          </span>
+          <span className="text-base font-extrabold tracking-tight uppercase">Cerrar sesión</span>
+        </button>
+
+        {asking && <ExitDialog onCancel={() => setAsking(false)} />}
+      </>
+    )
+  }
 
   return (
     <>
