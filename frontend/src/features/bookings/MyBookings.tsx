@@ -120,9 +120,9 @@ export default function MyBookings() {
             historial solo crece, y sin tope empujaría la reserva activa fuera de la pantalla con
             reservas de hace meses. El borde marca dónde empieza y termina lo que se recorre.
 
-            En PC y tablet el tope no es fijo: el recuadro ocupa lo que le sobra a la tarjeta, que ya
-            mide el alto de la ventana. Así hay un solo scroll, el del historial, y no uno adentro
-            de otro.
+            En PC y tablet el tope no es fijo: cuando la tarjeta llega al alto de la ventana, el
+            recuadro se achica para entrar en lo que le queda. Así hay un solo scroll, el del
+            historial, y no uno adentro de otro.
           */
           <ul className="border-border/60 flex max-h-80 flex-col gap-2 overflow-y-auto md:max-h-none md:min-h-40 md:flex-1 rounded-2xl border p-3">
             {history.map((booking) => (

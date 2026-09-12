@@ -18,9 +18,9 @@ import { PROFILE_SECTIONS } from './sections'
  * de cada sección habría que repetirla cuatro veces y se redibujaría en cada navegación, que es
  * justo lo que se nota cuando algo que no cambió parpadea.
  *
- * **El alto de abajo está definido y eso no es un detalle de estilo.** La tarjeta de la sección
- * ocupa lo que sobra después de la cabecera, y para eso necesita contra qué medirse: si esta
- * columna midiera su contenido, una tarjeta vacía mediría cero.
+ * **El alto de abajo está definido y eso no es un detalle de estilo.** En PC y tablet la tarjeta
+ * de la sección crece con su contenido hasta lo que sobra después de la cabecera, y para ponerse
+ * ese tope necesita contra qué medirse: si esta columna midiera su contenido, no habría tope.
  *
  * **En el celular la parte de abajo es una cosa o la otra, nunca las dos.** En `/profile` va la
  * lista de secciones; en una sección, su recuadro grande en lugar de la lista, con una flecha
@@ -50,8 +50,9 @@ export default function ProfileLayout() {
       que mide su contenido: si no entra, crece la página.
 
       **En PC y tablet no scrollea nada de afuera.** La cabecera y el riel quedan quietos y la
-      tarjeta de la sección ocupa exactamente el alto que sobra de la ventana; si su contenido no
-      entra, scrollea adentro de la tarjeta. Así lo que identifica la pantalla no se va nunca de
+      tarjeta de la sección mide lo que mide su contenido, con un tope: el alto que sobra de la
+      ventana. Una sección corta no deja media pantalla de vidrio vacío, y una larga no empuja la
+      página: scrollea adentro de la tarjeta. Así lo que identifica la pantalla no se va nunca de
       vista por leer una sección larga.
 
       El relleno de los costados no es solo aire: las tarjetas son de vidrio y su sombra se
@@ -77,11 +78,11 @@ export default function ProfileLayout() {
             ensancha esta columna, después el riel de al lado, y la pantalla entera termina con una
             barra de scroll horizontal en vez de que lo ancho scrollee adentro de lo suyo.
 
-            La tarjeta de la sección —el `<article>` de `ProfileCard`— toma el alto entero de esta
-            columna y scrollea adentro. Se le pide desde acá y no en `ProfileCard` porque en el
-            celular esa misma tarjeta tiene que medir su contenido.
+            La tarjeta de la sección —el `<article>` de `ProfileCard`— mide su contenido y tiene como
+            tope el alto de esta columna; pasado el tope, scrollea adentro. Se le pide desde acá y no
+            en `ProfileCard` porque en el celular esa misma tarjeta no tiene tope.
           */}
-          <div className="min-h-0 min-w-0 flex-1 [&>article]:h-full [&>article]:overflow-y-auto">
+          <div className="min-h-0 min-w-0 flex-1 [&>article]:max-h-full [&>article]:overflow-y-auto">
             <Outlet />
           </div>
         </div>
