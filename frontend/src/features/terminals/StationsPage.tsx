@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
-import BottomSheet from './components/BottomSheet'
+import BottomSheet from '@/components/BottomSheet'
 import NetworkSummary from './components/NetworkSummary'
 import StationCard from './components/StationCard'
 import StationFormSheet from './components/StationFormSheet'
@@ -14,7 +14,7 @@ import {
 } from './data/stationsRepository'
 import { CONNECTOR_TYPES, CONNECTOR_TYPE_LABEL, POWER_STEPS, matchesFilters } from './format'
 import type { ConnectorType, StationDetail, StationInput } from './types'
-import { useMediaQuery } from './useMediaQuery'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useWheelToHorizontal } from './useWheelToHorizontal'
 
 /**

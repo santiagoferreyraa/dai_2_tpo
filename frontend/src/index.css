@@ -5,6 +5,10 @@
 
 /* Tokens propios de la feature Terminales (prefijo `st-`). No pisan los de acá abajo. */
 @import "./features/terminals/terminals.css";
+/* El vidrio recortado del riel del perfil, que no puede salir de `.glass-panel`. Ver el archivo. */
+@import "./features/profile/profile.css";
+/* La burbuja de la reserva del celular y las animaciones de achicarla y agrandarla. */
+@import "./features/bookings/bookings.css";
 
 /*
   Tema de la aplicación (RNF07 y RNF08).
@@ -143,6 +147,25 @@
 }
 
 /*
+  Lo que va dibujado ENCIMA del verde de la marca: el texto de un botón, un ícono.
+
+  **El color cambia con el tema y no es un capricho de paleta.** El par de verdes no es el mismo
+  en los dos: en el oscuro va encendido y lo que se le apoye tiene que ser oscuro para leerse; en
+  el claro va apagado y pasa lo contrario. Un blanco fijo desaparece sobre el verde claro y un
+  oscuro fijo se empasta sobre el apagado.
+
+  Es una clase aparte y no `--color-on-primary` porque ese token lo usan todos los botones verdes
+  de la aplicación, y varios ya resuelven su contraste de otra manera.
+*/
+.text-on-brand {
+  color: var(--color-on-primary);
+}
+
+[data-theme="light"] .text-on-brand {
+  color: #ffffff;
+}
+
+/*
   El fondo de la aplicación: tres manchas de color muy abiertas sobre el color base.
 
   Es lo que evita que el tema oscuro sea un gris plano. Las manchas son enormes y de opacidad
@@ -205,6 +228,27 @@
   .glass-panel {
     background-color: var(--color-surface);
   }
+}
+
+/*
+  El vidrio de una ventana modal: el mismo de siempre, pero con cuerpo de sobra.
+
+  **Una ventana modal no se apoya sobre la página sino sobre el oscurecedor**, y ahí el 32% de
+  `.glass-panel` juega en contra en el tema claro: lo que el desenfoque recoge es el negro al 50%
+  del fondo, así que un panel que debería leerse blanco sale gris sucio. En el tema oscuro no se
+  nota, porque abajo ya había oscuro.
+
+  Por eso el claro sube más que el oscuro. No es un panel más de la pantalla: es lo único que se
+  puede tocar mientras está abierto, y tiene que separarse del resto en vez de confundirse con
+  él. El desenfoque y el borde siguen siendo los de `.glass-panel`, así que sigue siendo vidrio,
+  solo que uno que tapa.
+*/
+.glass-modal {
+  background-color: color-mix(in srgb, var(--color-surface) 82%, transparent);
+}
+
+[data-theme="light"] .glass-modal {
+  background-color: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
 /*
@@ -776,12 +820,12 @@ body {
   contenedor con `:has`. Y va acá, fuera de las capas de Tailwind, para que le gane siempre al
   color de reposo sin depender de en qué orden se emitan dos utilidades.
 */
-.contact-field__label {
+.underline-field__label {
   color: var(--color-text-muted);
   transition: color 200ms ease;
 }
 
-.contact-field:has(:focus) .contact-field__label {
+.underline-field:has(:focus) .underline-field__label {
   color: var(--color-primary);
 }
 
@@ -855,5 +899,69 @@ textarea:-webkit-autofill {
 @media (prefers-reduced-motion: reduce) {
   .top-nav__dot {
     transition: opacity 200ms ease;
+  }
+}
+
+/*
+  La cinta que se arrastra de a una pantalla: el carrusel didáctico de la portada del celular.
+
+  El desplazamiento y el freno en cada paso los hace el navegador. Lo que sí hay que sacar es la
+  barra: la cinta ocupa el ancho entero del teléfono y una barra clara debajo de las tarjetas se
+  lee como una raya suelta en el medio de la portada. Cuál es el paso ya lo dicen los puntos.
+
+  `overscroll-behavior-x: contain` es lo que evita que el arrastre horizontal se escape al
+  navegador —en el celular, seguir tirando en la última tarjeta dispara el gesto de "volver
+  atrás" y se sale de la aplicación sin haber pedido nada.
+*/
+.swipe-track {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.swipe-track::-webkit-scrollbar {
+  display: none;
+}
+/*
+  El temblor de las tarjetas cuando se entra al modo de eliminar, en el celular.
+
+  Es el gesto que usa iOS al mantener pulsado un ícono, y se copia porque ya está aprendido:
+  algo que tiembla está esperando que lo borres o lo muevas. Sin esto, la única señal de que
+  se entró a un modo distinto serían unas cruces chicas en una esquina, que es fácil no ver.
+
+  El ángulo es un compromiso entre dos cosas que tiran para lados opuestos. Con muy poco no se
+  aprecia —una tarjeta de 380px girando medio grado mueve las esquinas menos de dos píxeles—; con
+  mucho, el número deja de leerse mientras se mueve, y es lo único que distingue una tarjeta de
+  otra justo cuando hay que decidir cuál se borra.
+
+  Acá está definida la FORMA del movimiento, no su ritmo: la duración, la fase y el sentido los
+  pone cada tarjeta por separado desde `CardStack`, distintos para cada una. Es lo que evita que
+  la pila se lea como una sola pieza sacudiéndose. La duración de abajo es solo el valor por
+  omisión, para el caso de que alguien use la clase sin darle uno propio.
+*/
+@keyframes card-jiggle {
+  0%,
+  100% {
+    transform: rotate(-0.55deg) translate(-0.5px, -0.5px);
+  }
+  50% {
+    transform: rotate(0.55deg) translate(0.5px, 0.5px);
+  }
+}
+
+.card-jiggle {
+  animation: card-jiggle 0.26s ease-in-out infinite;
+}
+
+/*
+  Movimiento repetido y sin fin, que es exactamente lo que la preferencia de accesibilidad
+  pide desactivar: para alguien con sensibilidad vestibular, una pantalla entera vibrando es
+  motivo de mareo. El modo de eliminar se sigue distinguiendo por las cruces rojas, así que
+  apagarlo no deja a nadie sin saber qué está pasando.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .card-jiggle {
+    animation: none;
   }
 }

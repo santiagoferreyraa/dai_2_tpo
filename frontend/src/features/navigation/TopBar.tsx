@@ -107,7 +107,18 @@ export default function TopBar() {
   }, [pathname, sections.length])
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[1050] hidden md:block">
+    /*
+      **El z-index tiene que ganarle al mapa, no solo a la página.** La franja ordena su propio
+      contenido —y la lista de coincidencias del buscador cuelga de ella—, pero como capa compite
+      con lo que flota sobre el mapa: los filtros de estaciones viven en 1120. Con la franja en
+      1050, esa lista quedaba encerrada en un contexto que pierde entero, y las burbujas de los
+      filtros se dibujaban por delante de las sugerencias. Se veía solo en pantalla ancha, porque
+      en celular el buscador es el que está ADENTRO de esa misma fila.
+
+      1140 lo deja por encima de todo lo del mapa y por debajo de las ventanas modales, que son
+      1200 y tienen que tapar la navegación.
+    */
+    <header className="fixed inset-x-0 top-0 z-[1140] hidden md:block">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 px-6 py-4">
         {/*
           El logo y el buscador, juntos a la izquierda.

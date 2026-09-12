@@ -1,4 +1,4 @@
-# Los mismos tres procesos, pero contra PostgreSQL. Los levanta `pnpm demo`.
+# Los mismos cuatro procesos, pero contra PostgreSQL. Los levanta `pnpm demo`.
 #
 # Es el ambiente sobre el que se defienden las entregas, y el único de los tres que puede
 # ser COMPARTIDO: una sola base que ven todos los que apunten a esa máquina.
@@ -11,11 +11,13 @@
 # es un PostgreSQL instalado en la máquina, escuchando en el 5432 con la base, el usuario y
 # la contraseña que declara docker-compose.yml. Ver el README.
 #
-# No lleva perfil: el perfil por defecto de los dos módulos ya apunta a PostgreSQL.
+# No lleva perfil: el perfil por defecto de los tres módulos ya apunta a PostgreSQL.
 procs:
   back:
     shell: pnpm demo:back
   charging:
     shell: pnpm demo:charging
+  pay:
+    shell: pnpm demo:pay
   front:
     shell: pnpm dev:front

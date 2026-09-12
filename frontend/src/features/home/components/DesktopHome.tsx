@@ -1,10 +1,13 @@
 import ActivityTeaser from './ActivityTeaser'
 import ChargeTimeCard from './ChargeTimeCard'
 import { CompatibilityBody } from './CompatibilityCard'
+import EvFactCard from './EvFactCard'
 import NearestStationCard from './NearestStationCard'
 import StationTicker from './StationTicker'
 import TapedCard from './TapedCard'
 import VehicleHero from './VehicleHero'
+
+import { useSession } from '@/features/auth/session'
 
 import { useHomeStations } from '../data/homeStations'
 
@@ -35,6 +38,7 @@ import { useHomeStations } from '../data/homeStations'
 export default function DesktopHome() {
   const { stations, nearest, compatibleCount, usableCount, deviceLocation, loading, error } =
     useHomeStations()
+  const session = useSession()
 
   return (
     /*
@@ -65,7 +69,13 @@ export default function DesktopHome() {
           La fila de abajo. `xl:col-span-2` repartido entre dos recuadros deja a la
           compatibilidad justo debajo del mapa chico, cerrando la columna derecha.
         */}
-        <ChargeTimeCard nearest={nearest} loading={loading} />
+        {/*
+          El tiempo de carga solo con sesión. Sin ella, ese recuadro afirma "tu auto tarda tanto"
+          sobre un vehículo que nadie declaró —el número sale de la ficha de ejemplo de
+          `vehicle.ts`—, así que en su lugar va una curiosidad, que es algo cierto para
+          cualquiera. Ver `EvFactCard`.
+        */}
+        {session === null ? <EvFactCard /> : <ChargeTimeCard nearest={nearest} loading={loading} />}
         <ActivityTeaser />
         {/*
           Tapado como Actividad, y por decisión de producto: los números de adentro son reales,

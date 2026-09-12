@@ -6,8 +6,7 @@ target/
 dependency-reduced-pom.xml
 
 # --- Base de datos local H2 ---
-data/
-**/data/
+# Las carpetas de las bases van ancladas más abajo; acá solo los archivos sueltos de H2.
 *.mv.db
 *.trace.db
 

@@ -85,6 +85,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = getProfile(userId);
+
+        /*
+         * La actual se compara con el hash guardado, igual que en el login. Si no coincide, el
+         * mensaje no dice cuál de las dos falló: eso sería contarle a quien está probando si el
+         * usuario existe.
+         */
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("La contraseña actual no es correcta");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    @Override
     public void deactivateUser(Long userId) {
         User user = getProfile(userId);
         user.setActive(false);

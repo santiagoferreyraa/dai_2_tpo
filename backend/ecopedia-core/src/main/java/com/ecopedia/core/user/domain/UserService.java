@@ -30,6 +30,16 @@ public interface UserService {
     /** Actualización de datos de perfil. */
     User updateProfile(Long userId, ProfileData data);
 
+    /**
+     * Cambio de contraseña del propio usuario.
+     *
+     * <p><b>Pide la actual y no solo la nueva</b>, y esa es la regla: un token robado o una
+     * sesión abierta en una máquina ajena alcanzan para llegar hasta acá, y sin la contraseña
+     * vigente cualquiera de las dos cosas se convierte en quedarse con la cuenta para siempre.
+     * Pedirla es lo único que distingue al dueño de quien pasaba por ahí.
+     */
+    void changePassword(Long userId, String currentPassword, String newPassword);
+
     /** Baja lógica de un usuario (solo ADMIN). */
     void deactivateUser(Long userId);
 

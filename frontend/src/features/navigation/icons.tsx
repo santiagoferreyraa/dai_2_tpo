@@ -211,3 +211,162 @@ export function SteeringWheelIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Campana: las notificaciones del perfil.
+ *
+ * Sin badge ni punto rojo. El dibujo dice de qué sección se trata; cuántos avisos hay sin leer
+ * es un DATO, y ese lo pone quien lo tenga, encima del ícono y no adentro de él.
+ */
+export function BellIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M6 9a6 6 0 0 1 12 0c0 3.2.7 5 1.6 6.1.4.5 0 1.4-.7 1.4H5.1c-.7 0-1.1-.9-.7-1.4C5.3 14 6 12.2 6 9Z" />
+      <path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  )
+}
+
+/** Calendario: las reservas y su historial. Un turno es una fecha antes que cualquier otra cosa. */
+export function CalendarIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+      <path d="M3.5 9.75h17" />
+      <path d="M8 3.5v3M16 3.5v3" />
+    </svg>
+  )
+}
+
+/**
+ * Tarjeta: los medios de pago.
+ *
+ * La franja de arriba es lo que la separa de un rectángulo cualquiera, y por eso va llena: es
+ * la banda magnética, y sin ella el dibujo es el mismo que el de una ventana.
+ */
+export function CardIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+      <path d="M2.5 9.5h19" />
+      <path d="M6 14.5h3.5" />
+    </svg>
+  )
+}
+
+/**
+ * Deslizadores: la configuración.
+ *
+ * Es un panel de ajustes y no el engranaje de siempre. El engranaje dice "máquina" y esta
+ * sección no configura el sistema: son preferencias de quien mira, cada una con su posición.
+ */
+export function SlidersIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+      <circle cx="16" cy="7" r="2.25" />
+      <circle cx="8" cy="17" r="2.25" />
+    </svg>
+  )
+}
+
+/**
+ * El doble galón del tirador del riel del perfil.
+ *
+ * Apunta a la izquierda, que es lo que hace el riel abierto: cerrarse. Para el otro estado se
+ * lo da vuelta media vuelta desde el componente, en vez de dibujar un segundo ícono espejado.
+ *
+ * **Reemplaza a los tres puntos que estaban acá.** Los puntos son el símbolo de "hay más para
+ * ver", no el de una dirección: decían que el tirador se podía tocar, pero no hacia dónde iba
+ * a moverse el panel. El galón sí, y además es el mismo gesto en los dos sentidos.
+ */
+export function ChevronsLeftIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M11 6.5 5.5 12 11 17.5" />
+      <path d="M17.5 6.5 12 12l5.5 5.5" />
+    </svg>
+  )
+}
+
+/**
+ * Lápiz sobre una hoja: editar el perfil.
+ *
+ * El cuadrado abierto por la esquina es lo que lo separa de un lápiz suelto —que se lee como
+ * "escribir"— y lo convierte en "editar esto de acá".
+ */
+export function EditIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M11 4.5H6a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h11.5a2 2 0 0 0 2-2v-5" />
+      <path d="M17.6 3.4a1.9 1.9 0 0 1 2.7 2.7L13 13.4l-3.4.7.7-3.4Z" />
+    </svg>
+  )
+}
+
+/**
+ * Una cruz: salir de la sesión, en el botón de abajo del riel.
+ *
+ * **Es una cruz y no una puerta con una flecha.** El dibujo de la puerta es el de "salir de
+ * acá", y lo que hace este botón es cerrar la sesión, que es otra cosa: la pantalla se queda
+ * donde está. La cruz dice cortar, que es lo que pasa.
+ */
+export function CrossIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </svg>
+  )
+}
+
+/** Flecha a la izquierda: volver al listado desde el detalle de una configuración. */
+export function ArrowLeftIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M19 12H5.5" />
+      <path d="M11 5.5 4.5 12l6.5 6.5" />
+    </svg>
+  )
+}
+
+/** Galón a la derecha: el renglón de una lista que abre algo. */
+export function ChevronRightIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </svg>
+  )
+}
+
+/**
+ * Ojo abierto: la contraseña se está viendo.
+ *
+ * El par con `EyeOffIcon` es el símbolo universal de "mostrar y ocultar", y por eso reemplazó al
+ * botón que decía "Mostrar": un rótulo de texto al lado de un campo de contraseña se lee como
+ * otra cosa más para leer, mientras que el ojo se reconoce sin leerlo.
+ */
+export function EyeIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+/**
+ * Ojo tachado: la contraseña está oculta, que es el estado de arranque.
+ *
+ * La barra va en el MISMO ángulo que la que cruza cualquier símbolo de prohibido, y es lo único
+ * que distingue a los dos dibujos de un vistazo: sin ella, un ojo y otro ojo son el mismo ícono.
+ */
+export function EyeOffIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <path d="M4 4.5l16 15" />
+      <path d="M9.9 5.2A9.6 9.6 0 0 1 12 5c5.9 0 9.5 6 9.5 6a16 16 0 0 1-3.2 3.7" />
+      <path d="M15.2 14.6A3 3 0 0 1 9.9 10" />
+      <path d="M6.6 7.3A15.8 15.8 0 0 0 2.5 11s3.6 6 9.5 6c1.4 0 2.6-.3 3.7-.8" />
+    </svg>
+  )
+}

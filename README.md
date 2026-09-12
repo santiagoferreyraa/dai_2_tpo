@@ -56,29 +56,36 @@ Lo que más se usa: **reiniciar un solo proceso sin bajar el otro**. Tocaste una
 backend y querés relevantarlo sin perder el estado del navegador — lo reiniciás desde el
 panel y Vite ni se entera.
 
-El frontend queda en http://localhost:5173, el backend en http://localhost:8081 y Reservas
-(`ecopedia-charging`) en http://localhost:8082. **Se navega siempre por el 5173:** el proxy ya
-está configurado y redirige `/api/bookings` a Reservas y el resto de `/api` al backend.
+El frontend queda en http://localhost:5173. **Se navega siempre por el 5173:** el proxy ya está
+configurado y reparte `/api` entre los backends.
+
+**Son tres procesos, porque son tres artefactos desplegables**: `ecopedia-core` en el 8081
+(usuarios, estaciones), `ecopedia-charging` en el 8082 (reservas) y `ecopedia-integration` en el
+8083 (medios de pago). Ver ARQUITECTURA §6.4. El proxy de Vite manda `/api/bookings` al 8082,
+`/api/payment-methods` al 8083 y todo lo demás al 8081, así que desde el navegador se ve como una
+sola API.
 
 | Comando | Qué hace |
 |---------|----------|
-| `pnpm dev` | Backend, Reservas y frontend, cada uno en su panel |
-| `pnpm dev:back` | Solo el backend (`ecopedia-core`) |
-| `pnpm dev:charging` | Solo Reservas (`ecopedia-charging`). Necesita el backend arriba |
+| `pnpm dev` | Los cuatro procesos, cada uno en su panel |
+| `pnpm dev:back` | Solo `ecopedia-core` (8081) |
+| `pnpm dev:charging` | Solo Reservas (`ecopedia-charging`, 8082). Necesita el backend arriba |
+| `pnpm dev:pay` | Solo Pagos (`ecopedia-integration`, 8083), que sirve los medios de pago |
 | `pnpm dev:front` | Solo el frontend |
-| `pnpm dev:plain` | Los tres en una sola tira de logs, con prefijos `[back]`/`[charging]`/`[front]` |
-| `pnpm dev:mem` | Los tres, pero con las bases **en memoria**: se borra todo al bajar |
-| `pnpm demo` | Los tres contra **PostgreSQL**. Necesita la infraestructura arriba |
-| `pnpm free-ports` | Libera el 8081, el 8082 y el 5173 a mano |
+| `pnpm dev:plain` | Los cuatro en una sola tira de logs, con prefijos `[back]`/`[charging]`/`[pay]`/`[front]` |
+| `pnpm dev:mem` | Los cuatro, pero con las bases **en memoria**: se borra todo al bajar |
+| `pnpm demo` | Los cuatro contra **PostgreSQL**. Necesita la infraestructura arriba |
+| `pnpm free-ports` | Libera el 8081, el 8082, el 8083 y el 5173 a mano |
 | `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
 | `pnpm start` | Corre ese JAR |
 
-`pnpm dev` levanta el backend y Reservas con el perfil `local`: **bases H2 en un archivo de tu
+`pnpm dev` levanta los tres backends con el perfil `local`: **bases H2 en un archivo de tu
 disco, sin PostgreSQL instalado y sin Docker.** Lo que cargues sobrevive a bajar y volver a
-levantar. Consolas de H2: http://localhost:8081/h2-console y http://localhost:8082/h2-console
+levantar. Consolas de H2: http://localhost:8081/h2-console, http://localhost:8082/h2-console y
+http://localhost:8083/h2-console
 
-Los dos procesos validan el mismo token, así que tienen que compartir el secreto de firma: sale de
-la variable `ECOPEDIA_JWT_SECRET`, y sin ella los dos usan el mismo valor de desarrollo.
+Los tres procesos validan el mismo token, así que tienen que compartir el secreto de firma: sale
+de la variable `ECOPEDIA_JWT_SECRET`, y sin ella los tres usan el mismo valor de desarrollo.
 
 **`pnpm start` todavía no llega a Reservas:** sirve front y API desde el JAR de core, en el 8081,
 y ahí no hay nada escuchando `/api/bookings`. Para probar reservas se usa `pnpm dev`.
@@ -96,9 +103,10 @@ así que no hay forma de que se bifurque.
 | **Compartido** | `pnpm demo` | PostgreSQL | únicos, los ve todo el que apunte ahí | sí (o PostgreSQL instalado) |
 
 **El de todos los días es `pnpm dev`.** Te registrás una vez, promovés tu usuario a `CPO` una vez,
-y eso queda. Las bases viven en `backend/ecopedia-core/data/` y `backend/ecopedia-charging/data/`,
-que están en el `.gitignore`: **cada integrante tiene sus propios datos** y nadie ve los del otro.
-Un módulo por archivo, porque cada uno gobierna su esquema y su propio historial de Flyway.
+y eso queda. Las bases viven en `backend/ecopedia-core/data/`, `backend/ecopedia-charging/data/` y
+`backend/ecopedia-integration/data/`, que están en el `.gitignore`: **cada integrante tiene sus
+propios datos** y nadie ve los del otro. Un módulo por archivo, porque cada uno gobierna su
+esquema y su propio historial de Flyway.
 
 **`pnpm dev:mem` es para empezar de cero.** Es el perfil `dev`, el mismo que usan los tests. Sirve
 sobre todo cuando estás tocando una migración: ver abajo.
@@ -169,14 +177,14 @@ docker compose up -d
 ```
 
 Deja arriba PostgreSQL (`localhost:5432`) y ActiveMQ Artemis (`localhost:61616`, consola web en
-http://localhost:8161/console). Y después los tres procesos:
+http://localhost:8161/console). Y después los cuatro procesos:
 
 ```bash
 pnpm demo
 ```
 
-Levanta backend, Reservas y frontend **sin perfil**, que es el que ya apunta a PostgreSQL. Si
-preferís uno solo, `pnpm demo:back` y `pnpm demo:charging`.
+Levanta backend, Reservas, Pagos y frontend **sin perfil**, que es el que ya apunta a PostgreSQL.
+Si preferís uno solo, `pnpm demo:back`, `pnpm demo:charging` y `pnpm demo:pay`.
 
 **Si la base no está arriba, el backend no arranca.** Es el error más común de este ambiente, y
 casi siempre falta el `docker compose up -d`. Se ve en dos lugares distintos y conviene reconocer
@@ -259,6 +267,13 @@ Tres cosas que conviene saber:
   Eso hace que `pnpm dev:back` sirva ese frontend congelado en el 8081. No molesta —en
   desarrollo se navega por el 5173— pero si confunde, `mvn clean` lo borra.
 
+> **Pendiente conocido, desde ECO-26.** Este JAR único sirve el frontend y la API de
+> `ecopedia-core`, pero los medios de pago viven en `ecopedia-integration`, que es otro proceso.
+> Corriendo así, `/api/payment-methods` le pega a core y devuelve 404: en desarrollo lo resuelve
+> el proxy de Vite, y en producción hace falta que algo reparta por prefijo —un reverse proxy
+> delante de los dos, o que core haga de puerta—. Es una decisión de despliegue y no de este
+> ticket, pero hay que tomarla antes de la demo del ambiente compartido.
+
 ### Módulo por módulo
 
 Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a la vez:
@@ -290,9 +305,13 @@ Para arreglarlo: `mvn spotless:apply`.
 
 Se corren desde `frontend/`, o desde la raíz con `pnpm --dir frontend <comando>`.
 
-**El proxy ya está configurado:** todo lo que el front pida a `/api/...` se redirige a
-`http://localhost:8081`. Se llama a rutas relativas (`fetch('/api/stations')`) y no hay que
-tocar CORS en desarrollo.
+**El proxy ya está configurado:** lo que el front pida a `/api/payment-methods` va a
+`http://localhost:8083` (`ecopedia-integration`) y todo el resto de `/api/...` a
+`http://localhost:8081` (`ecopedia-core`). Se llama a rutas relativas (`fetch('/api/stations')`)
+y no hay que tocar CORS en desarrollo.
+
+El orden de las reglas en `vite.config.ts` importa: Vite se queda con la primera que coincide, y
+`/api` coincide con todo. La regla específica va arriba.
 
 **Alias de imports:** `@/` apunta a `frontend/src/`, así que se importa `@/components/Map` en
 vez de `../../components/Map`.

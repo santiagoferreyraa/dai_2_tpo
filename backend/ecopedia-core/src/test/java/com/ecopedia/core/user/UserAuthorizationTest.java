@@ -1,13 +1,17 @@
 package com.ecopedia.core.user;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ecopedia.core.security.JwtTokenProvider;
 import com.ecopedia.core.user.data.JpaUserRepository;
+import com.ecopedia.core.user.domain.Credentials;
 import com.ecopedia.core.user.domain.RegistrationData;
 import com.ecopedia.core.user.domain.Role;
 import com.ecopedia.core.user.domain.User;
@@ -208,6 +212,107 @@ class UserAuthorizationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.role").value(role.name()));
         }
+    }
+
+    /*
+     * La edición del perfil tiene la misma regla que la consulta —estar logueado, con
+     * cualquier rol— y una propiedad más fuerte: alcanza SOLO al dueño del token. No hay id en
+     * la URL que se pueda cambiar, así que lo que se prueba es que con dos usuarios en la base
+     * el que se modifica es el que pidió, y que el otro queda intacto.
+     */
+    @Test
+    @DisplayName("Editar el perfil exige token y solo alcanza al dueño del token")
+    void updatesOnlyTheTokenOwnerProfile() throws Exception {
+        String body = """
+                {"fullName":"Nombre Editado"}
+                """;
+
+        mockMvc.perform(put("/api/users/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+
+        User other = givenUser("otro@ecopedia.test", Role.CONDUCTOR);
+        User owner = givenUser("duenio@ecopedia.test", Role.CONDUCTOR);
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer "
+                                        + tokenProvider.generateToken(owner.getId(), owner.getEmail(), owner.getRole()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Nombre Editado"))
+                .andExpect(jsonPath("$.email").value("duenio@ecopedia.test"));
+
+        /* El de al lado no se tocó: es lo que separa "editó su perfil" de "editó un perfil". */
+        User untouched = userService.getProfile(other.getId());
+        assertEquals("Usuario CONDUCTOR", untouched.getFullName());
+    }
+
+    /*
+     * El cambio de contraseña, con lo que lo hace seguro: exige la vigente. Sin ese campo, un
+     * token robado o una sesión abierta en una máquina ajena alcanzarían para quedarse con la
+     * cuenta, y el token solo no es prueba de que quien pide sea el dueño.
+     */
+    @Test
+    @DisplayName("La contraseña se cambia solo con la actual correcta, y la nueva sirve para entrar")
+    void changesPasswordOnlyWithTheCurrentOne() throws Exception {
+        User owner = givenUser("clave@ecopedia.test", Role.CONDUCTOR);
+        String bearer = "Bearer " + tokenProvider.generateToken(owner.getId(), owner.getEmail(), owner.getRole());
+
+        mockMvc.perform(put("/api/users/profile/password")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"otraClave999\",\"newPassword\":\"claveNueva456\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("La contraseña actual no es correcta"));
+
+        mockMvc.perform(put("/api/users/profile/password")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"unaClave123\",\"newPassword\":\"claveNueva456\"}"))
+                .andExpect(status().isNoContent());
+
+        /*
+         * La prueba que importa: la nueva entra y la vieja ya no. Un 204 solo dice que la
+         * operación se aceptó, no que haya guardado el hash nuevo.
+         */
+        userService.authenticate(new Credentials("clave@ecopedia.test", "claveNueva456"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> userService.authenticate(new Credentials("clave@ecopedia.test", "unaClave123")));
+    }
+
+    /* Sin token no se llega, igual que a todo lo demás del perfil. */
+    @Test
+    @DisplayName("Cambiar la contraseña exige token")
+    void rejectsPasswordChangeForAnonymousCallers() throws Exception {
+        mockMvc.perform(put("/api/users/profile/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"unaClave123\",\"newPassword\":\"claveNueva456\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    /*
+     * Un nombre en blanco no es una edición: es borrar el nombre. La validación del DTO lo
+     * rechaza con su mensaje, que es lo que el formulario muestra.
+     */
+    @Test
+    @DisplayName("El nombre vacío se rechaza con 400 y con mensaje")
+    void rejectsBlankNameOnProfileUpdate() throws Exception {
+        User owner = givenUser("vacio@ecopedia.test", Role.CONDUCTOR);
+
+        mockMvc.perform(put("/api/users/profile")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer "
+                                        + tokenProvider.generateToken(owner.getId(), owner.getEmail(), owner.getRole()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("El nombre completo es obligatorio"));
     }
 
     /*
