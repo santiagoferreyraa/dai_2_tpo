@@ -63,7 +63,7 @@ export default function ProfileHeader() {
       type="button"
       onClick={() => setEditing(true)}
       aria-label="Editar el perfil"
-      className="profile-edit brand-fill flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full"
+      className="text-on-brand brand-fill flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full"
     >
       <EditIcon className="h-4.5 w-4.5" />
     </button>

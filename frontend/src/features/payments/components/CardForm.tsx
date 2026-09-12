@@ -195,8 +195,13 @@ export default function CardForm({ onSubmit, onCancel, error, sending }: CardFor
       )}
 
       <div className="flex gap-3">
+        {/*
+          El texto no va en blanco fijo: el verde de la marca es claro en el tema oscuro, así
+          que ahí el blanco no se lee. `text-on-brand` lo resuelve en los dos temas. Ver
+          `index.css`.
+        */}
         <button
-          className="bg-primary flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="bg-primary text-on-brand flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
           type="submit"
           disabled={sending}
         >

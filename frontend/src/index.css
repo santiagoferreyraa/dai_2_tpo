@@ -145,6 +145,25 @@
 }
 
 /*
+  Lo que va dibujado ENCIMA del verde de la marca: el texto de un botón, un ícono.
+
+  **El color cambia con el tema y no es un capricho de paleta.** El par de verdes no es el mismo
+  en los dos: en el oscuro va encendido y lo que se le apoye tiene que ser oscuro para leerse; en
+  el claro va apagado y pasa lo contrario. Un blanco fijo desaparece sobre el verde claro y un
+  oscuro fijo se empasta sobre el apagado.
+
+  Es una clase aparte y no `--color-on-primary` porque ese token lo usan todos los botones verdes
+  de la aplicación, y varios ya resuelven su contraste de otra manera.
+*/
+.text-on-brand {
+  color: var(--color-on-primary);
+}
+
+[data-theme="light"] .text-on-brand {
+  color: #ffffff;
+}
+
+/*
   El fondo de la aplicación: tres manchas de color muy abiertas sobre el color base.
 
   Es lo que evita que el tema oscuro sea un gris plano. Las manchas son enormes y de opacidad

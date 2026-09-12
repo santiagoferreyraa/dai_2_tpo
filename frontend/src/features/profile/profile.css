@@ -41,44 +41,24 @@
 }
 
 /*
-  El lápiz de editar, sobre el verde de la marca.
-
-  **En el tema claro va blanco y en el oscuro va con el color del fondo.** No es un capricho de
-  paleta: el verde claro es un par de tonos distinto en cada tema —ver `--brand-from` y
-  `--brand-to`—, y el mismo azul oscuro que se lee recortado sobre el verde encendido del tema
-  oscuro, sobre el verde apagado del claro se empasta y el dibujo se pierde.
-
-  Solo el botón del perfil, y no `--color-on-primary`: ese token lo usan todos los botones verdes
-  de la aplicación, y cambiarlo repintaría el texto de cada uno.
-*/
-.profile-edit {
-  color: var(--color-on-primary);
-}
-
-[data-theme="light"] .profile-edit {
-  color: #ffffff;
-}
-
-/*
   Un panel ADENTRO de otro panel de vidrio.
 
-  **Dos vidrios apilados no se leen como dos vidrios: se leen como uno más blanco.** El cuerpo
-  de `.glass-panel` es blanco al 32%, así que puesto sobre otro igual el resultado ronda el 54%
-  y en el tema claro eso es, directamente, un rectángulo blanco. Es lo que pasaba con la fila de
-  una tarjeta guardada y con el recuadro del alta: la clase era la misma que la de las tarjetas
-  de la portada, pero el apilado la volvía otra cosa.
+  **Dos vidrios apilados no se leen como dos vidrios: se leen como uno más blanco.** El cuerpo de
+  `.glass-panel` es del 32%, así que puesto sobre otro igual el resultado ronda el 54% y en el
+  tema claro eso es un rectángulo casi liso. Es lo que pasaba con la fila de una tarjeta guardada
+  y con el recuadro del alta.
 
-  Acá el de adentro deja de sumar blanco y toma un tinte del FONDO de la página. Se sigue
-  distinguiendo del panel que lo contiene —es lo que lo hace leer como una pieza aparte— pero
-  hacia el otro lado: en el tema claro queda apenas más frío que la tarjeta, y en el oscuro
-  apenas más hundido. En los dos casos el borde es el mismo de siempre.
+  Es el mismo vidrio, con el cuerpo bajado al 25%: sigue siendo de la familia —mismo borde, misma
+  sombra, mismo color— pero apilado sobre otro panel suma menos y el conjunto vuelve a leerse
+  como vidrio y no como pintura.
 
   No lleva `backdrop-filter`: el panel de afuera ya desenfocó lo que hay atrás, y volver a
   desenfocar un fondo ya difuso cuesta una capa de composición y no cambia nada en pantalla.
 */
 .glass-inset {
-  background-color: color-mix(in srgb, var(--color-background) 45%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background-color: color-mix(in srgb, var(--color-surface) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
   transition:
     background-color 300ms ease,
     border-color 300ms ease;
