@@ -178,8 +178,15 @@ pnpm demo
 Levanta backend, Reservas y frontend **sin perfil**, que es el que ya apunta a PostgreSQL. Si
 preferís uno solo, `pnpm demo:back` y `pnpm demo:charging`.
 
-**Si la base no está arriba, el arranque falla con `Connection refused`** y el log no dice mucho
-más. Es el error más común de este ambiente: casi siempre falta el `docker compose up -d`.
+**Si la base no está arriba, el backend no arranca.** Es el error más común de este ambiente, y
+casi siempre falta el `docker compose up -d`. Se ve en dos lugares distintos y conviene reconocer
+los dos:
+
+- **En el panel `back`**, al final de la traza: `java.net.ConnectException: Connection refused`,
+  y el proceso termina con `BUILD FAILURE`.
+- **En el navegador**, algo menos obvio: **el front levanta igual y cada llamada a `/api`
+  devuelve 502.** El proxy de Vite sigue en pie, pero no tiene a quién reenviarle. Un 502 acá no
+  es un problema del frontend: dice que el backend no está.
 
 **Los dos módulos comparten la base pero no el schema.** `core` y `charging` entran a la misma
 base `ecopedia` y cada uno crea el suyo, con su propia `flyway_schema_history`. Es lo que hace
