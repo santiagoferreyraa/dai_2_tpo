@@ -1,4 +1,4 @@
-package com.ecopedia.core.tariff.domain;
+package com.ecopedia.core.pricing.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,8 +15,8 @@ import java.time.Instant;
  * Entidad de Esquema Tarifario configurado por el CPO para un conector (ECO-29, RF06).
  */
 @Entity
-@Table(name = "tariff_schemes")
-public class TariffScheme {
+@Table(name = "pricing_schemes")
+public class PricingScheme {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

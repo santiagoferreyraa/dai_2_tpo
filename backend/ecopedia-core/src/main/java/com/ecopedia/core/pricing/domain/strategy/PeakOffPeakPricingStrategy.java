@@ -1,4 +1,4 @@
-package com.ecopedia.core.tariff.domain.strategy;
+package com.ecopedia.core.pricing.domain.strategy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

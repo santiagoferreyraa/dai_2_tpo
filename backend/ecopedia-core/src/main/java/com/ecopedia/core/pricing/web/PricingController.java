@@ -1,8 +1,8 @@
-package com.ecopedia.core.tariff.web;
+package com.ecopedia.core.pricing.web;
 
-import com.ecopedia.core.tariff.domain.TariffScheme;
-import com.ecopedia.core.tariff.domain.TariffService;
-import com.ecopedia.core.tariff.web.dto.*;
+import com.ecopedia.core.pricing.domain.PricingScheme;
+import com.ecopedia.core.pricing.domain.PricingService;
+import com.ecopedia.core.pricing.web.dto.*;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,28 +12,28 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/tariffs")
-public class TariffController {
+@RequestMapping("/api/pricing")
+public class PricingController {
 
-    private final TariffService tariffService;
+    private final PricingService pricingService;
 
-    public TariffController(TariffService tariffService) {
-        this.tariffService = tariffService;
+    public PricingController(PricingService pricingService) {
+        this.pricingService = pricingService;
     }
 
     /** RF06 / ECO-29: Definir esquema tarifario de un conector (Solo CPO o ADMIN). */
     @PostMapping
     @PreAuthorize("hasRole('CPO') or hasRole('ADMIN')")
-    public ResponseEntity<TariffSchemeResponse> defineScheme(@Valid @RequestBody TariffSchemeRequest request) {
-        TariffScheme scheme = tariffService.defineScheme(request.toDomainData());
-        return ResponseEntity.status(HttpStatus.CREATED).body(TariffSchemeResponse.fromDomain(scheme));
+    public ResponseEntity<PricingSchemeResponse> defineScheme(@Valid @RequestBody PricingSchemeRequest request) {
+        PricingScheme scheme = pricingService.defineScheme(request.toDomainData());
+        return ResponseEntity.status(HttpStatus.CREATED).body(PricingSchemeResponse.fromDomain(scheme));
     }
 
     /** RF06: Consultar esquema tarifario vigente de un conector. */
     @GetMapping("/connector/{connectorId}")
-    public ResponseEntity<TariffSchemeResponse> getScheme(@PathVariable Long connectorId) {
-        TariffScheme scheme = tariffService.getSchemeForConnector(connectorId);
-        return ResponseEntity.ok(TariffSchemeResponse.fromDomain(scheme));
+    public ResponseEntity<PricingSchemeResponse> getScheme(@PathVariable Long connectorId) {
+        PricingScheme scheme = pricingService.getSchemeForConnector(connectorId);
+        return ResponseEntity.ok(PricingSchemeResponse.fromDomain(scheme));
     }
 
     /** RF06: Estimar importe proyectado para una reserva/carga. */
@@ -41,8 +41,8 @@ public class TariffController {
     public ResponseEntity<EstimateCostResponse> estimateCost(
             @RequestParam Long connectorId, @RequestParam BigDecimal estimatedKwh) {
 
-        BigDecimal deposit = tariffService.calculateDeposit(connectorId);
-        BigDecimal estimatedCost = tariffService.estimateCost(connectorId, estimatedKwh, LocalDateTime.now());
+        BigDecimal deposit = pricingService.calculateDeposit(connectorId);
+        BigDecimal estimatedCost = pricingService.estimateCost(connectorId, estimatedKwh, LocalDateTime.now());
 
         return ResponseEntity.ok(new EstimateCostResponse(connectorId, estimatedKwh, deposit, estimatedCost));
     }

@@ -1,26 +1,29 @@
-package com.ecopedia.core.tariff.service;
+package com.ecopedia.core.pricing.service;
 
-import com.ecopedia.core.tariff.domain.*;
-import com.ecopedia.core.tariff.domain.strategy.*;
+import com.ecopedia.core.pricing.domain.*;
+import com.ecopedia.core.pricing.domain.strategy.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Implementación del servicio de tarificación (stateless - ECO-29, ECO-30, RF06).
+ */
 @Service
 @Transactional
-public class TariffServiceImpl implements TariffService {
+public class PricingServiceImpl implements PricingService {
 
-    private final TariffRepository tariffRepository;
+    private final PricingSchemeRepository pricingSchemeRepository;
 
-    public TariffServiceImpl(TariffRepository tariffRepository) {
-        this.tariffRepository = tariffRepository;
+    public PricingServiceImpl(PricingSchemeRepository pricingSchemeRepository) {
+        this.pricingSchemeRepository = pricingSchemeRepository;
     }
 
     @Override
-    public TariffScheme defineScheme(TariffSchemeData data) {
-        TariffScheme scheme =
-                tariffRepository.findByConnectorId(data.connectorId()).orElseGet(TariffScheme::new);
+    public PricingScheme defineScheme(PricingSchemeData data) {
+        PricingScheme scheme =
+                pricingSchemeRepository.findByConnectorId(data.connectorId()).orElseGet(PricingScheme::new);
 
         scheme.setConnectorId(data.connectorId());
         scheme.setStrategyType(data.strategyType() != null ? data.strategyType() : PricingStrategyType.FLAT_RATE);
@@ -31,13 +34,13 @@ public class TariffServiceImpl implements TariffService {
         scheme.setPeakKwhRate(data.peakKwhRate());
         scheme.setActive(true);
 
-        return tariffRepository.save(scheme);
+        return pricingSchemeRepository.save(scheme);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public TariffScheme getSchemeForConnector(Long connectorId) {
-        return tariffRepository
+    public PricingScheme getSchemeForConnector(Long connectorId) {
+        return pricingSchemeRepository
                 .findByConnectorId(connectorId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No se encontró esquema tarifario para el conector: " + connectorId));
@@ -46,7 +49,7 @@ public class TariffServiceImpl implements TariffService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal calculateDeposit(Long connectorId) {
-        TariffScheme scheme = getSchemeForConnector(connectorId);
+        PricingScheme scheme = getSchemeForConnector(connectorId);
         PricingStrategy strategy = resolveStrategy(scheme.getStrategyType());
         PricingContext context = new PricingContext(scheme, BigDecimal.ZERO, 0, 0, LocalDateTime.now());
         return strategy.calculateDeposit(context);
@@ -55,7 +58,7 @@ public class TariffServiceImpl implements TariffService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal estimateCost(Long connectorId, BigDecimal estimatedKwh, LocalDateTime startTime) {
-        TariffScheme scheme = getSchemeForConnector(connectorId);
+        PricingScheme scheme = getSchemeForConnector(connectorId);
         PricingStrategy strategy = resolveStrategy(scheme.getStrategyType());
 
         LocalDateTime start = startTime != null ? startTime : LocalDateTime.now();
@@ -77,7 +80,7 @@ public class TariffServiceImpl implements TariffService {
     @Transactional(readOnly = true)
     public BigDecimal calculateRealCost(
             Long connectorId, BigDecimal kwhConsumed, long excessMinutes, LocalDateTime startTime) {
-        TariffScheme scheme = getSchemeForConnector(connectorId);
+        PricingScheme scheme = getSchemeForConnector(connectorId);
         PricingStrategy strategy = resolveStrategy(scheme.getStrategyType());
 
         LocalDateTime start = startTime != null ? startTime : LocalDateTime.now();

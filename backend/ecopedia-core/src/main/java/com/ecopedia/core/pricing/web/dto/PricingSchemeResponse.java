@@ -1,10 +1,10 @@
-package com.ecopedia.core.tariff.web.dto;
+package com.ecopedia.core.pricing.web.dto;
 
-import com.ecopedia.core.tariff.domain.PricingStrategyType;
-import com.ecopedia.core.tariff.domain.TariffScheme;
+import com.ecopedia.core.pricing.domain.PricingScheme;
+import com.ecopedia.core.pricing.domain.PricingStrategyType;
 import java.math.BigDecimal;
 
-public record TariffSchemeResponse(
+public record PricingSchemeResponse(
         Long id,
         Long connectorId,
         PricingStrategyType strategyType,
@@ -12,8 +12,8 @@ public record TariffSchemeResponse(
         BigDecimal depositAmount,
         BigDecimal excessPenaltyPerMin,
         BigDecimal peakKwhRate) {
-    public static TariffSchemeResponse fromDomain(TariffScheme scheme) {
-        return new TariffSchemeResponse(
+    public static PricingSchemeResponse fromDomain(PricingScheme scheme) {
+        return new PricingSchemeResponse(
                 scheme.getId(),
                 scheme.getConnectorId(),
                 scheme.getStrategyType(),

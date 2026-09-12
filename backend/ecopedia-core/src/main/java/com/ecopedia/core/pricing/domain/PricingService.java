@@ -1,4 +1,4 @@
-package com.ecopedia.core.tariff.domain;
+package com.ecopedia.core.pricing.domain;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -6,13 +6,13 @@ import java.time.LocalDateTime;
 /**
  * Interfaz pública del componente {@code ServicioDeTarificacion} (stateless - ECO-29, ECO-30, RF06).
  */
-public interface TariffService {
+public interface PricingService {
 
     /** Define o actualiza el esquema tarifario de un conector (ECO-29). */
-    TariffScheme defineScheme(TariffSchemeData data);
+    PricingScheme defineScheme(PricingSchemeData data);
 
     /** Consulta el esquema tarifario vigente para un conector. */
-    TariffScheme getSchemeForConnector(Long connectorId);
+    PricingScheme getSchemeForConnector(Long connectorId);
 
     /** Calcula el monto de la seña requerida para reservar (RF06). */
     BigDecimal calculateDeposit(Long connectorId);

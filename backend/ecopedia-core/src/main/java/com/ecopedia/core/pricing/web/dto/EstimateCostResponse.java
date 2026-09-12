@@ -1,4 +1,4 @@
-package com.ecopedia.core.tariff.web.dto;
+package com.ecopedia.core.pricing.web.dto;
 
 import java.math.BigDecimal;
 

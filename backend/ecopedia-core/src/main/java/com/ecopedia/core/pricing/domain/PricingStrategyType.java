@@ -1,4 +1,4 @@
-package com.ecopedia.core.tariff.domain;
+package com.ecopedia.core.pricing.domain;
 
 /**
  * Tipos de estrategias de tarificación (Patrón Strategy - ECO-30).

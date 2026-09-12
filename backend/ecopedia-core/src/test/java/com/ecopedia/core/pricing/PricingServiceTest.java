@@ -1,15 +1,15 @@
-package com.ecopedia.core.tariff;
+package com.ecopedia.core.pricing;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import com.ecopedia.core.tariff.domain.*;
-import com.ecopedia.core.tariff.domain.strategy.FlatRatePricingStrategy;
-import com.ecopedia.core.tariff.domain.strategy.OccupancyPenaltyPricingStrategy;
-import com.ecopedia.core.tariff.domain.strategy.PeakOffPeakPricingStrategy;
-import com.ecopedia.core.tariff.domain.strategy.PricingContext;
-import com.ecopedia.core.tariff.service.TariffServiceImpl;
+import com.ecopedia.core.pricing.domain.*;
+import com.ecopedia.core.pricing.domain.strategy.FlatRatePricingStrategy;
+import com.ecopedia.core.pricing.domain.strategy.OccupancyPenaltyPricingStrategy;
+import com.ecopedia.core.pricing.domain.strategy.PeakOffPeakPricingStrategy;
+import com.ecopedia.core.pricing.domain.strategy.PricingContext;
+import com.ecopedia.core.pricing.service.PricingServiceImpl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -21,19 +21,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class TariffServiceTest {
+class PricingServiceTest {
 
     @Mock
-    private TariffRepository tariffRepository;
+    private PricingSchemeRepository pricingSchemeRepository;
 
     @InjectMocks
-    private TariffServiceImpl tariffService;
+    private PricingServiceImpl pricingService;
 
-    private TariffScheme mockFlatScheme;
+    private PricingScheme mockFlatScheme;
 
     @BeforeEach
     void setUp() {
-        mockFlatScheme = new TariffScheme();
+        mockFlatScheme = new PricingScheme();
         mockFlatScheme.setId(1L);
         mockFlatScheme.setConnectorId(10L);
         mockFlatScheme.setStrategyType(PricingStrategyType.FLAT_RATE);
@@ -93,31 +93,31 @@ class TariffServiceTest {
 
     @Test
     void testEstimateCostFailsWhenLessThanDepositRF06() {
-        when(tariffRepository.findByConnectorId(10L)).thenReturn(Optional.of(mockFlatScheme));
+        when(pricingSchemeRepository.findByConnectorId(10L)).thenReturn(Optional.of(mockFlatScheme));
 
         // 5 kWh * $10 = $50. Seña = $100.
         // Debe lanzar IllegalArgumentException según RF06.
         assertThrows(
                 IllegalArgumentException.class,
-                () -> tariffService.estimateCost(10L, new BigDecimal("5.00"), LocalDateTime.now()));
+                () -> pricingService.estimateCost(10L, new BigDecimal("5.00"), LocalDateTime.now()));
     }
 
     @Test
     void testDefineSchemeSuccess() {
-        when(tariffRepository.findByConnectorId(10L)).thenReturn(Optional.empty());
-        when(tariffRepository.save(any(TariffScheme.class))).thenReturn(mockFlatScheme);
+        when(pricingSchemeRepository.findByConnectorId(10L)).thenReturn(Optional.empty());
+        when(pricingSchemeRepository.save(any(PricingScheme.class))).thenReturn(mockFlatScheme);
 
-        TariffSchemeData data = new TariffSchemeData(
+        PricingSchemeData data = new PricingSchemeData(
                 10L,
                 PricingStrategyType.FLAT_RATE,
                 new BigDecimal("10.00"),
                 new BigDecimal("100.00"),
                 new BigDecimal("2.00"),
                 null);
-        TariffScheme saved = tariffService.defineScheme(data);
+        PricingScheme saved = pricingService.defineScheme(data);
 
         assertNotNull(saved);
         assertEquals(10L, saved.getConnectorId());
-        verify(tariffRepository, times(1)).save(any(TariffScheme.class));
+        verify(pricingSchemeRepository, times(1)).save(any(PricingScheme.class));
     }
 }
