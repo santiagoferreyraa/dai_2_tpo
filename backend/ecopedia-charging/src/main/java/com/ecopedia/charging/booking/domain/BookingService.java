@@ -18,13 +18,17 @@ import java.util.UUID;
  * <p><b>Contrato publicado antes que la implementación completa, a propósito.</b> Igual que el
  * commit semilla de Terminales: las firmas quedan fijas para que los tickets avancen en paralelo
  * contra el mismo contrato. ECO-31 implementó la retención y su ciclo de vida; ECO-32, confirmar
- * y cancelar.
+ * y cancelar; ECO-33, la disponibilidad.
  *
  * <p><b>El cruce contra las reservas guardadas lo trajo ECO-32 y no ECO-33</b>, que es donde lo
  * había dejado anotado ECO-31: es el criterio de aceptación de RF08 —confirmada la reserva, el
  * conector queda bloqueado para el resto durante esa ventana— y sin él confirmar no significaría
- * nada. A ECO-33 le queda {@link #getAvailability}, que es el problema distinto de calcular los
- * huecos libres.
+ * nada. ECO-33 sumó {@link #getAvailability}, que es el problema distinto de calcular los huecos
+ * libres.
+ *
+ * <p><b>El cruce con una carga sin reserva todavía no existe</b>, aunque el ticket de ECO-33 lo
+ * nombre: la carga sin reserva es RF10 y entra con SesionesDeCarga. Cuando entre, ocupa el mismo
+ * calendario que una reserva, así que el cruce y la disponibilidad la ven sin cambiar de forma.
  *
  * <p>Las operaciones internas que consume SesionesDeCarga —la ventana disponible de un walk-in,
  * consumir y liberar una reserva— se suman con ese componente.
@@ -91,6 +95,29 @@ public interface BookingService {
      */
     List<Booking> getDriverBookings(Long driverId);
 
-    /** Las ventanas libres de un conector dentro de un rango (ECO-33). */
+    /**
+     * Las ventanas libres de un conector dentro de un rango, en orden (ECO-33).
+     *
+     * <p>Libre es lo que nadie tiene comprometido: ni una reserva confirmada ni una retención
+     * vigente. La retención cuenta aunque todavía no sea de nadie, porque mientras dura nadie más
+     * la puede tomar, y ofrecerla como libre sería ofrecer un 409.
+     *
+     * <p>El rango se recorta a lo reservable: no empieza antes de ahora ni termina después del
+     * horizonte máximo. Un rango que queda vacío después del recorte es un pedido mal armado, no un
+     * conector sin huecos.
+     *
+     * <p><b>Es una foto, no una promesa.</b> No toma el candado: entre que el conductor ve un hueco
+     * y lo retiene, otro se lo puede ganar. La garantía contra la doble reserva sigue estando en
+     * {@link #startHold} y {@link #confirmBooking}, que es donde tiene que estar.
+     *
+     * <p>Una lista vacía significa que el conector funciona y está todo tomado. Un conector fuera
+     * de servicio no devuelve lista vacía sino {@link ConnectorNotBookableException}: son dos cosas
+     * distintas para el conductor, y el front las tiene que poder decir distinto.
+     *
+     * @throws InvalidBookingRequestException si el rango está invertido, ya pasó o queda entero
+     *     fuera del horizonte
+     * @throws ConnectorNotFoundException si el conector no existe
+     * @throws ConnectorNotBookableException si el conector está fuera de servicio
+     */
     List<TimeWindow> getAvailability(Long connectorId, Instant from, Instant to);
 }

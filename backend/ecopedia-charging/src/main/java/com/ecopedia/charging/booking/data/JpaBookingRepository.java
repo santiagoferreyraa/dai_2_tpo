@@ -45,4 +45,24 @@ public interface JpaBookingRepository extends JpaRepository<Booking, Long>, Book
             @Param("status") BookingStatus status,
             @Param("start") Instant start,
             @Param("end") Instant end);
+
+    /**
+     * Las reservas que se cruzan con la ventana, para calcular la disponibilidad. El {@code where}
+     * es el de {@link #existsOverlapping} copiado tal cual: si uno cambia, cambia el otro.
+     */
+    @Override
+    @Query(
+            """
+            select b from Booking b
+            where b.connectorId = :connectorId
+              and b.status = :status
+              and b.windowStart < :end
+              and b.windowEnd > :start
+            order by b.windowStart
+            """)
+    List<Booking> findOverlapping(
+            @Param("connectorId") Long connectorId,
+            @Param("status") BookingStatus status,
+            @Param("start") Instant start,
+            @Param("end") Instant end);
 }

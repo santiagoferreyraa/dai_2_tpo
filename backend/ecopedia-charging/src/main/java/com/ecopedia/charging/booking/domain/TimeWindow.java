@@ -41,7 +41,7 @@ public record TimeWindow(Instant start, Instant end) {
         }
     }
 
-    /** Si las dos ventanas comparten algún instante. Es la regla que usa la validación de ECO-33. */
+    /** Si las dos ventanas comparten algún instante. Es la regla del cruce y de la disponibilidad. */
     public boolean overlaps(TimeWindow other) {
         return start.isBefore(other.end) && other.start.isBefore(end);
     }

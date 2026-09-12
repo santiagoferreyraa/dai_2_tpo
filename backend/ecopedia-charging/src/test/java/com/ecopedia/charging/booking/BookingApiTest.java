@@ -1,6 +1,7 @@
 package com.ecopedia.charging.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * El recorrido completo de reservar un slot (ECO-32, RF08), con el artefacto entero arriba:
@@ -270,6 +273,89 @@ class BookingApiTest {
             mockMvc.perform(delete("/api/bookings/{id}", bookingId).header(HttpHeaders.AUTHORIZATION, driver(DRIVER)))
                     .andExpect(status().isNoContent());
         }
+    }
+
+    /** Consulta la disponibilidad del conector con token de conductor. */
+    private ResultActions availability(long connectorId, Instant from, Instant to) throws Exception {
+        return mockMvc.perform(get("/api/bookings/availability")
+                .header(HttpHeaders.AUTHORIZATION, driver(DRIVER))
+                .param("connectorId", String.valueOf(connectorId))
+                .param("from", from.toString())
+                .param("to", to.toString()));
+    }
+
+    /*
+     * ECO-33 contra la base de verdad: la reserva guardada sale por la consulta JPQL de
+     * findOverlapping y recorta la agenda. Si esa consulta y la de existsOverlapping se
+     * separaran, esta prueba mostraría como libre un horario que retener rechaza.
+     */
+    @Test
+    @DisplayName("La disponibilidad descuenta la reserva confirmada y deja libre lo pegado")
+    void availabilitySubtractsTheConfirmedBooking() throws Exception {
+        Instant start = nextWindowStart().truncatedTo(ChronoUnit.SECONDS);
+        confirm(holdSlot(17L, start, DRIVER), DRIVER);
+
+        String response = availability(17L, start.minus(Duration.ofHours(1)), start.plus(Duration.ofHours(2)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode free = json.readTree(response);
+        assertThat(free).hasSize(2);
+        assertWindow(free.get(0), start.minus(Duration.ofHours(1)), start);
+        assertWindow(free.get(1), start.plus(Duration.ofHours(1)), start.plus(Duration.ofHours(2)));
+
+        // Y lo que la agenda ofrece como libre, retener lo acepta: las dos consultas dicen lo mismo.
+        assertThat(holdAttempt(17L, start.plus(Duration.ofHours(1)), OTHER_DRIVER))
+                .isEqualTo(201);
+    }
+
+    /* Las dos respuestas que el front tiene que poder distinguir. */
+    @Test
+    @DisplayName("Todo tomado es 200 con lista vacía; fuera de servicio es 409")
+    void fullyBookedAndOutOfServiceAreDifferentAnswers() throws Exception {
+        Instant start = nextWindowStart().truncatedTo(ChronoUnit.SECONDS);
+        confirm(holdSlot(18L, start, DRIVER), DRIVER);
+
+        availability(18L, start, start.plus(Duration.ofHours(1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        when(connectorCatalog.findConnector(18L))
+                .thenReturn(Optional.of(new ConnectorSnapshot(18L, 1L, "OUT_OF_SERVICE")));
+
+        availability(18L, start, start.plus(Duration.ofHours(1)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value(containsString("fuera de servicio")));
+    }
+
+    @Test
+    @DisplayName("La disponibilidad de un conector que no existe recibe 404")
+    void availabilityOfUnknownConnector() throws Exception {
+        when(connectorCatalog.findConnector(19L)).thenReturn(Optional.empty());
+        Instant start = nextWindowStart();
+
+        availability(19L, start, start.plus(Duration.ofHours(1))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Un rango invertido, o al que le falta un extremo, recibe 400")
+    void availabilityWithInvalidRange() throws Exception {
+        Instant start = nextWindowStart();
+
+        availability(20L, start, start.minus(Duration.ofHours(1))).andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/bookings/availability")
+                        .header(HttpHeaders.AUTHORIZATION, driver(DRIVER))
+                        .param("connectorId", "20")
+                        .param("from", start.toString()))
+                .andExpect(status().isBadRequest());
+    }
+
+    private static void assertWindow(JsonNode window, Instant start, Instant end) {
+        assertThat(Instant.parse(window.get("start").asText())).isEqualTo(start);
+        assertThat(Instant.parse(window.get("end").asText())).isEqualTo(end);
     }
 
     private static void assertStatusIs(JsonNode booking, String expected) {

@@ -5,10 +5,12 @@ import com.ecopedia.charging.booking.domain.BookingService;
 import com.ecopedia.charging.booking.domain.Hold;
 import com.ecopedia.charging.booking.web.dto.BookingResponse;
 import com.ecopedia.charging.booking.web.dto.ConfirmBookingRequest;
+import com.ecopedia.charging.booking.web.dto.FreeWindowResponse;
 import com.ecopedia.charging.booking.web.dto.HoldRequest;
 import com.ecopedia.charging.booking.web.dto.HoldResponse;
 import com.ecopedia.charging.security.AuthenticatedUser;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -76,6 +79,26 @@ public class BookingController {
     public List<BookingResponse> myBookings(@AuthenticationPrincipal AuthenticatedUser driver) {
         return bookingService.getDriverBookings(driver.id()).stream()
                 .map(BookingResponse::fromDomain)
+                .toList();
+    }
+
+    /**
+     * Los huecos libres de un conector entre {@code from} y {@code to} (ECO-33), en ISO-8601 con
+     * zona, igual que la retención.
+     *
+     * <p><b>Cualquier usuario con sesión, no solo el conductor.</b> Mirar la agenda no compromete
+     * nada, y al operador le sirve para ver la de sus conectores. Anónimo no: la búsqueda en el
+     * mapa es pública, pero la agenda es el primer paso de reservar, y reservar pide sesión.
+     *
+     * <p>Las respuestas que el front tiene que distinguir: 200 con lista vacía es "funciona y está
+     * todo tomado"; 409 es "fuera de servicio"; 404, "ese conector no existe".
+     */
+    @GetMapping("/availability")
+    @PreAuthorize("isAuthenticated()")
+    public List<FreeWindowResponse> availability(
+            @RequestParam Long connectorId, @RequestParam Instant from, @RequestParam Instant to) {
+        return bookingService.getAvailability(connectorId, from, to).stream()
+                .map(FreeWindowResponse::fromDomain)
                 .toList();
     }
 
