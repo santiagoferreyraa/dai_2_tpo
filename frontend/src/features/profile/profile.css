@@ -58,3 +58,28 @@
 [data-theme="light"] .profile-edit {
   color: #ffffff;
 }
+
+/*
+  Un panel ADENTRO de otro panel de vidrio.
+
+  **Dos vidrios apilados no se leen como dos vidrios: se leen como uno más blanco.** El cuerpo
+  de `.glass-panel` es blanco al 32%, así que puesto sobre otro igual el resultado ronda el 54%
+  y en el tema claro eso es, directamente, un rectángulo blanco. Es lo que pasaba con la fila de
+  una tarjeta guardada y con el recuadro del alta: la clase era la misma que la de las tarjetas
+  de la portada, pero el apilado la volvía otra cosa.
+
+  Acá el de adentro deja de sumar blanco y toma un tinte del FONDO de la página. Se sigue
+  distinguiendo del panel que lo contiene —es lo que lo hace leer como una pieza aparte— pero
+  hacia el otro lado: en el tema claro queda apenas más frío que la tarjeta, y en el oscuro
+  apenas más hundido. En los dos casos el borde es el mismo de siempre.
+
+  No lleva `backdrop-filter`: el panel de afuera ya desenfocó lo que hay atrás, y volver a
+  desenfocar un fondo ya difuso cuesta una capa de composición y no cambia nada en pantalla.
+*/
+.glass-inset {
+  background-color: color-mix(in srgb, var(--color-background) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease;
+}

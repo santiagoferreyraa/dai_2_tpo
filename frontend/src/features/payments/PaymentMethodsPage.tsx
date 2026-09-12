@@ -209,11 +209,11 @@ export default function PaymentMethodsPage() {
       */}
       {wide && adding ? (
         /*
-          El mismo vidrio y el mismo radio que las tarjetas de la portada: adentro del perfil esto
-          es una tarjeta más, y con el fondo opaco se leía como un recuadro pegado encima del
-          vidrio en vez de uno de la familia. Ver `home/HomeCard`.
+          El radio de las tarjetas de la portada, con el relleno de un panel de adentro: este
+          recuadro vive sobre la tarjeta de la sección, que ya es de vidrio, y un vidrio sobre
+          otro suma blanco. Ver `.glass-inset` en `profile/profile.css`.
         */
-        <div className="glass-panel rounded-3xl p-6">
+        <div className="glass-inset rounded-3xl p-6">
           <h2 className="mb-4 text-lg font-semibold">Nueva tarjeta</h2>
           {form}
         </div>

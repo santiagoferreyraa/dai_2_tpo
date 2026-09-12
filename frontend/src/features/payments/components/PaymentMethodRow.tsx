@@ -21,12 +21,12 @@ interface PaymentMethodRowProps {
 export default function PaymentMethodRow({ card, onRemove, removing }: PaymentMethodRowProps) {
   return (
     /*
-      El mismo vidrio y el mismo radio que las tarjetas de la portada. Con el fondo opaco, esta
-      fila se leía como un recuadro pegado encima del vidrio del perfil en vez de una tarjeta más
-      de la misma familia. Ver `home/HomeCard`.
+      El radio de las tarjetas de la portada, con el relleno de un panel de adentro: esta fila
+      vive sobre la tarjeta de la sección, que ya es de vidrio, y un vidrio sobre otro suma
+      blanco hasta dejar un rectángulo liso. Ver `.glass-inset` en `profile/profile.css`.
     */
     <li
-      className={`glass-panel flex items-center gap-4 rounded-3xl p-4 ${
+      className={`glass-inset flex items-center gap-4 rounded-3xl p-4 ${
         card.expired ? 'opacity-70' : ''
       }`}
     >
