@@ -11,6 +11,9 @@
     "dev:mem": "mprocs --config mprocs-mem.yaml",
     "dev:mem:back": "node scripts/free-port.mjs 8081 && mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev",
     "dev:mem:charging": "node scripts/free-port.mjs 8082 && mvn -pl backend/ecopedia-charging spring-boot:run -Dspring-boot.run.profiles=dev",
+    "demo": "mprocs --config mprocs-demo.yaml",
+    "demo:back": "node scripts/free-port.mjs 8081 && mvn -pl backend/ecopedia-core spring-boot:run",
+    "demo:charging": "node scripts/free-port.mjs 8082 && mvn -pl backend/ecopedia-charging spring-boot:run",
     "free-ports": "node scripts/free-port.mjs 8081 8082 5173",
     "build": "mvn -Pweb clean package",
     "start": "java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar"
