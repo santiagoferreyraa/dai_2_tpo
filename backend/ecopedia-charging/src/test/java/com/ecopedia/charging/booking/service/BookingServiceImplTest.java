@@ -134,6 +134,25 @@ class BookingServiceImplTest {
         assertThat(service.activeHoldCount()).isEqualTo(3);
     }
 
+    /*
+     * La regla es la hora, no el hilo que limpia (ECO-33). Con el plazo en minutos el hilo no
+     * llega a sacar la retención, y aun así, pasado el plazo, el slot tiene que estar libre: si
+     * dependiera del hilo, un reloj atrasado bloquearía slots que ya nadie tiene.
+     */
+    @Test
+    @DisplayName("Una retención vencida no bloquea, aunque el reloj todavía no la haya sacado")
+    void expiredHoldDoesNotBlockBeforeItIsSwept() {
+        started(AVAILABLE, Duration.ofMinutes(10));
+        TimeWindow window = windowIn(2);
+        service.startHold(CONNECTOR, window, DRIVER);
+
+        clock.advance(Duration.ofMinutes(11));
+        assertThat(service.activeHoldCount()).isEqualTo(1);
+
+        Hold retaken = service.startHold(CONNECTOR, window, OTHER_DRIVER);
+        assertThat(retaken.driverId()).isEqualTo(OTHER_DRIVER);
+    }
+
     @Test
     @DisplayName("Al destruirse el componente (@PreDestroy) se liberan las retenciones")
     void destroyReleasesPendingHolds() {
@@ -416,5 +435,158 @@ class BookingServiceImplTest {
         assertThat(mine.get(0).getWindow().start())
                 .isBefore(mine.get(1).getWindow().start());
         assertThat(mine).allMatch(booking -> booking.getDriverId().equals(DRIVER));
+    }
+
+    /*
+     * La disponibilidad (ECO-33). El cálculo de huecos en sí está en FreeWindowsTest; acá se
+     * prueba qué cuenta como ocupado y cómo se recorta el rango. El reloj arranca a las 12:00, así
+     * que windowIn(2) es de 14 a 15.
+     */
+    @Nested
+    @DisplayName("Disponibilidad de un conector")
+    class Availability {
+
+        /** De ahora a seis horas: un rango que no hay que recortar. */
+        private List<TimeWindow> nextSixHours() {
+            return service.getAvailability(
+                    CONNECTOR, clock.instant(), clock.instant().plus(Duration.ofHours(6)));
+        }
+
+        private TimeWindow between(long fromHours, long toHours) {
+            return new TimeWindow(
+                    clock.instant().plus(Duration.ofHours(fromHours)),
+                    clock.instant().plus(Duration.ofHours(toHours)));
+        }
+
+        @Test
+        @DisplayName("Una reserva confirmada y una retención vigente ocupan; lo demás está libre")
+        void bookingsAndHoldsAreOccupied() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            service.confirmBooking(
+                    service.startHold(CONNECTOR, windowIn(1), DRIVER).id(), DRIVER);
+            service.startHold(CONNECTOR, windowIn(3), OTHER_DRIVER);
+
+            assertThat(nextSixHours()).containsExactly(between(0, 1), between(2, 3), between(4, 6));
+        }
+
+        @Test
+        @DisplayName("Una reserva cancelada deja de ocupar")
+        void cancelledBookingIsFree() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            Booking booking = service.confirmBooking(
+                    service.startHold(CONNECTOR, windowIn(2), DRIVER).id(), DRIVER);
+
+            service.cancelBooking(booking.getId(), DRIVER);
+
+            assertThat(nextSixHours()).containsExactly(between(0, 6));
+        }
+
+        @Test
+        @DisplayName("Una retención vencida deja de ocupar, aunque el reloj no la haya sacado")
+        void expiredHoldIsFree() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            service.startHold(CONNECTOR, windowIn(2), DRIVER);
+
+            clock.advance(Duration.ofMinutes(11));
+
+            assertThat(nextSixHours()).containsExactly(between(0, 6));
+        }
+
+        @Test
+        @DisplayName("Lo reservado en otro conector no ocupa este")
+        void otherConnectorsDoNotCount() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            service.confirmBooking(
+                    service.startHold(CONNECTOR + 1, windowIn(2), DRIVER).id(), DRIVER);
+
+            assertThat(nextSixHours()).containsExactly(between(0, 6));
+        }
+
+        @Test
+        @DisplayName("Con todo tomado, la lista viene vacía y no es un error")
+        void fullyBookedIsAnEmptyList() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            service.confirmBooking(
+                    service.startHold(CONNECTOR, windowIn(1), DRIVER).id(), DRIVER);
+
+            assertThat(service.getAvailability(
+                            CONNECTOR,
+                            clock.instant().plus(Duration.ofHours(1)),
+                            clock.instant().plus(Duration.ofHours(2))))
+                    .isEmpty();
+        }
+
+        /* Fuera de servicio NO es "todo tomado": el conductor tiene que poder ver la diferencia. */
+        @Test
+        @DisplayName("Un conector fuera de servicio no devuelve lista vacía sino que se rechaza")
+        void outOfServiceIsRejected() {
+            started(id -> Optional.of(new ConnectorSnapshot(id, 1L, "OUT_OF_SERVICE")), Duration.ofMinutes(10));
+
+            assertThatThrownBy(this::nextSixHours).isInstanceOf(ConnectorNotBookableException.class);
+        }
+
+        @Test
+        @DisplayName("Un conector que no existe se rechaza")
+        void unknownConnectorIsRejected() {
+            started(id -> Optional.empty(), Duration.ofMinutes(10));
+
+            assertThatThrownBy(this::nextSixHours).isInstanceOf(ConnectorNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("Un rango que empezó antes de ahora se recorta a ahora")
+        void rangeStartingInThePastIsClippedToNow() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+
+            assertThat(service.getAvailability(
+                            CONNECTOR,
+                            clock.instant().minus(Duration.ofHours(3)),
+                            clock.instant().plus(Duration.ofHours(1))))
+                    .containsExactly(between(0, 1));
+        }
+
+        @Test
+        @DisplayName("Un rango que se pasa del horizonte se recorta al horizonte")
+        void rangeBeyondTheHorizonIsClipped() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            Instant horizon = clock.instant().plus(MAX_HORIZON);
+
+            assertThat(service.getAvailability(
+                            CONNECTOR, horizon.minus(Duration.ofHours(1)), horizon.plus(Duration.ofDays(5))))
+                    .containsExactly(new TimeWindow(horizon.minus(Duration.ofHours(1)), horizon));
+        }
+
+        @Test
+        @DisplayName("Un rango que ya terminó se rechaza, en vez de contestar que no hay huecos")
+        void rangeInThePastIsRejected() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+
+            assertThatThrownBy(() -> service.getAvailability(
+                            CONNECTOR,
+                            clock.instant().minus(Duration.ofHours(3)),
+                            clock.instant().minus(Duration.ofHours(1))))
+                    .isInstanceOf(InvalidBookingRequestException.class);
+        }
+
+        @Test
+        @DisplayName("Un rango que empieza después del horizonte se rechaza")
+        void rangeBeyondTheHorizonIsRejected() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+            Instant afterHorizon = clock.instant().plus(MAX_HORIZON).plus(Duration.ofDays(1));
+
+            assertThatThrownBy(() ->
+                            service.getAvailability(CONNECTOR, afterHorizon, afterHorizon.plus(Duration.ofHours(2))))
+                    .isInstanceOf(InvalidBookingRequestException.class);
+        }
+
+        @Test
+        @DisplayName("Un rango invertido se rechaza")
+        void invertedRangeIsRejected() {
+            started(AVAILABLE, Duration.ofMinutes(10));
+
+            assertThatThrownBy(() -> service.getAvailability(
+                            CONNECTOR, clock.instant().plus(Duration.ofHours(2)), clock.instant()))
+                    .isInstanceOf(InvalidBookingRequestException.class);
+        }
     }
 }

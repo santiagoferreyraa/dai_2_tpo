@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
  * Seguridad y contrato HTTP de la retención de slots (ECO-31), con el artefacto entero arriba.
@@ -204,6 +205,35 @@ class BookingAuthorizationTest {
     @DisplayName("Sin token, cancelar una reserva se rechaza")
     void rejectsAnonymousCancel() throws Exception {
         mockMvc.perform(delete("/api/bookings/1")).andExpect(status().isForbidden());
+    }
+
+    /*
+     * La disponibilidad (ECO-33) tiene otra regla que el resto: alcanza con tener sesión, sea
+     * cual sea el rol. El anónimo no pasa.
+     */
+
+    /** Un pedido de disponibilidad válido, de cuatro horas a dos días de ahora. */
+    private static MockHttpServletRequestBuilder availabilityRequest() {
+        Instant from = Instant.now().plus(Duration.ofDays(2));
+        return get("/api/bookings/availability")
+                .param("connectorId", "7")
+                .param("from", from.toString())
+                .param("to", from.plus(Duration.ofHours(4)).toString());
+    }
+
+    @Test
+    @DisplayName("Sin token, consultar la disponibilidad se rechaza")
+    void rejectsAnonymousAvailability() throws Exception {
+        mockMvc.perform(availabilityRequest()).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Con sesión, cualquier rol consulta la disponibilidad: conductor, CPO y admin")
+    void anySessionSeesAvailability() throws Exception {
+        for (String role : new String[] {"CONDUCTOR", "CPO", "ADMIN"}) {
+            mockMvc.perform(availabilityRequest().header(HttpHeaders.AUTHORIZATION, bearer(role)))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Test

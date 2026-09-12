@@ -60,6 +60,15 @@ class InMemoryBookingRepository implements BookingRepository {
     }
 
     @Override
+    public List<Booking> findOverlapping(Long connectorId, BookingStatus status, Instant start, Instant end) {
+        TimeWindow window = new TimeWindow(start, end);
+        return findByConnectorIdAndStatus(connectorId, status).stream()
+                .filter(booking -> booking.getWindow().overlaps(window))
+                .sorted(Comparator.comparing(booking -> booking.getWindow().start()))
+                .toList();
+    }
+
+    @Override
     public List<Booking> findByDriverIdOrderByWindowStartAsc(Long driverId) {
         List<Booking> ofDriver = new ArrayList<>(saved.values().stream()
                 .filter(booking -> booking.getDriverId().equals(driverId))
