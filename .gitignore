@@ -5,6 +5,12 @@ target/
 *.class
 dependency-reduced-pom.xml
 
+# --- Base de datos local H2 ---
+data/
+**/data/
+*.mv.db
+*.trace.db
+
 # --- Node / React ---
 node_modules/
 dist/

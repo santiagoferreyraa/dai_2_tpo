@@ -21,4 +21,6 @@ public interface StationRepository {
     Optional<Station> findById(Long stationId);
 
     List<Station> findAllActive();
+
+    List<Station> findAll();
 }
