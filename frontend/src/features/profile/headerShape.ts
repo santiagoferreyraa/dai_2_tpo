@@ -53,10 +53,26 @@ export const HEADER_SHAPE = {
    * afuera. Ver `ProfileHeader`.
    */
   slant: 66,
+  /**
+   * Cuánto se mete el avatar hacia adentro del redondel, por cada lado.
+   *
+   * **El dibujo no llena el agujero: queda un anillo de vidrio alrededor.** Calzado al ras, el
+   * borde del avatar Y el contorno de la figura son la misma línea, así que la cara se lee como
+   * si estuviera pegada sobre el recorte y no apoyada adentro. Con estos cinco píxeles de aire el
+   * contorno vuelve a verse entero rodeándola, que es lo que la mete en la figura.
+   *
+   * Es un número chico a propósito. Más separación no da más marco: empieza a verse un redondel
+   * vacío con una estampilla en el medio, y el avatar pierde el tamaño que lo hace el punto de
+   * entrada de la pantalla.
+   */
+  avatarInset: 5,
 } as const
 
 /** El alto de la figura entera. No es un número aparte: es el diámetro del redondel. */
 export const HEADER_HEIGHT = HEADER_SHAPE.avatarRadius * 2
+
+/** El diámetro del dibujo del avatar: el del redondel menos el aire de los dos lados. */
+export const AVATAR_SIZE = HEADER_HEIGHT - HEADER_SHAPE.avatarInset * 2
 
 const round = (value: number) => Math.round(value * 100) / 100
 

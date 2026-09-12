@@ -2,9 +2,9 @@ import { Link } from 'react-router'
 
 import { roleLabel } from '@/features/auth/roles'
 import { useSession } from '@/features/auth/session'
+import ProfileAvatar from '@/features/profile/components/ProfileAvatar'
 import { displayNameOf } from '@/lib/displayName'
 
-import { SteeringWheelIcon } from './icons'
 import { PROFILE_SECTION } from './navSections'
 
 /**
@@ -52,26 +52,20 @@ export default function ProfilePill() {
       aria-label={`Perfil de ${session.email}`}
     >
       {/*
-        El volante, en un círculo verde. Redondo y no cuadrado porque es lo que ocupa el lugar del
-        avatar que todavía no existe, y un avatar es redondo en todos lados.
+        El avatar elegido, en el redondel de la ficha. **Es el mismo componente que dibuja el de la
+        cabecera del perfil**, y eso es lo que hace que la ficha de arriba y la pantalla a la que
+        lleva muestren siempre la misma cara: son el mismo dato leído dos veces, no dos dibujos
+        que hay que acordarse de cambiar juntos.
 
-        **Es un volante y no un rayo**, que es lo que había antes. El rayo es el símbolo de la
-        carga y ya está en la ficha del vehículo, en los pines del mapa y en las fichas de la
-        cinta; acá, en el lugar del avatar, decía "electricidad" cuando lo que tiene que decir es
-        quién sos. El volante además acompaña al rol que va escrito justo debajo.
+        Quien todavía no eligió ve el volante, que es lo que había antes del catálogo. Ahí sí
+        conviene el círculo verde de fondo: un ícono de trazo suelto sobre el vidrio de la ficha
+        no se lee como un avatar, se lee como un ícono al lado del nombre. Con una cara elegida ese
+        fondo sobra, porque el dibujo ya trae el suyo y taparlo con verde sería pintarle un borde
+        a algo que es redondo de fábrica.
 
-        Va con el color del FONDO de la página, que es el mismo recurso que usan la luna y el sol
-        de la perilla del interruptor: oscuro sobre el tema oscuro, claro sobre el claro. Es lo
-        que lo hace leer como recortado del círculo verde y no como un dibujo apoyado encima, y es
-        lo que mantiene a los dos vecinos de la franja hablando el mismo idioma.
-
-        Un punto más grande que el rayo (20px contra 16): el rayo es una silueta maciza y se lee
-        de golpe, el volante es de trazo y tiene un círculo adentro, así que apretado a 16px los
-        tres brazos se empastan contra el cubo.
+        36 píxeles: es lo que deja el alto de la franja —48— con el aire de la punta redondeada.
       */}
-      <span className="text-background brand-fill flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-        <SteeringWheelIcon className="h-5 w-5" />
-      </span>
+      <ProfileAvatar size={36} placeholderClassName="text-background brand-fill" />
 
       <span className="flex flex-col leading-tight">
         <span className="text-text text-sm font-medium">{displayNameOf(session)}</span>

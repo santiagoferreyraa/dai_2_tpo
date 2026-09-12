@@ -54,7 +54,14 @@ export default function ProfileLayout() {
           <ProfileExit />
         </div>
 
-        <div className="min-h-0 flex-1">
+        {/*
+          `min-w-0` junto al `min-h-0`, y por el mismo motivo en el otro eje: un elemento flexible
+          no se achica por debajo de su contenido salvo que se lo permitan. Sin esto, una sección
+          con algo ancho adentro —la tira de avatares de editar el perfil, sin ir más lejos— ensancha
+          esta columna, después el riel de al lado, y la pantalla entera termina con una barra de
+          scroll horizontal en vez de que lo ancho scrollee adentro de lo suyo.
+        */}
+        <div className="min-h-0 min-w-0 flex-1">
           <Outlet />
         </div>
       </div>

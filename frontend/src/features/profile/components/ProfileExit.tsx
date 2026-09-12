@@ -94,7 +94,7 @@ function ExitDialog({ onCancel }: { onCancel: () => void }) {
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
-        className="glass-panel w-full max-w-sm rounded-3xl p-6"
+        className="glass-panel glass-modal w-full max-w-sm rounded-3xl p-6"
       >
         <h2 id={titleId} className="text-text text-lg font-extrabold tracking-tight">
           ¿Cerrás la sesión?

@@ -9,9 +9,17 @@
  * de tiempo, así que el estado que decide si se puede reservar es el del conector elegido y no
  * un resumen de la estación. Una estación con el CCS2 fuera de servicio y el Tipo 2 libre se
  * puede reservar; lo que no se puede es reservar el CCS2.
+ *
+ * **Sin sesión no hay botón, y eso es distinto de un botón apagado.** Reservar es a nombre de
+ * alguien: sin cuenta la acción no existe todavía, no es que esté impedida por el estado del
+ * conector. Un botón gris diría que el problema es la estación —que es justo lo que el panel
+ * usa el gris para decir— y mandaría a probar otro conector sin que ninguno sirva. En su lugar
+ * va escrito lo que falta, con el enlace para resolverlo.
  */
 
 import { Link } from 'react-router'
+
+import { useSession } from '@/features/auth/session'
 
 import {
   CONNECTOR_TYPE_LABEL,
@@ -36,6 +44,7 @@ export default function StationDetailPanel({
   onSelectConnector,
   onReserve,
 }: StationDetailPanelProps) {
+  const session = useSession()
   const connectors = station.matchingConnectors
 
   /*
@@ -114,24 +123,54 @@ export default function StationDetailPanel({
       )}
 
       <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={onReserve}
-          disabled={!reservable}
-          className="brand-fill text-on-primary focus-visible:outline-primary disabled:bg-none disabled:bg-surface disabled:text-text-muted w-full rounded-2xl py-4 text-sm font-bold tracking-wide uppercase focus-visible:outline-2 disabled:cursor-not-allowed"
-        >
-          Reservar
-        </button>
+        {session === null ? (
+          /*
+            El aviso ocupa exactamente el lugar del botón —mismo alto, mismo radio, mismo ancho—
+            para que el panel no cambie de forma al entrar o al salir. Va sobre el vidrio de
+            adentro y no en verde: no es la acción de la pantalla, es la condición para que la
+            acción aparezca.
 
-        {/*
-          El motivo del bloqueo va escrito, no solo insinuado por el botón apagado: un botón
-          gris sin explicación deja a quien lo mira sin saber si el problema es la estación,
-          su cuenta o la aplicación.
-        */}
-        {!reservable && selectedConnector !== null && (
-          <p className="text-st-offline text-center text-xs">
-            Este conector está fuera de servicio. Elegí otro para reservar.
-          </p>
+            "Iniciar sesión" es un enlace de verdad, así que se puede abrir en otra pestaña y se
+            ve a dónde lleva antes de tocarlo, igual que el nombre de la estación de arriba.
+          */
+          <div className="border-border bg-surface/60 flex w-full flex-col items-center gap-1 rounded-2xl border px-4 py-3.5 text-center">
+            <p className="text-text-muted text-sm font-semibold text-balance">
+              Debés iniciar sesión para poder reservar.
+            </p>
+            {/*
+              El enlace en un renglón aparte y no adentro de la frase: el panel mide 26rem, y las
+              dos palabras metidas al final del aviso caían partidas al renglón de abajo, que se
+              lee como un error de armado y no como algo para tocar.
+            */}
+            <Link
+              to="/login"
+              className="text-primary focus-visible:outline-primary text-sm font-semibold underline underline-offset-4 focus-visible:outline-2"
+            >
+              Iniciar sesión
+            </Link>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onReserve}
+              disabled={!reservable}
+              className="brand-fill text-on-primary focus-visible:outline-primary disabled:bg-none disabled:bg-surface disabled:text-text-muted w-full rounded-2xl py-4 text-sm font-bold tracking-wide uppercase focus-visible:outline-2 disabled:cursor-not-allowed"
+            >
+              Reservar
+            </button>
+
+            {/*
+              El motivo del bloqueo va escrito, no solo insinuado por el botón apagado: un botón
+              gris sin explicación deja a quien lo mira sin saber si el problema es la estación,
+              su cuenta o la aplicación.
+            */}
+            {!reservable && selectedConnector !== null && (
+              <p className="text-st-offline text-center text-xs">
+                Este conector está fuera de servicio. Elegí otro para reservar.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

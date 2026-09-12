@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { updateMyPassword, updateMyProfile } from '@/features/auth/data/userRepository'
 import { applyFullName, useSession } from '@/features/auth/session'
-import { EyeIcon, EyeOffIcon } from '@/features/navigation/icons'
+import { ChevronRightIcon, EyeIcon, EyeOffIcon } from '@/features/navigation/icons'
 import {
   validateNewPassword,
   validatePasswordConfirmation,
@@ -12,6 +12,7 @@ import {
 import UnderlineField from '@/components/UnderlineField'
 import { ApiError } from '@/lib/api'
 
+import { AVATAR_IDS, avatarSrc, chooseAvatar, useAvatarId } from './avatars'
 import ProfileCard from './components/ProfileCard'
 
 /**
@@ -27,9 +28,14 @@ import ProfileCard from './components/ProfileCard'
  *
  * **De los cuatro datos que se ven arriba, solo dos se pueden cambiar.** El correo identifica la
  * cuenta y viaja adentro del token; el rol es una decisión administrativa —si se aceptara acá,
- * cualquiera se promovería a administrador desde su propio perfil—. Los otros dos, el avatar y
- * el auto, todavía no existen en el sistema: no hay catálogo de avatares ni entidad de vehículo.
- * Se dibujan igual, apagados y diciendo por qué, porque el lugar ya está decidido y el dato no.
+ * cualquiera se promovería a administrador desde su propio perfil—. El auto todavía no existe en
+ * el sistema: no hay entidad de vehículo, así que se dibuja apagado y diciendo por qué, porque el
+ * lugar ya está decidido y el dato no.
+ *
+ * **El avatar sí se elige, y se guarda en otro lado que el resto.** El nombre y la contraseña van
+ * al backend; el avatar se queda en el navegador, porque el perfil no tiene dónde guardarlo. Ver
+ * `avatars.ts`, que explica la limitación y qué cambia el día que la tenga. Para quien está
+ * editando, los tres son lo mismo: se tocan acá y se guardan con el mismo botón.
  */
 export default function EditProfilePage() {
   const session = useSession()
@@ -49,6 +55,20 @@ export default function EditProfilePage() {
   const [typedName, setTypedName] = useState<string | null>(null)
   const fullName = typedName ?? session?.fullName ?? ''
   const setFullName = setTypedName
+
+  /*
+    El avatar se toca acá y se guarda al aceptar, igual que el nombre. **No se guarda al tocarlo**
+    aunque escribir en el almacenamiento sea instantáneo y no pueda fallar: quien entró a este
+    formulario está probando cosas, y Cancelar tiene que devolver la pantalla a como estaba. Si el
+    redondel de la franja de arriba cambiara en el momento del clic, cancelar dejaría la cara
+    nueva puesta y el nombre viejo.
+
+    `pickedAvatar` es `null` mientras nadie eligió nada en esta visita, y ahí manda lo guardado.
+    Es la misma forma que el nombre, y por el mismo motivo.
+  */
+  const savedAvatar = useAvatarId(session?.userId ?? null)
+  const [pickedAvatar, setPickedAvatar] = useState<string | null>(null)
+  const avatarId = pickedAvatar ?? savedAvatar
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -99,6 +119,13 @@ export default function EditProfilePage() {
       const profile = await updateMyProfile(fullName.trim())
       applyFullName(profile.fullName)
 
+      /*
+        El avatar, al final y solo si se tocó. Va DESPUÉS de las llamadas porque es lo único que
+        no puede fallar: guardándolo primero, un backend que rechaza la contraseña dejaría la cara
+        cambiada en una edición que la pantalla dice que no se guardó.
+      */
+      if (pickedAvatar !== null && session !== null) chooseAvatar(session.userId, pickedAvatar)
+
       void navigate('..', { relative: 'path' })
     } catch (cause: unknown) {
       /* El mensaje viene del backend —"La contraseña actual no es correcta"— y se muestra tal cual. */
@@ -143,10 +170,17 @@ export default function EditProfilePage() {
           El mismo relleno que el recuadro del alta de una tarjeta: los dos son un formulario
           adentro de la tarjeta de una sección. Ver `.glass-inset`.
         */}
-        <fieldset className="glass-inset flex flex-col gap-5 rounded-3xl p-6">
+        {/*
+          **`min-w-0` sobre el `<fieldset>`, que no es lo mismo que sobre un `<div>`.** El navegador
+          le da a esta etiqueta —y solo a ella— un `min-inline-size: min-content` en su hoja de
+          estilos propia, así que se niega a angostarse por debajo de lo que mide su contenido por
+          más `overflow` que tenga adentro. Con la tira de veintitrés avatares eso empujaba el
+          recuadro fuera de la tarjeta del perfil. Ver `AvatarPicker`.
+        */}
+        <fieldset className="glass-inset flex min-w-0 flex-col gap-5 rounded-3xl p-6">
           <legend className="sr-only">Datos de la cuenta</legend>
 
-          <AvatarPicker />
+          <AvatarPicker value={avatarId} onChange={setPickedAvatar} />
 
           <UnderlineField label="Nombre" error={errors.fullName}>
             {(props) => (
@@ -302,28 +336,155 @@ export default function EditProfilePage() {
 }
 
 /**
- * El elegidor de avatar, todavía sin avatares.
+ * El elegidor de avatar: una tira de caras que se arrastra de costado.
+
+ * **Es una tira y no una grilla, y la diferencia es el alto.** Veintitrés redondeles de 64
+ * píxeles en grilla son cuatro renglones, que adentro de un formulario que ya tiene un nombre,
+ * un auto y tres contraseñas empuja el botón de guardar fuera de la pantalla. En una fila que
+ * scrollea ocupan uno solo, y no hay nada que comparar entre caras: se elige la que gusta, no la
+ * mejor de un conjunto.
  *
- * Se dibuja la fila con los redondeles vacíos porque el lugar ya está decidido —es el mismo
- * redondel de la cabecera— y lo que falta es el catálogo. Apagados y con el motivo escrito al
- * lado, la pantalla dice qué va a haber ahí; sin la fila, nadie sabría que se va a poder elegir.
+ * **El elegido se marca con un anillo, no con un borde.** Un borde ocupa lugar y corre a los
+ * vecinos un par de píxeles al cambiar de elección, así que la fila entera tiembla con cada clic.
+ * El anillo se dibuja por fuera de la caja y no mueve nada. La separación intermedia —el hueco
+ * del color del panel entre la cara y el verde— es lo que evita que el anillo se lea como el
+ * borde del propio dibujo.
+ *
+ * **Son botones de radio, no botones a secas.** Elegir un avatar es elegir UNO entre varios, que
+ * es exactamente lo que un grupo de radios anuncia: quien navega con lector de pantalla escucha
+ * "3 de 23" y se mueve con las flechas. Con veintitrés botones sueltos tendría que tabular por
+ * cada uno para enterarse de que son alternativas de lo mismo.
+ *
+ * Las flechas aparecen recién en pantalla ancha. En el celular la fila se empuja con el dedo, y
+ * dos botones ahí se comen el ancho de tres caras para hacer lo que ya se hace arrastrando.
  */
-function AvatarPicker() {
+function AvatarPicker({
+  value,
+  onChange,
+}: {
+  /** El avatar marcado, o `null` si todavía no se eligió ninguno. */
+  value: string | null
+  onChange: (avatarId: string) => void
+}) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  /*
+    La fila arranca mostrando el elegido. Sin esto, quien ya tiene el avatar veinte abre el
+    formulario, ve seis caras ninguna marcada y concluye que no eligió nada: lo suyo está a tres
+    pantallas de scroll a la derecha.
+
+    `block: 'nearest'` es lo que mantiene el efecto adentro de la fila. Sin él el navegador
+    tambien scrollea la tarjeta del perfil para centrar el redondel verticalmente, y el formulario
+    se abre con el titulo ya pasado de largo.
+
+    Corre una sola vez, al montar: encadenarlo a `value` haría saltar la fila con cada clic,
+    incluso al elegir una cara que ya estaba a la vista.
+  */
+  useEffect(() => {
+    const track = trackRef.current
+    if (track === null || value === null) return
+
+    const selected = track.querySelector(`[data-avatar="${value}"]`)
+    selected?.scrollIntoView({ block: 'nearest', inline: 'center' })
+    /* eslint-disable-next-line react-hooks/exhaustive-deps -- solo al montar; ver arriba. */
+  }, [])
+
+  /** Corre la fila casi una pantalla, dejando una cara de las que ya estaban como referencia. */
+  function scrollBy(direction: 1 | -1): void {
+    const track = trackRef.current
+    if (track === null) return
+    track.scrollBy({ left: direction * (track.clientWidth - 72), behavior: 'smooth' })
+  }
+
   return (
-    <div className="flex flex-col gap-1.5 opacity-60">
+    /*
+      `min-w-0` acá arriba y no solo en la tira: por omisión un elemento flexible no se achica por
+      debajo de su contenido, y el contenido de éste es una fila de veintitrés caras. Sin esto la
+      tira no scrollea —se estira— y arrastra el ancho del formulario, de la tarjeta y de la
+      pantalla, que termina con una barra de scroll horizontal.
+    */
+    <div className="flex min-w-0 flex-col gap-1.5">
       <span className="text-sm font-medium">Avatar</span>
-      <div className="mt-1 flex items-center gap-3">
-        {[0, 1, 2, 3, 4].map((slot) => (
-          <span
-            key={slot}
-            aria-hidden="true"
-            className="border-primary/40 h-12 w-12 shrink-0 rounded-full border-2 border-dashed"
-          />
-        ))}
+
+      <div className="mt-1 flex items-center gap-2">
+        <ScrollArrow direction={-1} onClick={() => scrollBy(-1)} />
+
+        {/*
+          `role="radiogroup"` y no un `<fieldset>`: el grupo ya vive adentro del fieldset de los
+          datos de la cuenta, y anidar uno adentro de otro le agrega al lector de pantalla un
+          nivel que no significa nada.
+
+          El `py-1.5 -my-1.5` es para el anillo del elegido, igual que el de los filtros del mapa
+          es para la sombra: un contenedor que scrollea de costado recorta también arriba y abajo,
+          y sin lugar de sobra el anillo queda cortado al ras contra el borde de la fila.
+        */}
+        <div
+          ref={trackRef}
+          role="radiogroup"
+          aria-label="Elegí tu avatar"
+          className="no-scrollbar -my-1.5 flex min-w-0 flex-1 gap-3 overflow-x-auto py-1.5"
+        >
+          {AVATAR_IDS.map((id, index) => {
+            const selected = id === value
+
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={`Avatar ${String(index + 1)} de ${String(AVATAR_IDS.length)}`}
+                data-avatar={id}
+                onClick={() => onChange(id)}
+                /*
+                  Solo el elegido queda tabulable, que es cómo funciona un grupo de radios: se
+                  entra al grupo con Tab y se cambia de opción con las flechas, que el navegador ya
+                  maneja. Mientras no hay ninguno elegido entra el primero, o el grupo quedaría
+                  fuera del alcance del teclado justo cuando todavía no se eligió nada.
+                */
+                tabIndex={selected || (value === null && index === 0) ? 0 : -1}
+                className={`h-16 w-16 shrink-0 cursor-pointer rounded-full transition-[box-shadow] ${
+                  selected
+                    ? 'ring-primary ring-offset-surface ring-2 ring-offset-2'
+                    : 'hover:ring-primary/40 hover:ring-offset-surface hover:ring-2 hover:ring-offset-2'
+                }`}
+              >
+                <img src={avatarSrc(id)} alt="" className="h-16 w-16 rounded-full" />
+              </button>
+            )
+          })}
+        </div>
+
+        <ScrollArrow direction={1} onClick={() => scrollBy(1)} />
       </div>
+
       <p className="text-text-muted mt-1 text-xs">
-        Los avatares para elegir todavía no están cargados.
+        Se guarda en este navegador: entrando desde otra máquina vas a ver el que tengas ahí.
       </p>
     </div>
+  )
+}
+
+/**
+ * Una de las dos flechas que corren la tira.
+ *
+ * La izquierda es la misma de la derecha dada vuelta: el juego de íconos tiene un solo cheurón y
+ * agregarle el espejado sería dibujar dos veces la misma forma.
+ *
+ * `aria-hidden` sobre las dos porque no llevan a ninguna parte nueva: todo lo que muestran ya está
+ * en el grupo de radios, al que el teclado llega con las flechas sin tocar estos botones. Anunciar
+ * "siguiente" y "anterior" agregaría dos paradas que no eligen nada.
+ */
+function ScrollArrow({ direction, onClick }: { direction: 1 | -1; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-hidden="true"
+      tabIndex={-1}
+      className="text-text-muted hover:text-text hover:border-primary/60 border-border hidden h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors md:flex"
+    >
+      <ChevronRightIcon className={`h-4 w-4 ${direction === -1 ? 'rotate-180' : ''}`} />
+    </button>
   )
 }

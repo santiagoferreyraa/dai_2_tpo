@@ -229,6 +229,27 @@
 }
 
 /*
+  El vidrio de una ventana modal: el mismo de siempre, pero con cuerpo de sobra.
+
+  **Una ventana modal no se apoya sobre la página sino sobre el oscurecedor**, y ahí el 32% de
+  `.glass-panel` juega en contra en el tema claro: lo que el desenfoque recoge es el negro al 50%
+  del fondo, así que un panel que debería leerse blanco sale gris sucio. En el tema oscuro no se
+  nota, porque abajo ya había oscuro.
+
+  Por eso el claro sube más que el oscuro. No es un panel más de la pantalla: es lo único que se
+  puede tocar mientras está abierto, y tiene que separarse del resto en vez de confundirse con
+  él. El desenfoque y el borde siguen siendo los de `.glass-panel`, así que sigue siendo vidrio,
+  solo que uno que tapa.
+*/
+.glass-modal {
+  background-color: color-mix(in srgb, var(--color-surface) 82%, transparent);
+}
+
+[data-theme="light"] .glass-modal {
+  background-color: color-mix(in srgb, var(--color-surface) 96%, transparent);
+}
+
+/*
   Ajuste fino de los mosaicos, para que el gris del mapa quede en la misma familia que el del
   resto de la interfaz. El proveedor ya los sirve en gris (ver mapConfig.ts), y esa es la
   condición para que esto funcione: sobre una imagen que ya es gris, oscurecer no puede

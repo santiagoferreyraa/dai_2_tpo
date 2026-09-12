@@ -4,7 +4,14 @@ import { Link } from 'react-router'
 import { useSession } from '@/features/auth/session'
 import { EditIcon } from '@/features/navigation/icons'
 
-import { editAnchor, HEADER_HEIGHT, HEADER_SHAPE, headerOutlinePath } from '../headerShape'
+import {
+  AVATAR_SIZE,
+  editAnchor,
+  HEADER_HEIGHT,
+  HEADER_SHAPE,
+  headerOutlinePath,
+} from '../headerShape'
+import ProfileAvatar from './ProfileAvatar'
 import ProfileIdentity from './ProfileIdentity'
 
 /**
@@ -15,9 +22,17 @@ import ProfileIdentity from './ProfileIdentity'
  * la convierte en la identidad de la pantalla: quien entra a medios de pago sigue viendo de
  * quién son esos medios de pago.
  *
- * **El redondel queda vacío a propósito.** No es para una foto propia: lo que va ahí es un
- * avatar de una lista para elegir, y esos avatares todavía no están. Dibujado vacío, el lugar ya
- * está tomado y la figura no cambia de forma cuando lleguen.
+ * **En el redondel va el avatar elegido, y no una foto propia.** Se elige de un catálogo, en
+ * `/profile/edit`; el porqué de que sea una lista y no una imagen subida está en `avatars.ts`.
+ * Quien todavía no eligió ve el redondel con el volante, que es lo que había antes del catálogo:
+ * así se distingue un avatar elegido de uno que falta elegir.
+ *
+ * **El dibujo se apoya sobre el agujero, no lo rellena.** El redondel es parte del contorno de la
+ * figura —el mismo `path` que la barra—, así que su lugar sale de `HEADER_SHAPE` y no de una caja
+ * aparte. Y queda más chico que el agujero: entre la cara y el contorno se ve un anillo de vidrio,
+ * que es lo que la deja adentro de la figura en vez de pegada encima del recorte. El porqué y la
+ * medida están en `avatarInset`. Escrito a mano, cualquier retoque de la silueta dejaría la cara
+ * corrida dentro de su propio agujero.
  *
  * El porqué de que sea un `path` y no dos cajas está en `headerShape.ts`.
  *
@@ -110,6 +125,18 @@ export default function ProfileHeader() {
         )}
 
         {/*
+          El avatar, calzado en el redondel del contorno. Va DESPUÉS del vidrio en el orden del
+          documento —los dos son absolutos y ninguno declara capa—, que es lo que lo deja encima
+          sin agregarle un `z-index` a una figura que no tiene ninguno.
+        */}
+        <div
+          className="absolute"
+          style={{ top: HEADER_SHAPE.avatarInset, left: HEADER_SHAPE.avatarInset }}
+        >
+          <ProfileAvatar size={AVATAR_SIZE} />
+        </div>
+
+        {/*
           Lo escrito, por encima de la figura. Va contra la barra —que es más baja que la
           figura— y no contra el alto entero, o el texto quedaría corrido hacia abajo respecto
           del borde recto de arriba.
@@ -140,8 +167,19 @@ export default function ProfileHeader() {
         )}
       </header>
 
-      {/* La misma información en el celular, sin la figura. */}
+      {/*
+        La misma información en el celular, sin la figura.
+
+        El avatar va acá adentro como un redondel más de la fila y solo con sesión: sin cuenta
+        esta tarjeta muestra la invitación a entrar, y un volante al lado de "todavía no iniciaste
+        sesión" ocuparía el ancho que necesita esa frase para entrar en un teléfono.
+
+        56 píxeles y no los 124 de la figura: es el alto de dos renglones de texto, que es lo que
+        mide la tarjeta. El de escritorio puede ser grande porque la silueta se dibuja alrededor
+        de él.
+      */}
       <section className="glass-panel flex items-center gap-4 rounded-3xl p-5 md:hidden">
+        {session !== null && <ProfileAvatar size={56} />}
         <ProfileIdentity />
         {editButton}
       </section>
