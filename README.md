@@ -25,7 +25,7 @@ TP Integrador — **Desarrollo de Aplicaciones II** (3.4.218, Comisión Lunes TM
 - Maven 3.9+
 - Node 20+
 - pnpm 11+ *(`npm install -g pnpm`)*
-- Docker Desktop *(pendiente de instalar — ver "Correr sin Docker")*
+- Docker Desktop *(opcional — solo para el ambiente de la demo; ver "Los tres ambientes")*
 
 ---
 
@@ -67,19 +67,75 @@ está configurado y redirige `/api/bookings` a Reservas y el resto de `/api` al 
 | `pnpm dev:charging` | Solo Reservas (`ecopedia-charging`). Necesita el backend arriba |
 | `pnpm dev:front` | Solo el frontend |
 | `pnpm dev:plain` | Los tres en una sola tira de logs, con prefijos `[back]`/`[charging]`/`[front]` |
+| `pnpm dev:mem` | Los tres, pero con las bases **en memoria**: se borra todo al bajar |
 | `pnpm free-ports` | Libera el 8081, el 8082 y el 5173 a mano |
 | `pnpm build` | Empaqueta el frontend adentro del JAR del backend |
 | `pnpm start` | Corre ese JAR |
 
-`pnpm dev` levanta el backend y Reservas con el perfil `dev`, o sea contra bases H2 en memoria y
-sin PostgreSQL instalado. Consolas de H2: http://localhost:8081/h2-console y
-http://localhost:8082/h2-console
+`pnpm dev` levanta el backend y Reservas con el perfil `local`: **bases H2 en un archivo de tu
+disco, sin PostgreSQL instalado y sin Docker.** Lo que cargues sobrevive a bajar y volver a
+levantar. Consolas de H2: http://localhost:8081/h2-console y http://localhost:8082/h2-console
 
 Los dos procesos validan el mismo token, así que tienen que compartir el secreto de firma: sale de
 la variable `ECOPEDIA_JWT_SECRET`, y sin ella los dos usan el mismo valor de desarrollo.
 
 **`pnpm start` todavía no llega a Reservas:** sirve front y API desde el JAR de core, en el 8081,
 y ahí no hay nada escuchando `/api/bookings`. Para probar reservas se usa `pnpm dev`.
+
+### Los tres ambientes
+
+El proyecto corre contra tres bases distintas, y la diferencia entre ellas es **quién ve los datos
+y cuánto duran**. El esquema es siempre el mismo: lo construyen las mismas migraciones de Flyway,
+así que no hay forma de que se bifurque.
+
+| Ambiente | Comando | Motor | Los datos | ¿Docker? |
+|---|---|---|---|---|
+| **Propio** | `pnpm dev` | H2 en archivo | tuyos, **sobreviven** al reinicio | no |
+| **Descartable** | `pnpm dev:mem` | H2 en memoria | se borran al bajar | no |
+| **Compartido** | ver "Con PostgreSQL" | PostgreSQL | únicos, los ve todo el que apunte ahí | sí |
+
+**El de todos los días es `pnpm dev`.** Te registrás una vez, promovés tu usuario a `CPO` una vez,
+y eso queda. Las bases viven en `backend/ecopedia-core/data/` y `backend/ecopedia-charging/data/`,
+que están en el `.gitignore`: **cada integrante tiene sus propios datos** y nadie ve los del otro.
+Un módulo por archivo, porque cada uno gobierna su esquema y su propio historial de Flyway.
+
+**`pnpm dev:mem` es para empezar de cero.** Es el perfil `dev`, el mismo que usan los tests. Sirve
+sobre todo cuando estás tocando una migración: ver abajo.
+
+**El compartido es el ambiente de las entregas**, y el único que puede usarse desde dos máquinas
+a la vez. Es sobre el que hay que ensayar la demo, aunque el desarrollo no lo use.
+
+#### Empezar de cero
+
+Cada ambiente se resetea distinto:
+
+```bash
+rm -rf backend/*/data              # propio: borra las bases H2 de los dos módulos
+                                   # descartable: no hace falta, se borra solo al bajar
+docker compose down -v             # compartido: borra el volumen de PostgreSQL
+```
+
+**Cuándo lo vas a necesitar:** una migración que ya se aplicó **no se puede editar**. Flyway le
+guarda el checksum y, si el archivo cambia, aborta el arranque con `Migration checksum mismatch`.
+Es la contracara de que los datos persistan, y es la misma regla que rige en PostgreSQL — por eso
+conviene acostumbrarse acá y no descubrirla la semana de la entrega. Mientras estés iterando sobre
+una migración, `pnpm dev:mem` te evita el borrado en cada vuelta.
+
+#### Promover un usuario a `CPO`
+
+Registrarse deja el rol `CONDUCTOR`, así que `/stations` rebota a `/forbidden`. El ABM pide `CPO`,
+y el rol se cambia a mano. La consulta es la misma en los tres; cambia por dónde entrás:
+
+```sql
+update core.users set role = 'CPO' where email = 'el-tuyo@ejemplo.com';
+```
+
+- **Propio y descartable:** http://localhost:8081/h2-console, con la URL que el log del arranque
+  imprime en la línea `Database available at`, usuario `sa` y la contraseña vacía.
+- **Compartido:** `docker exec -it ecopedia-postgres psql -U ecopedia -d ecopedia`
+
+En el ambiente propio se hace **una sola vez**. En el descartable, en cada arranque — y ése es
+justo el momento en que algo sale mal delante del docente, así que la demo no se hace ahí.
 
 ### Si el puerto quedó tomado
 
@@ -112,7 +168,7 @@ docker compose up -d
 ```
 
 Deja arriba PostgreSQL (`localhost:5432`) y ActiveMQ Artemis (`localhost:61616`, consola web en
-http://localhost:8161/console). Y después el backend **sin** el perfil `dev`:
+http://localhost:8161/console). Y después el backend **sin** perfil:
 
 ```bash
 mvn -pl backend/ecopedia-core spring-boot:run
@@ -160,7 +216,9 @@ Cada artefacto tiene su puerto fijo, así los cuatro pueden estar levantados a l
 | `ecopedia-integration` | 8083 | `mvn -pl backend/ecopedia-integration spring-boot:run` |
 | `ecopedia-async` | — | `mvn -pl backend/ecopedia-async spring-boot:run` *(sin web: consume del broker)* |
 
-Agregarles el perfil `dev` es `-Dspring-boot.run.profiles=dev`.
+Sin perfil apuntan a PostgreSQL. Para el ambiente propio y persistente va
+`-Dspring-boot.run.profiles=local`, y para el descartable en memoria,
+`-Dspring-boot.run.profiles=dev`.
 
 `mvn verify` además **chequea el formato** con Spotless y falla si algo quedó sin formatear.
 Para arreglarlo: `mvn spotless:apply`.
@@ -390,10 +448,14 @@ escriben `V3__` la misma tarde y chocan; con timestamp el choque es imposible.
 - **Una migración ya mergeada no se edita nunca.** Flyway guarda un checksum: si cambiás el
   archivo, el arranque falla en la máquina de todos los que ya la corrieron. Para corregir
   algo, va una migración nueva.
-- **SQL de PostgreSQL.** El perfil `dev` corre H2 en `MODE=PostgreSQL` justamente para que
-  las mismas migraciones funcionen en los dos motores y el esquema no se bifurque.
-- Si la base de desarrollo quedó en un estado raro: `docker compose down -v && docker compose up -d`
-  la borra y la reconstruye desde cero.
+- **SQL de PostgreSQL.** Los perfiles `local` y `dev` corren H2 en `MODE=PostgreSQL` justamente
+  para que las mismas migraciones funcionen en los dos motores y el esquema no se bifurque. Es lo
+  que hace que los tres ambientes tengan el mismo esquema sin mantener nada en paralelo.
+- **Mientras iterás sobre una migración, trabajá con `pnpm dev:mem`.** Como la base se borra al
+  bajar, no hay checksum viejo con el que pelearse. Con `pnpm dev` cada cambio al archivo te pide
+  borrar `backend/*/data` antes de volver a levantar.
+- Si una base quedó en un estado raro, ver "Empezar de cero": se resetea distinto según el
+  ambiente.
 
 ---
 

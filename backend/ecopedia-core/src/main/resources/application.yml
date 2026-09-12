@@ -80,3 +80,46 @@ spring:
   h2:
     console:
       enabled: true         # http://localhost:8081/h2-console
+
+---
+# Perfil local: la base de este integrante, en un archivo de su propio disco.
+#
+# Es el perfil del día a día, el que levanta `pnpm dev`. La diferencia con `dev` es una sola
+# y es la que importa: acá los datos SOBREVIVEN a bajar y volver a levantar el proyecto. El
+# usuario que te registraste sigue estando, y al operador lo promovés a CPO una sola vez.
+#
+# **Por qué es un perfil aparte y no `dev` apuntando a un archivo.** Los tests declaran
+# @ActiveProfiles("dev") y necesitan una base vacía en cada corrida. Compartiendo perfil,
+# los datos de los tests aparecerían en tu navegador y —mucho peor— los tuyos entrarían a
+# los tests: una estación cargada a mano hace fallar a TerminalApiTest en tu máquina
+# mientras CI pasa en verde, porque CI clona limpio. Son dos necesidades opuestas.
+#
+# **El esquema no se bifurca por usar otro motor.** Lo construyen las mismas migraciones de
+# Flyway que corren contra PostgreSQL: el archivo .sql es el contrato y la base de cada uno
+# se arma sola a partir de él. Por eso los datos son propios pero el esquema es el mismo.
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    # h2:file, no h2:mem. El archivo queda en backend/ecopedia-core/data/ y esa carpeta está
+    # en el .gitignore: cada uno tiene sus datos y nadie ve los del otro.
+    #
+    # MODE=PostgreSQL y DATABASE_TO_LOWER=TRUE van por exactamente lo mismo que en el perfil
+    # `dev` — ver el comentario de allá, que explica por qué el segundo no es decoración.
+    #
+    # Ojo con la contracara de que los datos persistan: una migración YA APLICADA no se puede
+    # editar. Flyway ve el checksum cambiado y aborta el arranque. Se arregla borrando la
+    # carpeta data/ del módulo, que es el reset de este ambiente. Está en el README.
+    url: jdbc:h2:file:${ECOPEDIA_CORE_LOCAL_DB:./data/ecopedia-core};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: true         # http://localhost:8081/h2-console

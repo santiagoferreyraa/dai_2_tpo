@@ -4,10 +4,13 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "mprocs",
-    "dev:back": "node scripts/free-port.mjs 8081 && mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev",
-    "dev:charging": "node scripts/free-port.mjs 8082 && mvn -pl backend/ecopedia-charging spring-boot:run -Dspring-boot.run.profiles=dev",
+    "dev:back": "node scripts/free-port.mjs 8081 && mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=local",
+    "dev:charging": "node scripts/free-port.mjs 8082 && mvn -pl backend/ecopedia-charging spring-boot:run -Dspring-boot.run.profiles=local",
     "dev:front": "node scripts/free-port.mjs 5173 && pnpm --dir frontend dev",
     "dev:plain": "concurrently --names back,charging,front --prefix-colors cyan,yellow,magenta --kill-others-on-fail \"pnpm dev:back\" \"pnpm dev:charging\" \"pnpm dev:front\"",
+    "dev:mem": "mprocs --config mprocs-mem.yaml",
+    "dev:mem:back": "node scripts/free-port.mjs 8081 && mvn -pl backend/ecopedia-core spring-boot:run -Dspring-boot.run.profiles=dev",
+    "dev:mem:charging": "node scripts/free-port.mjs 8082 && mvn -pl backend/ecopedia-charging spring-boot:run -Dspring-boot.run.profiles=dev",
     "free-ports": "node scripts/free-port.mjs 8081 8082 5173",
     "build": "mvn -Pweb clean package",
     "start": "java -jar backend/ecopedia-core/target/ecopedia-core-0.1.0-SNAPSHOT.jar"

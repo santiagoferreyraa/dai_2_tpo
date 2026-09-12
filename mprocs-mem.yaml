@@ -1,0 +1,15 @@
+# Los mismos tres procesos que `pnpm dev`, pero con la base EN MEMORIA. Los levanta
+# `pnpm dev:mem`.
+#
+# Cuándo sirve: cuando querés empezar de cero sin borrar nada, o cuando estás tocando una
+# migración ya aplicada y no querés pelearte con el checksum de Flyway. Todo lo que cargues
+# se va cuando bajás los procesos.
+#
+# Es el perfil `dev`, el mismo que usan los tests. Ver mprocs.yaml para lo demás.
+procs:
+  back:
+    shell: pnpm dev:mem:back
+  charging:
+    shell: pnpm dev:mem:charging
+  front:
+    shell: pnpm dev:front
