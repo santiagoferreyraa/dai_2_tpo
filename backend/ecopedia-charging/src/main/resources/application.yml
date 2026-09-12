@@ -60,6 +60,15 @@ ecopedia:
     # Es el tiempo que tiene el conductor para confirmar. Ver ARQUITECTURA_ECOPEDIA.md §2.3.
     hold-ttl: ${ECOPEDIA_BOOKING_HOLD_TTL:PT10M}
 
+    # Cuánto puede durar una reserva y con cuánta anticipación se puede pedir.
+    #
+    # Son topes de negocio, no detalles técnicos: sin ellos un solo pedido —o un front con un
+    # error de fechas— deja un conector bloqueado por años, y la regla de RF08 lo haría cumplir
+    # al pie de la letra. Los valores de acá son los que usamos para la demo; el operador real
+    # los fija por variable de entorno sin tocar código.
+    max-window: ${ECOPEDIA_BOOKING_MAX_WINDOW:PT4H}
+    max-horizon: ${ECOPEDIA_BOOKING_MAX_HORIZON:P30D}
+
 ---
 # Perfil de desarrollo: base en memoria, para levantar el módulo sin PostgreSQL instalado.
 # Las demos de las entregas corren sobre PostgreSQL, no sobre H2.
