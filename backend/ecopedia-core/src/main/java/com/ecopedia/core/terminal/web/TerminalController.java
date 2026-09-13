@@ -40,7 +40,7 @@ public class TerminalController {
 
     /** RF04: Alta de una estación de carga. */
     @PostMapping("/stations")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<StationResponse> createStation(@Valid @RequestBody StationRequest request) {
         Station created = terminalService.createStation(request.toDomainData());
         return ResponseEntity.status(HttpStatus.CREATED).body(StationResponse.fromDomain(created));
@@ -48,7 +48,7 @@ public class TerminalController {
 
     /** RF04: Edición de datos de una estación. */
     @PutMapping("/stations/{id}")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<StationResponse> updateStation(
             @PathVariable Long id, @Valid @RequestBody StationRequest request) {
         Station updated = terminalService.updateStation(id, request.toDomainData());
@@ -65,7 +65,7 @@ public class TerminalController {
 
     /** RF05: Alta de un conector sobre una estación existente. */
     @PostMapping("/stations/{stationId}/connectors")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<ConnectorResponse> addConnector(
             @PathVariable Long stationId, @Valid @RequestBody ConfigureConnectorRequest request) {
         Connector created = terminalService.addConnector(stationId, request.connectorType(), request.maxPowerKw());
@@ -74,7 +74,7 @@ public class TerminalController {
 
     /** RF05: Parametrizar tipo y potencia máxima de un conector que ya existe. */
     @PostMapping("/connectors/{id}/configure")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<ConnectorResponse> configureConnector(
             @PathVariable Long id, @Valid @RequestBody ConfigureConnectorRequest request) {
         Connector configured = terminalService.configureConnector(id, request.connectorType(), request.maxPowerKw());
@@ -83,7 +83,7 @@ public class TerminalController {
 
     /** RF05: Cambiar el estado operativo de un conector. */
     @PatchMapping("/connectors/{id}/status")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<Void> changeOperationalStatus(
             @PathVariable Long id, @Valid @RequestBody ChangeStatusRequest request) {
         terminalService.changeOperationalStatus(id, request.operationalStatus());
@@ -148,7 +148,7 @@ public class TerminalController {
 
     /** Eliminar un conector por ID. */
     @DeleteMapping("/connectors/{id}")
-    @PreAuthorize("hasRole('CPO')")
+    @PreAuthorize("hasAnyRole('CPO','ADMIN')")
     public ResponseEntity<Void> removeConnector(@PathVariable Long id) {
         terminalService.removeConnector(id);
         return ResponseEntity.noContent().build();
