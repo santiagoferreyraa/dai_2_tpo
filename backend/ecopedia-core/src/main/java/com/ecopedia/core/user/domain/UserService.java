@@ -39,7 +39,7 @@ public interface UserService {
      * Pedirla es lo único que distingue al dueño de quien pasaba por ahí.
      */
     void changePassword(Long userId, String currentPassword, String newPassword);
-    
+
     /** Cambio de rol de un usuario (solo ADMIN). */
     User updateRole(Long userId, Role newRole);
 
