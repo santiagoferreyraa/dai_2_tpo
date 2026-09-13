@@ -14,6 +14,9 @@ public interface AdminService {
     /** Baja lógica administrativa de un usuario. */
     void deactivateUser(Long userId);
 
+    /** Alta/Reactivación lógica administrativa de un usuario. */
+    void activateUser(Long userId);
+
     /** Baja lógica administrativa de una estación. */
     void deactivateStation(Long stationId);
 }

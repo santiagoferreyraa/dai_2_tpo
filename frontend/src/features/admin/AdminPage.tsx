@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import type { Role } from '@/features/auth/types'
 import {
+  activateUser,
   addConnector,
   changeConnectorStatus,
   configureConnector,
@@ -189,6 +190,23 @@ export default function AdminPage() {
       await loadMetrics()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'No se pudo dar de baja al usuario.')
+    } finally {
+      setDeactivatingUserId(null)
+    }
+  }
+
+  const handleActivateUser = async (userId: number) => {
+    if (!confirm(`¿Confirma reactivar al usuario con ID ${userId}?`)) return
+    setDeactivatingUserId(userId)
+    setActionError(null)
+    setActionSuccess(null)
+    try {
+      await activateUser(userId)
+      setActionSuccess(`El usuario ${userId} fue reactivado exitosamente.`)
+      await loadUsers()
+      await loadMetrics()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo reactivar al usuario.')
     } finally {
       setDeactivatingUserId(null)
     }
@@ -716,7 +734,14 @@ export default function AdminPage() {
                             {deactivatingUserId === user.id ? 'Dando de baja...' : 'Dar de Baja'}
                           </button>
                         ) : (
-                          <span className="text-xs text-text-muted italic">Sin acciones</span>
+                          <button
+                            type="button"
+                            disabled={deactivatingUserId === user.id}
+                            onClick={() => handleActivateUser(user.id)}
+                            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white disabled:opacity-50"
+                          >
+                            {deactivatingUserId === user.id ? 'Reactivando...' : 'Reactivar'}
+                          </button>
                         )}
                       </td>
                     </tr>

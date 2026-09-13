@@ -119,4 +119,12 @@ public class UserController {
         userService.deactivateUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    /** Alta/Reactivación lógica de usuario (Solo ADMIN). */
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateUser(@PathVariable Long id) {
+        userService.activateUser(id);
+        return ResponseEntity.noContent().build();
+    }
 }

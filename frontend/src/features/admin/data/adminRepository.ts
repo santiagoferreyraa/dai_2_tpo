@@ -101,6 +101,10 @@ export function deactivateUser(userId: number): Promise<void> {
   return api.delete<void>(`/users/${userId}`)
 }
 
+export function activateUser(userId: number): Promise<void> {
+  return api.post<void>(`/users/${userId}/activate`)
+}
+
 export function fetchStations(): Promise<StationItem[]> {
   return api.get<StationItem[]>('/stations')
 }

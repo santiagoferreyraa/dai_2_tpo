@@ -37,6 +37,13 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Alta/Reactivación lógica administrativa de un usuario. */
+    @PostMapping("/users/{id}/activate")
+    public ResponseEntity<Void> activateUser(@PathVariable Long id) {
+        adminService.activateUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Baja lógica administrativa de una estación de carga. */
     @DeleteMapping("/stations/{id}")
     public ResponseEntity<Void> deactivateStation(@PathVariable Long id) {

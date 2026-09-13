@@ -46,6 +46,9 @@ public interface UserService {
     /** Baja lógica de un usuario (solo ADMIN). */
     void deactivateUser(Long userId);
 
+    /** Alta/Reactivación lógica de un usuario (solo ADMIN). */
+    void activateUser(Long userId);
+
     /** Listado de usuarios, opcionalmente filtrado por rol. */
     List<User> listUsers(Role roleFilter);
 }

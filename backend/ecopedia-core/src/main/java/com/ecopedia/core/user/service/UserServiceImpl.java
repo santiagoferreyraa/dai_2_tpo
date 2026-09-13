@@ -115,6 +115,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void activateUser(Long userId) {
+        User user = getProfile(userId);
+        user.setActive(true);
+        userRepository.save(user);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<User> listUsers(Role roleFilter) {
         if (roleFilter != null) {
