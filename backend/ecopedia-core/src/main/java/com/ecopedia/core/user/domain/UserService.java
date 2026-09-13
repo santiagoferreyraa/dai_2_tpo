@@ -40,8 +40,14 @@ public interface UserService {
      */
     void changePassword(Long userId, String currentPassword, String newPassword);
 
+    /** Cambio de rol de un usuario (solo ADMIN). */
+    User updateRole(Long userId, Role newRole);
+
     /** Baja lógica de un usuario (solo ADMIN). */
     void deactivateUser(Long userId);
+
+    /** Alta/Reactivación lógica de un usuario (solo ADMIN). */
+    void activateUser(Long userId);
 
     /** Listado de usuarios, opcionalmente filtrado por rol. */
     List<User> listUsers(Role roleFilter);

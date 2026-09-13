@@ -101,10 +101,23 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    public User updateRole(Long userId, Role newRole) {
+        User user = getProfile(userId);
+        user.setRole(newRole);
+        return userRepository.save(user);
+    }
+
     @Override
     public void deactivateUser(Long userId) {
         User user = getProfile(userId);
         user.setActive(false);
+        userRepository.save(user);
+    }
+
+    @Override
+    public void activateUser(Long userId) {
+        User user = getProfile(userId);
+        user.setActive(true);
         userRepository.save(user);
     }
 

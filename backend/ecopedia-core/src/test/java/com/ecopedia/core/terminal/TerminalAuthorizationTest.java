@@ -152,28 +152,51 @@ class TerminalAuthorizationTest {
     }
 
     /*
-     * El ADMIN queda afuera del ABM salvo por la baja, y la asimetría es del dominio: el
-     * backoffice existe para retirar contenido (RF03), no para administrarle las estaciones a
-     * un operador. Si alguna vez alguien le agrega ADMIN al resto de las anotaciones "para que
-     * pueda todo", estas dos pruebas se ponen en rojo y lo obligan a justificarlo.
+     * El ADMIN puede ejecutar el ABM completo desde el Backoffice (ECO-27).
      */
     @Test
-    @DisplayName("Con token de ADMIN, las seis operaciones exclusivas del operador son rechazadas")
-    void rejectsOperatorOnlyOperationsForAdmins() throws Exception {
-        for (MockHttpServletRequestBuilder request : operatorOnlyRequests()) {
-            mockMvc.perform(request.header(HttpHeaders.AUTHORIZATION, bearer(Role.ADMIN)))
-                    .andExpect(status().isForbidden());
-        }
-    }
+    @DisplayName("Con token de ADMIN, el ABM completo también está permitido")
+    void allowsTheWholeAbmForAdmins() throws Exception {
+        String admin = bearer(Role.ADMIN);
 
-    @Test
-    @DisplayName("Con token de ADMIN, la baja de una estación sí está permitida (RF03)")
-    void allowsStationDeactivationForAdmins() throws Exception {
-        Station station = terminalService.createStation(
-                new StationData("Estación del backoffice", "Av. San Juan 2901", -34.603754, -58.381659, List.of()));
+        mockMvc.perform(post("/api/stations")
+                        .header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(STATION_JSON))
+                .andExpect(status().isCreated());
 
-        mockMvc.perform(delete("/api/stations/" + station.getId())
-                        .header(HttpHeaders.AUTHORIZATION, bearer(Role.ADMIN)))
+        Station station = terminalService.getAllStations().get(0);
+
+        mockMvc.perform(post("/api/stations/" + station.getId() + "/connectors")
+                        .header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CONNECTOR_JSON))
+                .andExpect(status().isCreated());
+
+        Connector connector = connectorRepository.findAll().get(0);
+
+        mockMvc.perform(post("/api/connectors/" + connector.getId() + "/configure")
+                        .header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CONNECTOR_JSON))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/connectors/" + connector.getId() + "/status")
+                        .header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(STATUS_JSON))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/stations/" + station.getId())
+                        .header(HttpHeaders.AUTHORIZATION, admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(STATION_JSON))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/connectors/" + connector.getId()).header(HttpHeaders.AUTHORIZATION, admin))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/stations/" + station.getId()).header(HttpHeaders.AUTHORIZATION, admin))
                 .andExpect(status().isNoContent());
     }
 

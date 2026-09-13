@@ -5,6 +5,7 @@ import com.ecopedia.core.user.domain.User;
 import com.ecopedia.core.user.domain.UserService;
 import com.ecopedia.core.user.web.dto.ChangePasswordRequest;
 import com.ecopedia.core.user.web.dto.UpdateProfileRequest;
+import com.ecopedia.core.user.web.dto.UpdateRoleRequest;
 import com.ecopedia.core.user.web.dto.UserProfileResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -102,11 +103,28 @@ public class UserController {
                 users.stream().map(UserProfileResponse::fromDomain).toList());
     }
 
+    /** Cambiar rol de usuario (Solo ADMIN - ECO-27). */
+    @PatchMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserProfileResponse> updateUserRole(
+            @PathVariable Long id, @Valid @RequestBody UpdateRoleRequest request) {
+        User updated = userService.updateRole(id, request.role());
+        return ResponseEntity.ok(UserProfileResponse.fromDomain(updated));
+    }
+
     /** Baja lógica de usuario (Solo ADMIN - ECO-25 / ECO-27). */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivateUser(@PathVariable Long id) {
         userService.deactivateUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Alta/Reactivación lógica de usuario (Solo ADMIN). */
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateUser(@PathVariable Long id) {
+        userService.activateUser(id);
         return ResponseEntity.noContent().build();
     }
 }

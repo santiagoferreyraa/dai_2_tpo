@@ -11,8 +11,14 @@ public record StationResponse(
         double longitude,
         Long ownerId,
         boolean active,
-        List<String> photoUrls) {
+        List<String> photoUrls,
+        List<ConnectorResponse> connectors) {
+
     public static StationResponse fromDomain(Station station) {
+        return fromDomain(station, List.of());
+    }
+
+    public static StationResponse fromDomain(Station station, List<ConnectorResponse> connectors) {
         return new StationResponse(
                 station.getId(),
                 station.getName(),
@@ -21,6 +27,7 @@ public record StationResponse(
                 station.getLongitude(),
                 station.getOwnerId(),
                 station.isActive(),
-                station.getPhotoUrls());
+                station.getPhotoUrls(),
+                connectors != null ? connectors : List.of());
     }
 }

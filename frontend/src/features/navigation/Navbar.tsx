@@ -1,3 +1,4 @@
+import AdminMobileBubble from './AdminMobileBubble'
 import MobileNav from './MobileNav'
 import TopBar from './TopBar'
 
@@ -22,6 +23,7 @@ export default function Navbar() {
     <>
       <TopBar />
       <MobileNav />
+      <AdminMobileBubble />
     </>
   )
 }
