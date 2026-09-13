@@ -111,14 +111,18 @@ public class TerminalController {
     public ResponseEntity<List<StationResponse>> getAllStations() {
         List<Station> stations = terminalService.getAllStations();
         return ResponseEntity.ok(
-                stations.stream().map(StationResponse::fromDomain).toList());
+                stations.stream().map(s -> StationResponse.fromDomain(
+                        s,
+                        terminalService.getConnectorsByStation(s.getId()).stream().map(ConnectorResponse::fromDomain).toList()
+                )).toList());
     }
 
     /** Consultar una estación por ID. */
     @GetMapping("/stations/{id}")
     public ResponseEntity<StationResponse> getStation(@PathVariable Long id) {
         Station station = terminalService.getStation(id);
-        return ResponseEntity.ok(StationResponse.fromDomain(station));
+        List<ConnectorResponse> connectors = terminalService.getConnectorsByStation(id).stream().map(ConnectorResponse::fromDomain).toList();
+        return ResponseEntity.ok(StationResponse.fromDomain(station, connectors));
     }
 
     /** Listar conectores (opcionalmente por estación). */
