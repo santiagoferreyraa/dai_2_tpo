@@ -1,6 +1,6 @@
 import type { Role } from '@/features/auth/types'
 
-import { ContactIcon, HomeIcon, MapIcon, ProfileIcon, StationsIcon } from './icons'
+import { ContactIcon, HomeIcon, KeyIcon, MapIcon, ProfileIcon, StationsIcon } from './icons'
 
 /**
  * Las secciones de la navegación, en un solo lugar.
@@ -37,16 +37,14 @@ export interface NavSection {
 }
 
 /**
- * Las cuatro secciones del centro.
- *
- * En escritorio van al medio de la barra, como texto. En el celular son los primeros cuatro
- * íconos. El perfil no está acá porque no se comporta como ellas: ver abajo.
+ * Las secciones del centro en escritorio.
  */
 export const MAIN_SECTIONS: NavSection[] = [
   { to: '/', label: 'Inicio', Icon: HomeIcon, end: true },
   { to: '/stations', label: 'Estaciones', Icon: StationsIcon, end: true, roles: ['CPO'] },
   { to: '/stations/map', label: 'Mapa', Icon: MapIcon },
   { to: '/contact', label: 'Contacto', Icon: ContactIcon },
+  { to: '/admin', label: 'Backoffice', Icon: KeyIcon, roles: ['ADMIN'] },
 ]
 
 /**
@@ -59,8 +57,15 @@ export const MAIN_SECTIONS: NavSection[] = [
  */
 export const PROFILE_SECTION: NavSection = { to: '/profile', label: 'Perfil', Icon: ProfileIcon }
 
-/** Las cinco, en el orden en que aparecen en la barra del celular. */
-export const MOBILE_SECTIONS: NavSection[] = [...MAIN_SECTIONS, PROFILE_SECTION]
+export const BASE_MOBILE_SECTIONS: NavSection[] = [
+  { to: '/', label: 'Inicio', Icon: HomeIcon, end: true },
+  { to: '/stations', label: 'Estaciones', Icon: StationsIcon, end: true, roles: ['CPO'] },
+  { to: '/stations/map', label: 'Mapa', Icon: MapIcon },
+  { to: '/contact', label: 'Contacto', Icon: ContactIcon },
+]
+
+/** Las secciones, en el orden en que aparecen en la barra del celular. */
+export const MOBILE_SECTIONS: NavSection[] = [...BASE_MOBILE_SECTIONS, PROFILE_SECTION]
 
 /**
  * Si la sección está activa, con la misma regla que aplica `NavLink`.

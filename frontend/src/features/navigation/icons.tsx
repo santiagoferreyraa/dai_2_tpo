@@ -211,3 +211,14 @@ export function SteeringWheelIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+/** Llave: el acceso al Backoffice de administración. */
+export function KeyIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE} className={className}>
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="m10.7 12.3 8.3-8.3a2 2 0 0 1 2.8 0l.2.2a2 2 0 0 1 0 2.8L20 9l-2-2-2 2" />
+      <path d="m15.5 7.5 2 2" />
+    </svg>
+  )
+}

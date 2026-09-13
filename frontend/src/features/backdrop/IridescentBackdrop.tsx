@@ -264,7 +264,7 @@ export default function IridescentBackdrop() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-700 ${
+      className={`pointer-events-none fixed inset-0 h-full w-full transition-opacity duration-700 ${
         painted ? 'opacity-100' : 'opacity-0'
       }`}
     />

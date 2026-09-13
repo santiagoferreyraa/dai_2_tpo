@@ -155,6 +155,7 @@
     radial-gradient(70% 55% at 12% 0%, var(--shell-glow-a), transparent 70%),
     radial-gradient(60% 60% at 92% 18%, var(--shell-glow-b), transparent 70%),
     radial-gradient(85% 55% at 50% 112%, var(--shell-glow-c), transparent 70%);
+  background-attachment: fixed;
   transition:
     background-color 300ms ease,
     color 300ms ease;
