@@ -2,26 +2,37 @@ import { useEffect, useState } from 'react'
 
 import type { Role } from '@/features/auth/types'
 import {
+  addConnector,
+  changeConnectorStatus,
+  configureConnector,
+  createStation,
   deactivateStation,
   deactivateUser,
+  deleteConnector,
   fetchAdminDashboard,
+  fetchConnectors,
   fetchPricingScheme,
   fetchStations,
   fetchUsers,
   savePricingScheme,
+  updateStation,
+  updateUserRole,
 } from './data/adminRepository'
 import type {
   AdminDashboardMetrics,
+  ConnectorItem,
   PricingSchemeResponse,
   PricingStrategyType,
   StationItem,
   UserItem,
 } from './types'
 
+const CONNECTOR_TYPES = ['TYPE_1', 'TYPE_2', 'CCS2', 'CHADEMO', 'TESLA_SUPERCHARGER']
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'stations' | 'pricing'>(
-    'dashboard',
-  )
+  const [activeTab, setActiveTab] = useState<
+    'dashboard' | 'users' | 'stations' | 'connectors' | 'pricing'
+  >('dashboard')
 
   // Dashboard State
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null)
@@ -33,12 +44,41 @@ export default function AdminPage() {
   const [searchUser, setSearchUser] = useState('')
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [deactivatingUserId, setDeactivatingUserId] = useState<number | null>(null)
+  const [updatingUserRoleId, setUpdatingUserRoleId] = useState<number | null>(null)
 
   // Stations State
   const [stations, setStations] = useState<StationItem[]>([])
   const [searchStation, setSearchStation] = useState('')
   const [loadingStations, setLoadingStations] = useState(false)
   const [deactivatingStationId, setDeactivatingStationId] = useState<number | null>(null)
+
+  // Station Form Modal State
+  const [stationModalOpen, setStationModalOpen] = useState<'create' | 'edit' | null>(null)
+  const [editingStation, setEditingStation] = useState<StationItem | null>(null)
+  const [stationForm, setStationForm] = useState({
+    name: '',
+    address: '',
+    latitude: -34.6037,
+    longitude: -58.3816,
+  })
+  const [submittingStation, setSubmittingStation] = useState(false)
+
+  // Connector Form Modal State
+  const [connectorModalOpen, setConnectorModalOpen] = useState<'create' | 'edit' | null>(null)
+  const [targetStationId, setTargetStationId] = useState<number | null>(null)
+  const [editingConnector, setEditingConnector] = useState<ConnectorItem | null>(null)
+  const [connectorForm, setConnectorForm] = useState({
+    connectorType: 'CCS2',
+    maxPowerKw: 50,
+  })
+  const [submittingConnector, setSubmittingConnector] = useState(false)
+
+  // Connectors List State
+  const [connectors, setConnectors] = useState<ConnectorItem[]>([])
+  const [loadingConnectors, setLoadingConnectors] = useState(false)
+  const [searchConnector, setSearchConnector] = useState('')
+  const [connectorStationFilter, setConnectorStationFilter] = useState<number | 'ALL'>('ALL')
+  const [updatingConnectorStatusId, setUpdatingConnectorStatusId] = useState<number | null>(null)
 
   // Pricing Scheme State
   const [pricingConnectorId, setPricingConnectorId] = useState<number>(1)
@@ -52,7 +92,7 @@ export default function AdminPage() {
   const [pricingErrorMsg, setPricingErrorMsg] = useState<string | null>(null)
   const [loadingPricing, setLoadingPricing] = useState(false)
 
-  // Feedback Messages
+  // Global Action Feedback
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -93,6 +133,19 @@ export default function AdminPage() {
     }
   }
 
+  const loadConnectors = async () => {
+    setLoadingConnectors(true)
+    try {
+      const stationId = connectorStationFilter === 'ALL' ? undefined : connectorStationFilter
+      const data = await fetchConnectors(stationId)
+      setConnectors(data)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Error al cargar conectores')
+    } finally {
+      setLoadingConnectors(false)
+    }
+  }
+
   useEffect(() => {
     loadMetrics()
   }, [])
@@ -100,16 +153,38 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === 'users') loadUsers()
     if (activeTab === 'stations') loadStations()
-  }, [activeTab, selectedRole])
+    if (activeTab === 'connectors' || activeTab === 'pricing') {
+      loadStations()
+      loadConnectors()
+    }
+  }, [activeTab, selectedRole, connectorStationFilter])
 
+  // Change User Role
+  const handleUpdateRole = async (userId: number, newRole: Role) => {
+    setUpdatingUserRoleId(userId)
+    setActionError(null)
+    setActionSuccess(null)
+    try {
+      await updateUserRole(userId, newRole)
+      setActionSuccess(`El rol del usuario ${userId} fue actualizado a ${newRole}.`)
+      await loadUsers()
+      await loadMetrics()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo actualizar el rol.')
+    } finally {
+      setUpdatingUserRoleId(null)
+    }
+  }
+
+  // Deactivate User
   const handleDeactivateUser = async (userId: number) => {
-    if (!confirm(`¿Confirma dar de baja al usuario con ID #${userId}?`)) return
+    if (!confirm(`¿Confirma dar de baja al usuario con ID ${userId}?`)) return
     setDeactivatingUserId(userId)
     setActionError(null)
     setActionSuccess(null)
     try {
       await deactivateUser(userId)
-      setActionSuccess(`El usuario #${userId} fue dado de baja exitosamente.`)
+      setActionSuccess(`El usuario ${userId} fue dado de baja exitosamente.`)
       await loadUsers()
       await loadMetrics()
     } catch (err) {
@@ -119,14 +194,15 @@ export default function AdminPage() {
     }
   }
 
+  // Deactivate Station
   const handleDeactivateStation = async (stationId: number) => {
-    if (!confirm(`¿Confirma la baja de la estación de carga #${stationId}?`)) return
+    if (!confirm(`¿Confirma la baja de la estación de carga ${stationId}?`)) return
     setDeactivatingStationId(stationId)
     setActionError(null)
     setActionSuccess(null)
     try {
       await deactivateStation(stationId)
-      setActionSuccess(`La estación #${stationId} fue dada de baja exitosamente.`)
+      setActionSuccess(`La estación ${stationId} fue dada de baja exitosamente.`)
       await loadStations()
       await loadMetrics()
     } catch (err) {
@@ -136,13 +212,136 @@ export default function AdminPage() {
     }
   }
 
-  const handleQueryPricingScheme = async () => {
-    if (!pricingConnectorId || pricingConnectorId <= 0) return
+  // Open Station Modal for Create / Edit
+  const openCreateStationModal = () => {
+    setEditingStation(null)
+    setStationForm({ name: '', address: '', latitude: -34.6037, longitude: -58.3816 })
+    setStationModalOpen('create')
+  }
+
+  const openEditStationModal = (station: StationItem) => {
+    setEditingStation(station)
+    setStationForm({
+      name: station.name,
+      address: station.address,
+      latitude: station.latitude,
+      longitude: station.longitude,
+    })
+    setStationModalOpen('edit')
+  }
+
+  const handleStationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmittingStation(true)
+    setActionError(null)
+    setActionSuccess(null)
+    try {
+      if (stationModalOpen === 'create') {
+        const created = await createStation(stationForm)
+        setActionSuccess(`¡"${created.name}" creada exitosamente con ID ${created.id}!`)
+      } else if (stationModalOpen === 'edit' && editingStation) {
+        const updated = await updateStation(editingStation.id, stationForm)
+        setActionSuccess(`¡Estación ${updated.id} "${updated.name}" actualizada correctamente!`)
+      }
+      setStationModalOpen(null)
+      await loadStations()
+      await loadMetrics()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Error al procesar la estación.')
+    } finally {
+      setSubmittingStation(false)
+    }
+  }
+
+  // Open Connector Modal for Create / Edit
+  const openAddConnectorModal = (stationId: number) => {
+    setTargetStationId(stationId)
+    setEditingConnector(null)
+    setConnectorForm({ connectorType: 'CCS2', maxPowerKw: 50 })
+    setConnectorModalOpen('create')
+  }
+
+  const openEditConnectorModal = (connector: ConnectorItem) => {
+    setEditingConnector(connector)
+    setConnectorForm({ connectorType: connector.connectorType, maxPowerKw: connector.maxPowerKw })
+    setConnectorModalOpen('edit')
+  }
+
+  const handleConnectorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmittingConnector(true)
+    setActionError(null)
+    setActionSuccess(null)
+    try {
+      if (connectorModalOpen === 'create' && targetStationId) {
+        const created = await addConnector(targetStationId, connectorForm)
+        setActionSuccess(
+          `¡Conector ${created.id} (${created.connectorType}) agregado a la estación ${targetStationId}!`,
+        )
+      } else if (connectorModalOpen === 'edit' && editingConnector) {
+        const updated = await configureConnector(editingConnector.id, connectorForm)
+        setActionSuccess(`¡Conector ${updated.id} configurado exitosamente!`)
+      }
+      setConnectorModalOpen(null)
+      await loadStations()
+      await loadConnectors()
+      await loadMetrics()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Error al guardar el conector.')
+    } finally {
+      setSubmittingConnector(false)
+    }
+  }
+
+  // Change Operational Status of Connector
+  const handleChangeConnectorStatus = async (connectorId: number, status: string) => {
+    setUpdatingConnectorStatusId(connectorId)
+    setActionError(null)
+    setActionSuccess(null)
+    try {
+      await changeConnectorStatus(connectorId, status)
+      setActionSuccess(`Estado del conector ${connectorId} cambiado a ${status}.`)
+      await loadConnectors()
+      await loadStations()
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'No se pudo cambiar el estado del conector.',
+      )
+    } finally {
+      setUpdatingConnectorStatusId(null)
+    }
+  }
+
+  // Delete Connector
+  const handleDeleteConnector = async (connectorId: number) => {
+    if (!confirm(`¿Confirma eliminar el conector ${connectorId}?`)) return
+    setActionError(null)
+    setActionSuccess(null)
+    try {
+      await deleteConnector(connectorId)
+      setActionSuccess(`Conector ${connectorId} eliminado exitosamente.`)
+      await loadConnectors()
+      await loadStations()
+      await loadMetrics()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo eliminar el conector.')
+    }
+  }
+
+  // Pricing Scheme Handlers
+  const handleSelectConnectorForPricing = (connectorId: number) => {
+    setPricingConnectorId(connectorId)
+    setActiveTab('pricing')
+    handleQueryPricingSchemeForId(connectorId)
+  }
+
+  const handleQueryPricingSchemeForId = async (id: number) => {
+    if (!id || id <= 0) return
     setLoadingPricing(true)
     setPricingSuccessMsg(null)
     setPricingErrorMsg(null)
     try {
-      const scheme = await fetchPricingScheme(pricingConnectorId)
+      const scheme = await fetchPricingScheme(id)
       setPricingScheme(scheme)
       setStrategyType(scheme.strategyType || 'FLAT_RATE')
       setKwhRate(scheme.kwhRate || 150)
@@ -154,7 +353,7 @@ export default function AdminPage() {
       setPricingErrorMsg(
         err instanceof Error
           ? err.message
-          : `No se encontró esquema cargado para el conector #${pricingConnectorId}`,
+          : `No se encontró esquema configurado para el conector ${id}`,
       )
     } finally {
       setLoadingPricing(false)
@@ -177,7 +376,7 @@ export default function AdminPage() {
       })
       setPricingScheme(resp)
       setPricingSuccessMsg(
-        `¡Esquema tarifario para el conector #${pricingConnectorId} guardado exitosamente!`,
+        `¡Esquema tarifario para el conector ${pricingConnectorId} guardado exitosamente!`,
       )
     } catch (err) {
       setPricingErrorMsg(
@@ -200,6 +399,17 @@ export default function AdminPage() {
     return s.name.toLowerCase().includes(q) || s.address.toLowerCase().includes(q)
   })
 
+  const filteredConnectors = connectors.filter((c) => {
+    if (!searchConnector.trim()) return true
+    const q = searchConnector.toLowerCase()
+    return (
+      c.id.toString().includes(q) ||
+      c.connectorType.toLowerCase().includes(q) ||
+      c.operationalStatus.toLowerCase().includes(q) ||
+      (c.stationId && c.stationId.toString().includes(q))
+    )
+  })
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-8">
       {/* Banner / Header */}
@@ -213,7 +423,7 @@ export default function AdminPage() {
               Backoffice de Administración
             </h1>
             <p className="mt-1 text-sm text-text-muted">
-              Gestión global de la plataforma Ecopedia: usuarios, estaciones, estado del sistema y
+              Gestión global de la plataforma Ecopedia: usuarios, roles, estaciones, conectores y
               tarifas.
             </p>
           </div>
@@ -223,19 +433,19 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Action Feedbacks */}
+        {/* Feedback de acciones globales */}
         {actionSuccess && (
-          <div className="mt-4 rounded-xl border border-primary/40 bg-primary/10 p-4 text-sm font-medium text-primary">
-            ✓ {actionSuccess}
+          <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-400">
+            {actionSuccess}
           </div>
         )}
         {actionError && (
           <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-medium text-rose-400">
-            ⚠ {actionError}
+            {actionError}
           </div>
         )}
 
-        {/* Navigation Tabs */}
+        {/* Pestañas de Navegación */}
         <div className="mt-6 flex flex-wrap gap-2 border-t border-border/50 pt-4">
           <button
             type="button"
@@ -246,7 +456,7 @@ export default function AdminPage() {
                 : 'border border-border/60 bg-surface/40 text-text-muted hover:border-primary/40 hover:text-text'
             }`}
           >
-            📊 Tablero General
+            Tablero General
           </button>
 
           <button
@@ -258,7 +468,7 @@ export default function AdminPage() {
                 : 'border border-border/60 bg-surface/40 text-text-muted hover:border-primary/40 hover:text-text'
             }`}
           >
-            👥 Gestión de Usuarios
+            Gestión de Usuarios
           </button>
 
           <button
@@ -270,7 +480,19 @@ export default function AdminPage() {
                 : 'border border-border/60 bg-surface/40 text-text-muted hover:border-primary/40 hover:text-text'
             }`}
           >
-            ⚡ Gestión de Estaciones
+            Gestión de Estaciones
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('connectors')}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+              activeTab === 'connectors'
+                ? 'brand-fill text-on-primary shadow-lg shadow-primary/20'
+                : 'border border-border/60 bg-surface/40 text-text-muted hover:border-primary/40 hover:text-text'
+            }`}
+          >
+            Catálogo de Conectores
           </button>
 
           <button
@@ -282,7 +504,7 @@ export default function AdminPage() {
                 : 'border border-border/60 bg-surface/40 text-text-muted hover:border-primary/40 hover:text-text'
             }`}
           >
-            💰 Esquemas Tarifarios
+            Esquemas Tarifarios
           </button>
         </div>
       </div>
@@ -296,7 +518,6 @@ export default function AdminPage() {
             </div>
           ) : metrics ? (
             <>
-              {/* Tarjetas métricas superiores */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl border border-border/80 bg-surface/80 p-5 shadow-lg backdrop-blur-xl">
                   <span className="text-xs font-semibold text-text-muted uppercase">
@@ -348,7 +569,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Detalle adicional */}
               <div className="rounded-2xl border border-border/80 bg-surface/80 p-6 shadow-xl backdrop-blur-xl">
                 <h3 className="text-lg font-bold text-text">Estado General del Sistema</h3>
                 <p className="mt-1 text-sm text-text-muted">
@@ -405,11 +625,10 @@ export default function AdminPage() {
             <div>
               <h2 className="text-xl font-bold text-text">Padrón de Usuarios</h2>
               <p className="text-sm text-text-muted">
-                Consulta, filtra y realiza la baja lógica de usuarios en la plataforma.
+                Administra los permisos de usuario y realiza la baja lógica.
               </p>
             </div>
 
-            {/* Filtros */}
             <div className="flex flex-wrap items-center gap-3">
               <input
                 type="text"
@@ -448,7 +667,7 @@ export default function AdminPage() {
                     <th className="py-3 px-4">ID</th>
                     <th className="py-3 px-4">Nombre Completo</th>
                     <th className="py-3 px-4">Email</th>
-                    <th className="py-3 px-4">Rol</th>
+                    <th className="py-3 px-4">Cambiar Rol</th>
                     <th className="py-3 px-4">Estado</th>
                     <th className="py-3 px-4 text-right">Acciones</th>
                   </tr>
@@ -457,22 +676,21 @@ export default function AdminPage() {
                   {filteredUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-surface/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono text-xs font-semibold text-text-muted">
-                        #{user.id}
+                        {user.id}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-text">{user.fullName}</td>
                       <td className="py-3.5 px-4 text-text-muted">{user.email}</td>
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                            user.role === 'ADMIN'
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : user.role === 'CPO'
-                                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                                : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                          }`}
+                        <select
+                          value={user.role}
+                          disabled={updatingUserRoleId === user.id || !user.active}
+                          onChange={(e) => handleUpdateRole(user.id, e.target.value as Role)}
+                          className="rounded-lg border border-border/80 bg-surface/90 px-2.5 py-1 text-xs font-semibold text-text focus:border-primary focus:outline-none disabled:opacity-50"
                         >
-                          {user.role}
-                        </span>
+                          <option value="CONDUCTOR">CONDUCTOR</option>
+                          <option value="CPO">CPO</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </select>
                       </td>
                       <td className="py-3.5 px-4">
                         {user.active ? (
@@ -517,17 +735,27 @@ export default function AdminPage() {
             <div>
               <h2 className="text-xl font-bold text-text">Red de Estaciones de Carga</h2>
               <p className="text-sm text-text-muted">
-                Monitorea y deshabilita estaciones de la plataforma (RF03 / Backoffice).
+                Crea nuevas estaciones, edita sus datos o deshabilítalas.
               </p>
             </div>
 
-            <input
-              type="text"
-              placeholder="Buscar por nombre o dirección..."
-              value={searchStation}
-              onChange={(e) => setSearchStation(e.target.value)}
-              className="w-full max-w-xs rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text placeholder-text-muted focus:border-primary focus:outline-none"
-            />
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                placeholder="Buscar por nombre o dirección..."
+                value={searchStation}
+                onChange={(e) => setSearchStation(e.target.value)}
+                className="rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text placeholder-text-muted focus:border-primary focus:outline-none"
+              />
+
+              <button
+                type="button"
+                onClick={openCreateStationModal}
+                className="rounded-xl brand-fill px-4 py-2 text-xs font-bold text-on-primary shadow-lg shadow-primary/20 transition-all hover:opacity-90"
+              >
+                Crear Estación
+              </button>
+            </div>
           </div>
 
           {loadingStations ? (
@@ -548,7 +776,7 @@ export default function AdminPage() {
                   <div>
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-semibold text-text-muted">
-                        Estación #{station.id}
+                        Estación {station.id}
                       </span>
                       {station.active ? (
                         <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold text-emerald-400">
@@ -565,30 +793,40 @@ export default function AdminPage() {
                     <p className="mt-0.5 text-xs text-text-muted">{station.address}</p>
 
                     <div className="mt-3 flex items-center gap-3 text-xs text-text-muted">
-                      <span>📍 Lat: {station.latitude}</span>
+                      <span>Lat: {station.latitude}</span>
                       <span>Lng: {station.longitude}</span>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-3">
-                    <span className="text-xs text-text-muted">
-                      {station.connectors
-                        ? `${station.connectors.length} conectores`
-                        : 'CPO Owner ID: #' + station.ownerId}
-                    </span>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => openAddConnectorModal(station.id)}
+                      className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-on-primary"
+                    >
+                      Agregar Conector
+                    </button>
 
-                    {station.active ? (
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        disabled={deactivatingStationId === station.id}
-                        onClick={() => handleDeactivateStation(station.id)}
-                        className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-400 transition-all hover:bg-rose-500 hover:text-white disabled:opacity-50"
+                        onClick={() => openEditStationModal(station)}
+                        className="rounded-lg border border-border/80 bg-surface/80 px-2.5 py-1 text-xs font-semibold text-text hover:border-primary/40"
                       >
-                        {deactivatingStationId === station.id ? 'Dando de baja...' : 'Dar de Baja'}
+                        Editar
                       </button>
-                    ) : (
-                      <span className="text-xs text-text-muted italic">Deshabilitada</span>
-                    )}
+
+                      {station.active && (
+                        <button
+                          type="button"
+                          disabled={deactivatingStationId === station.id}
+                          onClick={() => handleDeactivateStation(station.id)}
+                          className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-400 transition-all hover:bg-rose-500 hover:text-white disabled:opacity-50"
+                        >
+                          {deactivatingStationId === station.id ? 'Baja...' : 'Dar de Baja'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -597,49 +835,203 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* TAB 4: ESQUEMAS TARIFARIOS */}
+      {/* TAB 4: CATÁLOGO DE CONECTORES */}
+      {activeTab === 'connectors' && (
+        <div className="rounded-2xl border border-border/80 bg-surface/80 p-6 shadow-xl backdrop-blur-xl">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-text">Catálogo Global de Conectores</h2>
+              <p className="text-sm text-text-muted">
+                Visualiza todos los conectores registrados. Configura su potencia, cambia su estado
+                o asígnales esquema tarifario directamente.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                placeholder="Buscar por ID, tipo o estado..."
+                value={searchConnector}
+                onChange={(e) => setSearchConnector(e.target.value)}
+                className="rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text placeholder-text-muted focus:border-primary focus:outline-none"
+              />
+
+              <select
+                value={connectorStationFilter}
+                onChange={(e) =>
+                  setConnectorStationFilter(
+                    e.target.value === 'ALL' ? 'ALL' : Number(e.target.value),
+                  )
+                }
+                className="rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+              >
+                <option value="ALL">Todas las Estaciones</option>
+                {stations.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    Estación {s.id} - {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {loadingConnectors ? (
+            <div className="mt-6 py-8 text-center text-sm text-text-muted">
+              Cargando conectores...
+            </div>
+          ) : filteredConnectors.length === 0 ? (
+            <div className="mt-6 rounded-xl border border-border/50 bg-surface/30 p-8 text-center text-sm text-text-muted">
+              No se encontraron conectores cargados.
+            </div>
+          ) : (
+            <div className="mt-6 overflow-x-auto">
+              <table className="w-full text-left text-sm text-text">
+                <thead className="border-b border-border/60 text-xs text-text-muted uppercase">
+                  <tr>
+                    <th className="py-3 px-4">ID Conector</th>
+                    <th className="py-3 px-4">Estación</th>
+                    <th className="py-3 px-4">Tipo Conector</th>
+                    <th className="py-3 px-4">Potencia Máx.</th>
+                    <th className="py-3 px-4">Estado Operativo</th>
+                    <th className="py-3 px-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {filteredConnectors.map((connector) => {
+                    const parentStation = stations.find((s) => s.id === connector.stationId)
+                    return (
+                      <tr key={connector.id} className="hover:bg-surface/40 transition-colors">
+                        <td className="py-3.5 px-4 font-mono text-xs font-bold text-primary">
+                          {connector.id}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-text">
+                          {parentStation
+                            ? `${parentStation.id} - ${parentStation.name}`
+                            : `Estación ${connector.stationId}`}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-text-muted">
+                          {connector.connectorType}
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-text">
+                          {connector.maxPowerKw} kW
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <select
+                            value={connector.operationalStatus}
+                            disabled={updatingConnectorStatusId === connector.id}
+                            onChange={(e) =>
+                              handleChangeConnectorStatus(connector.id, e.target.value)
+                            }
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-bold focus:outline-none ${
+                              connector.operationalStatus === 'AVAILABLE'
+                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                                : connector.operationalStatus === 'OCCUPIED'
+                                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                                  : 'bg-rose-500/10 border-rose-500/40 text-rose-400'
+                            }`}
+                          >
+                            <option value="AVAILABLE">AVAILABLE (Disponible)</option>
+                            <option value="OCCUPIED">OCCUPIED (Ocupado)</option>
+                            <option value="OUT_OF_SERVICE">
+                              OUT_OF_SERVICE (Fuera de Servicio)
+                            </option>
+                          </select>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectConnectorForPricing(connector.id)}
+                              className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary"
+                            >
+                              Configurar Tarifa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEditConnectorModal(connector)}
+                              className="rounded-lg border border-border/80 bg-surface/80 px-2.5 py-1 text-xs font-semibold text-text hover:border-primary/40"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteConnector(connector.id)}
+                              className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs font-semibold text-rose-400 hover:bg-rose-500 hover:text-white"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 5: ESQUEMAS TARIFARIOS */}
       {activeTab === 'pricing' && (
         <div className="rounded-2xl border border-border/80 bg-surface/80 p-6 shadow-xl backdrop-blur-xl">
           <div>
             <h2 className="text-xl font-bold text-text">Gestión de Esquemas Tarifarios</h2>
             <p className="text-sm text-text-muted">
-              Define y consulta la tarifa vigente (`/api/pricing`) de los conectores de la red
-              (ECO-29, ECO-30, RF06).
+              Define y consulta la tarifa vigente de los conectores de la red.
             </p>
           </div>
 
           {pricingSuccessMsg && (
             <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-400">
-              ✓ {pricingSuccessMsg}
+              {pricingSuccessMsg}
             </div>
           )}
           {pricingErrorMsg && (
             <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-medium text-rose-400">
-              ⚠ {pricingErrorMsg}
+              {pricingErrorMsg}
             </div>
           )}
 
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Selector de conector */}
+            {/* Selector interactivo de conector */}
             <div className="rounded-xl border border-border/60 bg-surface/40 p-5">
-              <h3 className="text-sm font-bold text-text">1. Buscar Conector</h3>
+              <h3 className="text-sm font-bold text-text">1. Seleccionar Conector</h3>
               <p className="mt-1 text-xs text-text-muted">
-                Ingresa el ID del conector para cargar su tarifa configurada.
+                Elige un conector del catálogo para cargar su tarifa configurada.
               </p>
 
               <div className="mt-4 flex flex-col gap-3">
-                <label className="text-xs font-semibold text-text-muted">ID del Conector</label>
-                <input
-                  type="number"
-                  min="1"
+                <label className="text-xs font-semibold text-text-muted">
+                  Conector Seleccionado
+                </label>
+                <select
                   value={pricingConnectorId}
-                  onChange={(e) => setPricingConnectorId(Number(e.target.value))}
+                  onChange={(e) => {
+                    const id = Number(e.target.value)
+                    setPricingConnectorId(id)
+                    handleQueryPricingSchemeForId(id)
+                  }}
                   className="rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
-                />
+                >
+                  {connectors.length === 0 ? (
+                    <option value={1}>Conector 1</option>
+                  ) : (
+                    connectors.map((c) => {
+                      const st = stations.find((s) => s.id === c.stationId)
+                      return (
+                        <option key={c.id} value={c.id}>
+                          Conector {c.id} ({c.connectorType} - {c.maxPowerKw}kW){' '}
+                          {st ? `• ${st.name}` : ''}
+                        </option>
+                      )
+                    })
+                  )}
+                </select>
 
                 <button
                   type="button"
-                  onClick={handleQueryPricingScheme}
+                  onClick={() => handleQueryPricingSchemeForId(pricingConnectorId)}
                   disabled={loadingPricing}
                   className="mt-2 rounded-xl border border-primary/40 bg-primary/10 py-2.5 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-on-primary disabled:opacity-50"
                 >
@@ -659,6 +1051,16 @@ export default function AdminPage() {
                   <div className="text-text">
                     Seña: <strong>${pricingScheme.depositAmount}</strong>
                   </div>
+                  {pricingScheme.excessPenaltyPerMin ? (
+                    <div className="text-text">
+                      Penalización: <strong>${pricingScheme.excessPenaltyPerMin}/min</strong>
+                    </div>
+                  ) : null}
+                  {pricingScheme.peakKwhRate ? (
+                    <div className="text-text">
+                      Tarifa Pico: <strong>${pricingScheme.peakKwhRate}/kWh</strong>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -670,7 +1072,7 @@ export default function AdminPage() {
             >
               <h3 className="text-sm font-bold text-text">2. Definir / Actualizar Tarifa</h3>
               <p className="mt-1 text-xs text-text-muted">
-                Aplica la regla de cálculo (Patrón Strategy) para el conector #{pricingConnectorId}.
+                Aplica la regla de cálculo para el conector {pricingConnectorId}.
               </p>
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -758,6 +1160,161 @@ export default function AdminPage() {
                   className="rounded-xl brand-fill px-6 py-2.5 text-xs font-bold text-on-primary shadow-lg shadow-primary/20 transition-all hover:opacity-90 disabled:opacity-50"
                 >
                   {loadingPricing ? 'Guardando...' : 'Guardar Esquema Tarifario'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CREAR/EDITAR ESTACIÓN */}
+      {stationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-text">
+              {stationModalOpen === 'create' ? 'Crear Nueva Estación' : 'Editar Estación'}
+            </h3>
+            <p className="mt-1 text-xs text-text-muted">
+              Completa la información física de la estación de carga.
+            </p>
+
+            <form onSubmit={handleStationSubmit} className="mt-4 flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-semibold text-text-muted">Nombre de Estación</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Estación Puerto Madero"
+                  value={stationForm.name}
+                  onChange={(e) => setStationForm({ ...stationForm, name: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-text-muted">Dirección</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Av. Alicia Moreau de Justo 1000"
+                  value={stationForm.address}
+                  onChange={(e) => setStationForm({ ...stationForm, address: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-text-muted">Latitud</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={stationForm.latitude}
+                    onChange={(e) =>
+                      setStationForm({ ...stationForm, latitude: Number(e.target.value) })
+                    }
+                    className="mt-1 w-full rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-text-muted">Longitud</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={stationForm.longitude}
+                    onChange={(e) =>
+                      setStationForm({ ...stationForm, longitude: Number(e.target.value) })
+                    }
+                    className="mt-1 w-full rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStationModalOpen(null)}
+                  className="rounded-xl border border-border/80 px-4 py-2 text-xs font-semibold text-text hover:bg-surface/60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingStation}
+                  className="rounded-xl brand-fill px-5 py-2 text-xs font-bold text-on-primary shadow-lg shadow-primary/20 disabled:opacity-50"
+                >
+                  {submittingStation ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CREAR/EDITAR CONECTOR */}
+      {connectorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-text">
+              {connectorModalOpen === 'create'
+                ? `Agregar Conector a Estación ${targetStationId}`
+                : `Editar Conector ${editingConnector?.id}`}
+            </h3>
+            <p className="mt-1 text-xs text-text-muted">
+              Configura el tipo y la potencia máxima entregable.
+            </p>
+
+            <form onSubmit={handleConnectorSubmit} className="mt-4 flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-semibold text-text-muted">Tipo de Conector</label>
+                <select
+                  value={connectorForm.connectorType}
+                  onChange={(e) =>
+                    setConnectorForm({ ...connectorForm, connectorType: e.target.value })
+                  }
+                  className="mt-1 w-full rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                >
+                  {CONNECTOR_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-text-muted">
+                  Potencia Máxima (kW)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  required
+                  value={connectorForm.maxPowerKw}
+                  onChange={(e) =>
+                    setConnectorForm({ ...connectorForm, maxPowerKw: Number(e.target.value) })
+                  }
+                  className="mt-1 w-full rounded-xl border border-border/80 bg-surface/90 px-3.5 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConnectorModalOpen(null)}
+                  className="rounded-xl border border-border/80 px-4 py-2 text-xs font-semibold text-text hover:bg-surface/60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingConnector}
+                  className="rounded-xl brand-fill px-5 py-2 text-xs font-bold text-on-primary shadow-lg shadow-primary/20 disabled:opacity-50"
+                >
+                  {submittingConnector ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

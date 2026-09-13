@@ -57,13 +57,14 @@ public interface TerminalService {
     /** Búsqueda geolocalizada con filtros de conector, potencia y disponibilidad (RF07). */
     List<StationResult> search(SearchCriteria criteria);
 
-    /**
-     * Devuelve un conector por su identificador.
-     *
-     * <p>Operación interna: la usan Reservas y SesionesDeCarga para verificar que el conector
-     * exista y esté operativo antes de comprometer una reserva o habilitar una carga.
-     */
+    /** Devuelve un conector por su identificador. */
     Connector getConnector(Long connectorId);
+
+    /** Devuelve todos los conectores registrados en la plataforma. */
+    List<Connector> getAllConnectors();
+
+    /** Devuelve todos los conectores pertenecientes a una estación determinada. */
+    List<Connector> getConnectorsByStation(Long stationId);
 
     /** Devuelve una estación por su identificador. */
     Station getStation(Long stationId);

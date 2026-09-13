@@ -31,7 +31,9 @@ public class TerminalServiceImpl implements TerminalService {
         station.setPhotoUrls(data.photoUrls() != null ? data.photoUrls() : new ArrayList<>());
         station.setOwnerId(1L); // Identificador provisorio de operador
         station.setActive(true);
-        return stationRepository.save(station);
+        Station saved = stationRepository.save(station);
+        Hibernate.initialize(saved.getPhotoUrls());
+        return saved;
     }
 
     @Override
@@ -47,7 +49,9 @@ public class TerminalServiceImpl implements TerminalService {
         if (data.photoUrls() != null) {
             station.setPhotoUrls(data.photoUrls());
         }
-        return stationRepository.save(station);
+        Station saved = stationRepository.save(station);
+        Hibernate.initialize(saved.getPhotoUrls());
+        return saved;
     }
 
     @Override
@@ -168,6 +172,18 @@ public class TerminalServiceImpl implements TerminalService {
         return connectorRepository
                 .findById(connectorId)
                 .orElseThrow(() -> new IllegalArgumentException("Conector no encontrado con ID: " + connectorId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Connector> getAllConnectors() {
+        return connectorRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Connector> getConnectorsByStation(Long stationId) {
+        return connectorRepository.findByStationId(stationId);
     }
 
     /*
